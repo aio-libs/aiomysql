@@ -110,24 +110,6 @@ class Cursor(object):
         while (yield from self.nextset()):
             pass
 
-        if PY2:  # Use bytes on Python 2 always
-            encoding = conn.encoding
-
-            def ensure_bytes(x):
-                if isinstance(x, unicode):
-                    x = x.encode(encoding)
-                return x
-
-            query = ensure_bytes(query)
-
-            if args is not None:
-                if isinstance(args, (tuple, list)):
-                    args = tuple(map(ensure_bytes, args))
-                elif isinstance(args, dict):
-                    args = dict((ensure_bytes(key), ensure_bytes(val)) for (key, val) in args.items())
-                else:
-                    args = ensure_bytes(args)
-
         if args is not None:
             query = query % self._escape_args(args, conn)
 
