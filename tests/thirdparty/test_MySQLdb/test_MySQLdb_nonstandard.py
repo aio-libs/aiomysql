@@ -2,9 +2,11 @@ import sys
 import unittest
 
 import aiomysql
+
+
 _mysql = aiomysql
 from aiomysql.constants import FIELD_TYPE
-from aiomysql.tests import base
+from tests import base
 from aiomysql._compat import PY2, long_type
 
 if not PY2:

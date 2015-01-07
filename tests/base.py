@@ -1,22 +1,25 @@
 import asyncio
-import os
 import json
+
+import os
+
 import aiomysql
-from aiomysql.tests._testutils import BaseTest
+from tests._testutils import BaseTest
 
 
 class AIOPyMySQLTestCase(BaseTest):
     # You can specify your test environment creating a file named
-    #  "databases.json" or editing the `databases` variable below.
+    # "databases.json" or editing the `databases` variable below.
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
     if os.path.exists(fname):
         with open(fname) as f:
             databases = json.load(f)
     else:
         databases = [
-            {"host":"localhost","user":"root",
-             "passwd":"","db":"test_pymysql", "use_unicode": True},
-            {"host":"localhost","user":"root","passwd":"","db":"test_pymysql2"}]
+            {"host": "localhost", "user": "root", "passwd": "",
+             "db": "test_pymysql", "use_unicode": True},
+            {"host": "localhost", "user": "root", "passwd": "",
+             "db": "test_pymysql2"}]
 
     @asyncio.coroutine
     def _connect_all(self):

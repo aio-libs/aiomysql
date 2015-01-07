@@ -1,6 +1,4 @@
-import sys
-
-from aiomysql.tests import base
+from tests import base
 import aiomysql.cursors
 
 

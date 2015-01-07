@@ -1,9 +1,8 @@
-from tornado.testing import gen_test
-from tornado import gen
 import unittest
 
-from aiomysql.tests import base
-from aiomysql import util
+from tornado.testing import gen_test
+
+from tests import base
 
 
 class TestNextset(base.PyMySQLTestCase):

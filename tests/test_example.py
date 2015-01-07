@@ -1,5 +1,5 @@
 import aiomysql
-from aiomysql.tests import base
+from tests import base
 
 class TestExample(base.PyMySQLTestCase):
     def test_example(self):

@@ -1,5 +1,4 @@
 import datetime
-import unittest
 
 try:
     import imp
@@ -8,10 +7,9 @@ except AttributeError:
     pass
 
 from tornado.testing import gen_test
-from tornado import gen
 
 import aiomysql
-from aiomysql.tests import base
+from tests import base
 
 __all__ = ["TestOldIssues", "TestNewIssues", "TestGitHubIssues"]
 

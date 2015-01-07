@@ -1,8 +1,9 @@
 import datetime
+
 from tornado.testing import gen_test
 from tornado import gen
 
-from aiomysql.tests import base
+from tests import base
 import aiomysql.cursors
 
 

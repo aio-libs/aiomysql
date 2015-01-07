@@ -1,30 +1,30 @@
-from tornado.testing import gen_test
-from tornado import gen
-
-import aiomysql.cursors
-
-from aiomysql.tests import base
-from aiomysql import util
-from aiomysql.err import ProgrammingError
-
+import asyncio
 import time
 import datetime
+
+import aiomysql.cursors
+from tests import base
+from aiomysql import util
+from aiomysql.err import ProgrammingError
+from tests._testutils import run_until_complete
+
 
 __all__ = ["TestConversion", "TestCursor", "TestBulkInserts"]
 
 
-class TestConversion(base.PyMySQLTestCase):
-    @gen_test
+class TestConversion(base.AIOPyMySQLTestCase):
+
+    @run_until_complete
     def test_datatypes(self):
         """ test every data type """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_datatypes (b bit, i int, l bigint, f real, s varchar(32), u varchar(32), bb blob, d date, dt datetime, ts timestamp, td time, t time, st datetime)")
+        yield from c.execute("create table test_datatypes (b bit, i int, l bigint, f real, s varchar(32), u varchar(32), bb blob, d date, dt datetime, ts timestamp, td time, t time, st datetime)")
         try:
             # insert values
             v = (True, -3, 123456789012, 5.7, "hello'\" world", u"Espa\xc3\xb1ol", "binary\x00data".encode(conn.charset), datetime.date(1988,2,2), datetime.datetime.now().replace(microsecond=0), datetime.timedelta(5,6), datetime.time(16,32), time.localtime())
-            yield c.execute("insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", v)
-            yield c.execute("select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
+            yield from c.execute("insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", v)
+            yield from c.execute("select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
             r = c.fetchone()
             self.assertEqual(util.int2byte(1), r[0])
             #self.assertEqual(v[1:8], r[1:8])
@@ -36,93 +36,93 @@ class TestConversion(base.PyMySQLTestCase):
             self.assertEqual(datetime.timedelta(0, 60 * (v[10].hour * 60 + v[10].minute)), r[10])
             self.assertEqual(datetime.datetime(*v[-1][:6]), r[-1])
 
-            yield c.execute("delete from test_datatypes")
+            yield from c.execute("delete from test_datatypes")
 
             # check nulls
-            yield c.execute("insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [None] * 12)
-            yield c.execute("select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
+            yield from c.execute("insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", [None] * 12)
+            yield from c.execute("select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
             r = c.fetchone()
             self.assertEqual(tuple([None] * 12), r)
 
-            yield c.execute("delete from test_datatypes")
+            yield from c.execute("delete from test_datatypes")
 
             # check sequence type
-            yield c.execute("insert into test_datatypes (i, l) values (2,4), (6,8), (10,12)")
-            yield c.execute("select l from test_datatypes where i in %s order by i", ((2,6),))
+            yield from c.execute("insert into test_datatypes (i, l) values (2,4), (6,8), (10,12)")
+            yield from c.execute("select l from test_datatypes where i in %s order by i", ((2,6),))
             r = c.fetchall()
             self.assertEqual(((4,),(8,)), r)
         finally:
             c.execute("drop table test_datatypes")
 
-    @gen_test
+    @run_until_complete
     def test_dict(self):
         """ test dict escaping """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_dict (a integer, b integer, c integer)")
+        yield from c.execute("create table test_dict (a integer, b integer, c integer)")
         try:
-            yield c.execute("insert into test_dict (a,b,c) values (%(a)s, %(b)s, %(c)s)", {"a":1,"b":2,"c":3})
-            yield c.execute("select a,b,c from test_dict")
+            yield from c.execute("insert into test_dict (a,b,c) values (%(a)s, %(b)s, %(c)s)", {"a":1,"b":2,"c":3})
+            yield from c.execute("select a,b,c from test_dict")
             self.assertEqual((1,2,3), c.fetchone())
         finally:
-            yield c.execute("drop table test_dict")
+            yield from c.execute("drop table test_dict")
 
-    @gen_test
+    @run_until_complete
     def test_string(self):
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_dict (a text)")
+        yield from c.execute("create table test_dict (a text)")
         test_value = "I am a test string"
         try:
-            yield c.execute("insert into test_dict (a) values (%s)", test_value)
-            yield c.execute("select a from test_dict")
+            yield from c.execute("insert into test_dict (a) values (%s)", test_value)
+            yield from c.execute("select a from test_dict")
             self.assertEqual((test_value,), c.fetchone())
         finally:
-            yield c.execute("drop table test_dict")
+            yield from c.execute("drop table test_dict")
 
-    @gen_test
+    @run_until_complete
     def test_integer(self):
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_dict (a integer)")
+        yield from c.execute("create table test_dict (a integer)")
         test_value = 12345
         try:
-            yield c.execute("insert into test_dict (a) values (%s)", test_value)
-            yield c.execute("select a from test_dict")
+            yield from c.execute("insert into test_dict (a) values (%s)", test_value)
+            yield from c.execute("select a from test_dict")
             self.assertEqual((test_value,), c.fetchone())
         finally:
-            yield c.execute("drop table test_dict")
+            yield from c.execute("drop table test_dict")
 
-    @gen_test
+    @run_until_complete
     def test_big_blob(self):
         """ test tons of data """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_big_blob (b blob)")
+        yield from c.execute("create table test_big_blob (b blob)")
         try:
             data = "pymysql" * 1024
-            yield c.execute("insert into test_big_blob (b) values (%s)", (data,))
-            yield c.execute("select b from test_big_blob")
+            yield from c.execute("insert into test_big_blob (b) values (%s)", (data,))
+            yield from c.execute("select b from test_big_blob")
             self.assertEqual(data.encode(conn.charset), c.fetchone()[0])
         finally:
-            yield c.execute("drop table test_big_blob")
+            yield from c.execute("drop table test_big_blob")
 
-    @gen_test
+    @run_until_complete
     def test_untyped(self):
         """ test conversion of null, empty string """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("select null,''")
+        yield from c.execute("select null,''")
         self.assertEqual((None,u''), c.fetchone())
-        yield c.execute("select '',null")
+        yield from c.execute("select '',null")
         self.assertEqual((u'',None), c.fetchone())
 
-    @gen_test
+    @run_until_complete
     def test_timedelta(self):
         """ test timedelta conversion """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("select time('12:30'), time('23:12:59'), time('23:12:59.05100'), time('-12:30'), time('-23:12:59'), time('-23:12:59.05100'), time('-00:30')")
+        yield from c.execute("select time('12:30'), time('23:12:59'), time('23:12:59.05100'), time('-12:30'), time('-23:12:59'), time('-23:12:59.05100'), time('-00:30')")
         self.assertEqual((datetime.timedelta(0, 45000),
                           datetime.timedelta(0, 83579),
                           datetime.timedelta(0, 83579, 51000),
@@ -132,25 +132,25 @@ class TestConversion(base.PyMySQLTestCase):
                           -datetime.timedelta(0, 1800)),
                          c.fetchone())
 
-    @gen_test
+    @run_until_complete
     def test_datetime(self):
         """ test datetime conversion """
         conn = self.connections[0]
         c = conn.cursor()
         dt = datetime.datetime(2013,11,12,9,9,9,123450)
         try:
-            yield c.execute("create table test_datetime (id int, ts datetime(6))")
-            yield c.execute("insert into test_datetime values (1,'2013-11-12 09:09:09.12345')")
-            yield c.execute("select ts from test_datetime")
+            yield from c.execute("create table test_datetime (id int, ts datetime(6))")
+            yield from c.execute("insert into test_datetime values (1,'2013-11-12 09:09:09.12345')")
+            yield from c.execute("select ts from test_datetime")
             self.assertEqual((dt,),c.fetchone())
         except ProgrammingError:
             # User is running a version of MySQL that doesn't support msecs within datetime
             pass
         finally:
-            yield c.execute("drop table if exists test_datetime")
+            yield from c.execute("drop table if exists test_datetime")
 
 
-class TestCursor(base.PyMySQLTestCase):
+class TestCursor(base.AIOPyMySQLTestCase):
     # this test case does not work quite right yet, however,
     # we substitute in None for the erroneous field which is
     # compatible with the DB-API 2.0 spec and has not broken
@@ -204,50 +204,50 @@ class TestCursor(base.PyMySQLTestCase):
     #
     #    self.assertEqual(r, c.description)
 
-    @gen_test
+    @run_until_complete
     def test_fetch_no_result(self):
         """ test a fetchone() with no rows """
         conn = self.connections[0]
         c = conn.cursor()
-        yield c.execute("create table test_nr (b varchar(32))")
+        yield from c.execute("create table test_nr (b varchar(32))")
         try:
             data = "pymysql"
-            yield c.execute("insert into test_nr (b) values (%s)", (data,))
+            yield from c.execute("insert into test_nr (b) values (%s)", (data,))
             self.assertEqual(None, c.fetchone())
         finally:
-            yield c.execute("drop table test_nr")
+            yield from c.execute("drop table test_nr")
 
-    @gen_test
+    @run_until_complete
     def test_aggregates(self):
         """ test aggregate functions """
         conn = self.connections[0]
         c = conn.cursor()
         try:
-            yield c.execute('create table test_aggregates (i integer)')
+            yield from c.execute('create table test_aggregates (i integer)')
             for i in range(0, 10):
-                yield c.execute('insert into test_aggregates (i) values (%s)', (i,))
-            yield c.execute('select sum(i) from test_aggregates')
+                yield from c.execute('insert into test_aggregates (i) values (%s)', (i,))
+            yield from c.execute('select sum(i) from test_aggregates')
             r, = c.fetchone()
             self.assertEqual(sum(range(0,10)), r)
         finally:
-            yield c.execute('drop table test_aggregates')
+            yield from c.execute('drop table test_aggregates')
 
-    @gen_test
+    @run_until_complete
     def test_single_tuple(self):
         """ test a single tuple """
         conn = self.connections[0]
         c = conn.cursor()
         try:
-            yield c.execute("create table mystuff (id integer primary key)")
-            yield c.execute("insert into mystuff (id) values (1)")
-            yield c.execute("insert into mystuff (id) values (2)")
-            yield c.execute("select id from mystuff where id in %s", ((1,),))
+            yield from c.execute("create table mystuff (id integer primary key)")
+            yield from c.execute("insert into mystuff (id) values (1)")
+            yield from c.execute("insert into mystuff (id) values (2)")
+            yield from c.execute("select id from mystuff where id in %s", ((1,),))
             self.assertEqual([(1,)], list(c.fetchall()))
         finally:
-            yield c.execute("drop table mystuff")
+            yield from c.execute("drop table mystuff")
 
 
-class TestBulkInserts(base.PyMySQLTestCase):
+class TestBulkInserts(base.AIOPyMySQLTestCase):
 
     cursor_type = aiomysql.cursors.DictCursor
 
@@ -256,81 +256,77 @@ class TestBulkInserts(base.PyMySQLTestCase):
         self.conn = conn = self.connections[0]
         c = conn.cursor(self.cursor_type)
 
-        @gen.coroutine
+        @asyncio.coroutine
         def prepare():
             # create a table ane some data to query
-            yield c.execute("drop table if exists bulkinsert")
-            yield c.execute(
-"""CREATE TABLE bulkinsert
-(
-id int(11),
-name char(20),
-age int,
-height int,
-PRIMARY KEY (id)
-)
-""")
-        self.io_loop.run_sync(prepare)
+            yield from c.execute("drop table if exists bulkinsert;")
+            yield from c.execute(
+                """CREATE TABLE bulkinsert
+                (
+                id int(11),
+                name char(20),
+                age int,
+                height int,
+                PRIMARY KEY (id)
+                )
+                """)
+        self.loop.run_until_complete(prepare())
 
-    @gen.coroutine
+    @asyncio.coroutine
     def _verify_records(self, data):
         conn = self.connections[0]
         cursor = conn.cursor()
-        yield cursor.execute("SELECT id, name, age, height from bulkinsert")
+        yield from cursor.execute("SELECT id, name, age, height from bulkinsert")
         result = cursor.fetchall()
+        yield from cursor.execute('commit')
         self.assertEqual(sorted(data), sorted(result))
 
-    @gen_test
+    @run_until_complete
     def test_bulk_insert(self):
         conn = self.connections[0]
         cursor = conn.cursor()
 
         data = [(0, "bob", 21, 123), (1, "jim", 56, 45), (2, "fred", 100, 180)]
-        yield cursor.executemany("insert into bulkinsert (id, name, age, height) "
+        yield from cursor.executemany("insert into bulkinsert (id, name, age, height) "
                                  "values (%s,%s,%s,%s)", data)
         self.assertEqual(
             cursor._last_executed, bytearray(
             b"insert into bulkinsert (id, name, age, height) values "
             b"(0,'bob',21,123),(1,'jim',56,45),(2,'fred',100,180)"))
-        yield cursor.execute('commit')
-        yield self._verify_records(data)
+        yield from cursor.execute('commit')
+        yield from self._verify_records(data)
 
-    @gen_test
+    @run_until_complete
     def test_bulk_insert_multiline_statement(self):
         conn = self.connections[0]
         cursor = conn.cursor()
         data = [(0, "bob", 21, 123), (1, "jim", 56, 45), (2, "fred", 100, 180)]
-        yield cursor.executemany("""insert
-into bulkinsert (id, name,
-age, height)
-values (%s,
-%s , %s,
-%s )
- """, data)
+        yield from cursor.executemany("""insert
+            into bulkinsert (id, name,
+            age, height)
+            values (%s,
+            %s , %s,
+            %s )
+             """, data)
         self.assertEqual(cursor._last_executed, bytearray(b"""insert
-into bulkinsert (id, name,
-age, height)
-values (0,
-'bob' , 21,
-123 ),(1,
-'jim' , 56,
-45 ),(2,
-'fred' , 100,
-180 )"""))
-        yield cursor.execute('commit')
-        yield self._verify_records(data)
+            into bulkinsert (id, name,
+            age, height)
+            values (0,
+            'bob' , 21,
+            123 ),(1,
+            'jim' , 56,
+            45 ),(2,
+            'fred' , 100,
+            180 )"""))
+        yield from cursor.execute('commit')
+        yield from self._verify_records(data)
 
-    @gen_test
+    @run_until_complete
     def test_bulk_insert_single_record(self):
         conn = self.connections[0]
         cursor = conn.cursor()
         data = [(0, "bob", 21, 123)]
-        yield cursor.executemany("insert into bulkinsert (id, name, age, height) "
+        yield from cursor.executemany("insert into bulkinsert (id, name, age, height) "
                                  "values (%s,%s,%s,%s)", data)
-        yield cursor.execute('commit')
-        yield self._verify_records(data)
-
-
-if __name__ == "__main__":
-    import unittest
-    unittest.main()
+        yield from cursor.execute('commit')
+        yield from self._verify_records(data)

@@ -3,8 +3,7 @@ import unittest
 
 from . import dbapi20
 import aiomysql
-from aiomysql.tests import base
-
+from tests import base
 
 
 class test_MySQLdb(dbapi20.DatabaseAPI20Test):
@@ -169,7 +168,6 @@ class test_MySQLdb(dbapi20.DatabaseAPI20Test):
 
     @unittest.expectedFailure
     def test_nextset(self):
-        from warnings import warn
         con = self._connect()
         try:
             cur = con.cursor()

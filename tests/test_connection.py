@@ -1,7 +1,8 @@
 import time
+
 import aiomysql
-from aiomysql.tests._testutils import run_until_complete
-from aiomysql.tests.base import AIOPyMySQLTestCase
+from tests._testutils import run_until_complete
+from tests.base import AIOPyMySQLTestCase
 
 
 class TestConnection(AIOPyMySQLTestCase):

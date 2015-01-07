@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import unittest
+
 import warnings
 
 from . import capabilities
 import aiomysql
-from aiomysql.tests import base
+from tests import base
+
 
 warnings.filterwarnings('error')
 
