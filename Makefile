@@ -6,7 +6,7 @@ FLAGS=
 flake:
 	flake8 aiomysql tests
 
-test: flake
+test:
 	nosetests -s $(FLAGS) ./tests/
 
 vtest: flake
