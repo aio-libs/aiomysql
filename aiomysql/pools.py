@@ -8,7 +8,7 @@ import warnings
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine, Return
 from tornado.concurrent import Future
-from tornado_mysql import connect
+from aiomysql import connect
 
 
 DEBUG = False
@@ -35,7 +35,7 @@ class Pool(object):
                  io_loop=None,
                  ):
         """
-        :param dict connect_kwargs: kwargs for tornado_mysql.connect()
+        :param dict connect_kwargs: kwargs for aiomysql.connect()
         :param int max_idle_connections: Max number of keeping connections.
         :param int max_recycle_sec: How long connections are recycled.
         """

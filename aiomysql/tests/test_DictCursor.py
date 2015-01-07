@@ -2,8 +2,8 @@ import datetime
 from tornado.testing import gen_test
 from tornado import gen
 
-from tornado_mysql.tests import base
-import tornado_mysql.cursors
+from aiomysql.tests import base
+import aiomysql.cursors
 
 
 class TestDictCursor(base.PyMySQLTestCase):
@@ -11,7 +11,7 @@ class TestDictCursor(base.PyMySQLTestCase):
     jim = {'name': 'jim', 'age': 56, 'DOB': datetime.datetime(1955, 5, 9, 13, 12, 45)}
     fred = {'name': 'fred', 'age': 100, 'DOB': datetime.datetime(1911, 9, 12, 1, 1, 1)}
 
-    cursor_type = tornado_mysql.cursors.DictCursor
+    cursor_type = aiomysql.cursors.DictCursor
 
     def setUp(self):
         super(TestDictCursor, self).setUp()
@@ -107,7 +107,7 @@ class TestDictCursor(base.PyMySQLTestCase):
 
 
 #class TestSSDictCursor(TestDictCursor):
-#    cursor_type = tornado_mysql.cursors.SSDictCursor
+#    cursor_type = aiomysql.cursors.SSDictCursor
 
 
 if __name__ == "__main__":

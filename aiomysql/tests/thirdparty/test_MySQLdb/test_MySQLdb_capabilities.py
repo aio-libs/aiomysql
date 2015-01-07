@@ -3,14 +3,14 @@ import unittest
 import warnings
 
 from . import capabilities
-import tornado_mysql
-from tornado_mysql.tests import base
+import aiomysql
+from aiomysql.tests import base
 
 warnings.filterwarnings('error')
 
 class test_MySQLdb(capabilities.DatabaseTest):
 
-    db_module = tornado_mysql
+    db_module = aiomysql
     connect_args = ()
     connect_kwargs = base.PyMySQLTestCase.databases[0].copy()
     connect_kwargs.update(dict(read_default_file='~/.my.cnf',
@@ -80,7 +80,7 @@ class test_MySQLdb(capabilities.DatabaseTest):
             generator)
 
     def test_bug_2671682(self):
-        from tornado_mysql.constants import ER
+        from aiomysql.constants import ER
         try:
             self.cursor.execute("describe some_non_existent_table");
         except self.connection.ProgrammingError as msg:

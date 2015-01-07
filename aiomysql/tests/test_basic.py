@@ -1,11 +1,11 @@
 from tornado.testing import gen_test
 from tornado import gen
 
-import tornado_mysql.cursors
+import aiomysql.cursors
 
-from tornado_mysql.tests import base
-from tornado_mysql import util
-from tornado_mysql.err import ProgrammingError
+from aiomysql.tests import base
+from aiomysql import util
+from aiomysql.err import ProgrammingError
 
 import time
 import datetime
@@ -249,7 +249,7 @@ class TestCursor(base.PyMySQLTestCase):
 
 class TestBulkInserts(base.PyMySQLTestCase):
 
-    cursor_type = tornado_mysql.cursors.DictCursor
+    cursor_type = aiomysql.cursors.DictCursor
 
     def setUp(self):
         super(TestBulkInserts, self).setUp()

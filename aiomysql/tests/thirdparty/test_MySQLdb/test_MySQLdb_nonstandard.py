@@ -1,11 +1,11 @@
 import sys
 import unittest
 
-import tornado_mysql
-_mysql = tornado_mysql
-from tornado_mysql.constants import FIELD_TYPE
-from tornado_mysql.tests import base
-from tornado_mysql._compat import PY2, long_type
+import aiomysql
+_mysql = aiomysql
+from aiomysql.constants import FIELD_TYPE
+from aiomysql.tests import base
+from aiomysql._compat import PY2, long_type
 
 if not PY2:
     basestring = str
@@ -13,16 +13,16 @@ if not PY2:
 
 class TestDBAPISet(unittest.TestCase):
     def test_set_equality(self):
-        self.assertTrue(tornado_mysql.STRING == tornado_mysql.STRING)
+        self.assertTrue(aiomysql.STRING == aiomysql.STRING)
 
     def test_set_inequality(self):
-        self.assertTrue(tornado_mysql.STRING != tornado_mysql.NUMBER)
+        self.assertTrue(aiomysql.STRING != aiomysql.NUMBER)
 
     def test_set_equality_membership(self):
-        self.assertTrue(FIELD_TYPE.VAR_STRING == tornado_mysql.STRING)
+        self.assertTrue(FIELD_TYPE.VAR_STRING == aiomysql.STRING)
 
     def test_set_inequality_membership(self):
-        self.assertTrue(FIELD_TYPE.DATE != tornado_mysql.STRING)
+        self.assertTrue(FIELD_TYPE.DATE != aiomysql.STRING)
 
 
 class CoreModule(unittest.TestCase):
@@ -72,7 +72,7 @@ class CoreAPI(unittest.TestCase):
 
     #def test_debug(self):
         ## FIXME Only actually tests if you lack SUPER
-        #self.assertRaises(tornado_mysql.OperationalError,
+        #self.assertRaises(aiomysql.OperationalError,
                           #self.conn.dump_debug_info)
 
     def test_charset_name(self):

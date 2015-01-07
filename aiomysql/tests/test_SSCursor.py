@@ -1,7 +1,7 @@
 import sys
 
-from tornado_mysql.tests import base
-import tornado_mysql.cursors
+from aiomysql.tests import base
+import aiomysql.cursors
 
 
 class TestSSCursor(base.PyMySQLTestCase):
@@ -22,7 +22,7 @@ class TestSSCursor(base.PyMySQLTestCase):
             ('America', '', 'America/Detroit'),]
 
         try:
-            cursor = conn.cursor(tornado_mysql.cursors.SSCursor)
+            cursor = conn.cursor(aiomysql.cursors.SSCursor)
 
             # Create table
             cursor.execute(('CREATE TABLE tz_data ('

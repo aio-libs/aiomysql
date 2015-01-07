@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 '''
+import asyncio
 
 VERSION = (0, 6, 2, None)
 
@@ -33,9 +34,6 @@ from .err import Warning, Error, InterfaceError, DataError, \
      NotSupportedError, ProgrammingError, MySQLError
 from .times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
-
-import sys
-from tornado import gen
 
 
 threadsafety = 1
@@ -80,13 +78,13 @@ def Binary(x):
         return x.encode()
     return bytes(x)
 
-@gen.coroutine
+@asyncio.coroutine
 def connect(*args, **kwargs):
     """See connections.Connection.__init__() for information about defaults."""
     from .connections import Connection
     conn = Connection(*args, **kwargs)
-    yield conn.connect()
-    raise gen.Return(conn)
+    yield from conn.connect()
+    return conn
 
 from . import connections as _orig_conn
 if _orig_conn.Connection.__init__.__doc__ is not None:

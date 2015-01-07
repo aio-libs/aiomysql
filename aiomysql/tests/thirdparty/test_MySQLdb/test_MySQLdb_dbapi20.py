@@ -2,13 +2,13 @@
 import unittest
 
 from . import dbapi20
-import tornado_mysql
-from tornado_mysql.tests import base
+import aiomysql
+from aiomysql.tests import base
 
 
 
 class test_MySQLdb(dbapi20.DatabaseAPI20Test):
-    driver = tornado_mysql
+    driver = aiomysql
     connect_args = ()
     connect_kw_args = base.PyMySQLTestCase.databases[0].copy()
     connect_kw_args.update(dict(read_default_file='~/.my.cnf',

@@ -1,9 +1,9 @@
-import tornado_mysql
-from tornado_mysql.tests import base
+import aiomysql
+from aiomysql.tests import base
 
 class TestExample(base.PyMySQLTestCase):
     def test_example(self):
-        conn = tornado_mysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
+        conn = aiomysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
 
 
         cur = conn.cursor()

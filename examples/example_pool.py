@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 from tornado import ioloop, gen
-from tornado_mysql import pools
+from aiomysql import pools
 
 
 pools.DEBUG = True

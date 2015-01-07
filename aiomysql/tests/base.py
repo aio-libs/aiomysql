@@ -1,13 +1,11 @@
+import asyncio
 import os
 import json
-import tornado_mysql
-import unittest
-
-from tornado import gen
-from tornado.testing import AsyncTestCase, gen_test
+import aiomysql
+from aiomysql.tests._testutils import BaseTest
 
 
-class PyMySQLTestCase(AsyncTestCase):
+class AIOPyMySQLTestCase(BaseTest):
     # You can specify your test environment creating a file named
     #  "databases.json" or editing the `databases` variable below.
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -20,18 +18,18 @@ class PyMySQLTestCase(AsyncTestCase):
              "passwd":"","db":"test_pymysql", "use_unicode": True},
             {"host":"localhost","user":"root","passwd":"","db":"test_pymysql2"}]
 
-    @gen.coroutine
+    @asyncio.coroutine
     def _connect_all(self):
         for params in self.databases:
-            conn = yield tornado_mysql.connect(io_loop=self.io_loop, **params)
+            conn = yield from aiomysql.connect(loop=self.loop, **params)
             self.connections.append(conn)
 
     def setUp(self):
-        super(PyMySQLTestCase, self).setUp()
+        super(AIOPyMySQLTestCase, self).setUp()
         self.connections = []
-        self.io_loop.run_sync(self._connect_all)
+        self.loop.run_until_complete(self._connect_all())
 
     def tearDown(self):
         for connection in self.connections:
             connection.close()
-        super(PyMySQLTestCase, self).tearDown()
+        super(AIOPyMySQLTestCase, self).tearDown()

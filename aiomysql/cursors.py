@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, absolute_import
+import asyncio
 import re
-
-from tornado import gen
 
 from ._compat import range_type, text_type, PY2
 
@@ -48,7 +47,7 @@ class Cursor(object):
         '''
         self.close()
 
-    @gen.coroutine
+    @asyncio.coroutine
     def close(self):
         '''
         Closing a cursor just exhausts all remaining data.
@@ -57,7 +56,7 @@ class Cursor(object):
         if conn is None:
             return
         try:
-            while (yield self.nextset()):
+            while (yield from self.nextset()):
                 pass
         finally:
             self.connection = None
@@ -80,18 +79,18 @@ class Cursor(object):
     def setoutputsizes(self, *args):
         """Does nothing, required by DB API."""
 
-    @gen.coroutine
+    @asyncio.coroutine
     def nextset(self):
         """Get the next query set"""
         conn = self._get_db()
         current_result = self._result
         if current_result is None or current_result is not conn._result:
-            raise gen.Return()
+            return
         if not current_result.has_next:
-            raise gen.Return()
-        yield conn.next_result()
+            return
+        yield from conn.next_result()
         self._do_get_result()
-        raise gen.Return(True)
+        return True
 
     def _escape_args(self, args, conn):
         if isinstance(args, (tuple, list)):
@@ -103,12 +102,12 @@ class Cursor(object):
             #Worst case it will throw a Value error
             return conn.escape(args)
 
-    @gen.coroutine
+    @asyncio.coroutine
     def execute(self, query, args=None):
         '''Execute a query'''
         conn = self._get_db()
 
-        while (yield self.nextset()):
+        while (yield from self.nextset()):
             pass
 
         if PY2:  # Use bytes on Python 2 always
@@ -132,11 +131,11 @@ class Cursor(object):
         if args is not None:
             query = query % self._escape_args(args, conn)
 
-        yield self._query(query)
+        yield from self._query(query)
         self._executed = query
-        raise gen.Return(self.rowcount)
+        return self.rowcount
 
-    @gen.coroutine
+    @asyncio.coroutine
     def executemany(self, query, args):
         """Run several data against one query
 
@@ -151,18 +150,18 @@ class Cursor(object):
             q_values = m.group(1).rstrip()
             assert q_values[0] == '(' and q_values[-1] == ')'
             q_prefix = query[:m.start(1)]
-            yield self._do_execute_many(q_prefix, q_values, args,
+            yield from self._do_execute_many(q_prefix, q_values, args,
                                         self.max_stmt_length,
                                         self._get_db().encoding)
         else:
             rows = 0
             for arg in args:
-                yield self.execute(query, arg)
+                yield from self.execute(query, arg)
                 rows += self.rowcount
             self.rowcount = rows
-        raise gen.Return(self.rowcount)
+        return self.rowcount
 
-    @gen.coroutine
+    @asyncio.coroutine
     def _do_execute_many(self, prefix, values, args, max_stmt_length, encoding):
         conn = self._get_db()
         escape = self._escape_args
@@ -181,17 +180,17 @@ class Cursor(object):
                 v = v.encode(encoding)
             if len(sql) + len(v) + 1 > max_stmt_length:
                 print(sql)
-                yield self.execute(bytes(sql))
+                yield from self.execute(bytes(sql))
                 rows += self.rowcount
                 sql = bytearray(prefix)
             else:
                 sql += b','
             sql += v
-        yield self.execute(bytes(sql))
+        yield from self.execute(bytes(sql))
         rows += self.rowcount
         self.rowcount = rows
 
-    @gen.coroutine
+    @asyncio.coroutine
     def callproc(self, procname, args=()):
         """Execute stored procedure procname with args
 
@@ -223,15 +222,15 @@ class Cursor(object):
         conn = self._get_db()
         for index, arg in enumerate(args):
             q = "SET @_%s_%d=%s" % (procname, index, conn.escape(arg))
-            yield self._query(q)
-            yield self.nextset()
+            yield from self._query(q)
+            yield from self.nextset()
 
         q = "CALL %s(%s)" % (procname,
                              ','.join(['@_%s_%d' % (procname, i)
                                        for i in range_type(len(args))]))
-        yield self._query(q)
+        yield from self._query(q)
         self._executed = q
-        yield gen.Return(args)
+        return args
 
     def fetchone(self):
         ''' Fetch the next row '''
@@ -277,11 +276,11 @@ class Cursor(object):
             raise IndexError("out of range")
         self.rownumber = r
 
-    @gen.coroutine
+    @asyncio.coroutine
     def _query(self, q):
         conn = self._get_db()
         self._last_executed = q
-        yield conn.query(q)
+        yield from conn.query(q)
         self._do_get_result()
 
     def _do_get_result(self):
@@ -357,47 +356,47 @@ class SSCursor(Cursor):
     def _conv_row(self, row):
         return row
 
-    @gen.coroutine
+    @asyncio.coroutine
     def close(self):
         conn = self.connection
         if conn is None:
             return
 
         if self._result is not None and self._result is conn._result:
-            yield self._result._finish_unbuffered_query()
+            yield from self._result._finish_unbuffered_query()
 
         try:
-            while (yield self.nextset()):
+            while (yield from self.nextset()):
                 pass
         finally:
             self.connection = None
 
-    @gen.coroutine
+    @asyncio.coroutine
     def _query(self, q):
         conn = self._get_db()
         self._last_executed = q
         yield conn.query(q, unbuffered=True)
         self._do_get_result()
-        raise gen.Return(self.rowcount)
+        return self.rowcount
 
-    @gen.coroutine
+    @asyncio.coroutine
     def read_next(self):
         """ Read next row """
-        row = yield self._result._read_rowdata_packet_unbuffered()
+        row = yield from self._result._read_rowdata_packet_unbuffered()
         row = self._conv_row(row)
-        raise gen.Return(row)
+        return row
 
-    @gen.coroutine
+    @asyncio.coroutine
     def fetchone(self):
         """ Fetch next row """
         self._check_executed()
-        row = yield self.read_next()
+        row = yield from self.read_next()
         if row is None:
-            raise gen.Return()
+            return
         self.rownumber += 1
-        raise gen.Return(row)
+        return row
 
-    @gen.coroutine
+    @asyncio.coroutine
     def fetchall(self):
         """
         Fetch all, as per MySQLdb. Pretty useless for large queries, as
@@ -405,13 +404,13 @@ class SSCursor(Cursor):
         """
         rows = []
         while True:
-            row = yield self.fetchone()
+            row = yield from self.fetchone()
             if row is None:
                 break
             rows.append(row)
-        raise gen.Return(rows)
+        return rows
 
-    @gen.coroutine
+    @asyncio.coroutine
     def fetchmany(self, size=None):
         """Fetch many"""
         self._check_executed()
@@ -420,12 +419,12 @@ class SSCursor(Cursor):
 
         rows = []
         for i in range_type(size):
-            row = yield self.read_next()
+            row = yield from self.read_next()
             if row is None:
                 break
             rows.append(row)
             self.rownumber += 1
-        raise gen.Return(rows)
+        return rows
 
     def scroll(self, value, mode='relative'):
         self._check_executed()
