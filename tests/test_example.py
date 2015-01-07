@@ -1,9 +1,10 @@
 import aiomysql
 from tests import base
 
-class TestExample(base.PyMySQLTestCase):
+class TestExample(base.AIOPyMySQLTestCase):
+
     def test_example(self):
-        conn = aiomysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
+        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
 
 
         cur = conn.cursor()
@@ -24,9 +25,3 @@ class TestExample(base.PyMySQLTestCase):
 
         cur.close()
         conn.close()
-
-__all__ = ["TestExample"]
-
-if __name__ == "__main__":
-    import unittest
-    unittest.main()

@@ -79,7 +79,3 @@ class TestConnection(AIOPyMySQLTestCase):
         #self.assertEquals(cm.exception.args[0], 2006)
         self.assertIn(cm.exception.args[0], (2006, 2013))
 
-
-if __name__ == "__main__":
-    import unittest
-    unittest.main()

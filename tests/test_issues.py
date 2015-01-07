@@ -366,7 +366,3 @@ class TestGitHubIssues(base.PyMySQLTestCase):
             finally:
                 yield cur.execute('drop table if exists test_field_count')
 
-
-if __name__ == "__main__":
-    import unittest
-    unittest.main()
