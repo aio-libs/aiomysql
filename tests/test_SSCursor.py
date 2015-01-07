@@ -2,7 +2,7 @@ from tests import base
 import aiomysql.cursors
 
 
-class TestSSCursor(base.PyMySQLTestCase):
+class TestSSCursor(base.AIOPyMySQLTestCase):
     def test_SSCursor(self):
         affected_rows = 18446744073709551615
 
@@ -87,7 +87,3 @@ class TestSSCursor(base.PyMySQLTestCase):
             cursor.close()
 
 __all__ = ["TestSSCursor"]
-
-if __name__ == "__main__":
-    import unittest
-    unittest.main()
