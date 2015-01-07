@@ -1,4 +1,4 @@
-'''
+"""
 Tornado-MySQL: A pure-Python MySQL client library for Tornado.
 
 Copyright (c) 2010, 2013-2014 PyMySQL contributors
@@ -21,16 +21,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-'''
+"""
 import asyncio
+from pymysql.constants import FIELD_TYPE
+from pymysql.converters import escape_dict, escape_sequence, escape_string
+from pymysql.err import Warning, Error, InterfaceError, DataError, \
+    DatabaseError, OperationalError, IntegrityError, InternalError, \
+    NotSupportedError, ProgrammingError, MySQLError
 
-from ._compat import text_type, JYTHON, IRONPYTHON
-from .constants import FIELD_TYPE
-from .converters import escape_dict, escape_sequence, escape_string
-from .err import Warning, Error, InterfaceError, DataError, \
-     DatabaseError, OperationalError, IntegrityError, InternalError, \
-     NotSupportedError, ProgrammingError, MySQLError
-from .times import Date, Time, Timestamp, \
+from pymysql.times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
 
 VERSION = (0, 0, 1, None)
@@ -39,9 +38,8 @@ threadsafety = 1
 apilevel = "2.0"
 paramstyle = "format"
 
+
 class DBAPISet(frozenset):
-
-
     def __ne__(self, other):
         if isinstance(other, set):
             return super(DBAPISet, self).__ne__(self, other)
@@ -71,41 +69,41 @@ TIMESTAMP = DBAPISet([FIELD_TYPE.TIMESTAMP, FIELD_TYPE.DATETIME])
 DATETIME = TIMESTAMP
 ROWID = DBAPISet()
 
-def Binary(x):
-    """Return x as a binary type."""
-    if isinstance(x, text_type) and not (JYTHON or IRONPYTHON):
-        return x.encode()
-    return bytes(x)
 
 @asyncio.coroutine
 def connect(*args, **kwargs):
     """See connections.Connection.__init__() for information about defaults."""
     from .connections import Connection
+
     conn = Connection(*args, **kwargs)
     yield from conn.connect()
     return conn
 
+
 from . import connections as _orig_conn
+
 if _orig_conn.Connection.__init__.__doc__ is not None:
     connect.__doc__ = _orig_conn.Connection.__init__.__doc__ + ("""
 See connections.Connection.__init__() for information about defaults.
 """)
 del _orig_conn
 
+
 def get_client_info():  # for MySQLdb compatibility
     return '.'.join(map(str, VERSION))
 
 
 # we include a doctored version_info here for MySQLdb compatibility
-version_info = (1,2,2,"final",0)
+version_info = (1, 2, 2, "final", 0)
 
 NULL = "NULL"
 
 __version__ = get_client_info()
 
 __all__ = [
-    'BINARY', 'Binary', 'connect', 'Connection', 'DATE', 'Date',
-    'Time', 'Timestamp', 'DateFromTicks', 'TimeFromTicks', 'TimestampFromTicks',
+    'BINARY', 'connect', 'Connection', 'DATE', 'Date',
+    'Time', 'Timestamp', 'DateFromTicks', 'TimeFromTicks',
+    'TimestampFromTicks',
     'DataError', 'DatabaseError', 'Error', 'FIELD_TYPE', 'IntegrityError',
     'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER',
     'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
@@ -114,5 +112,5 @@ __all__ = [
     'escape_dict', 'escape_sequence', 'escape_string', 'get_client_info',
     'paramstyle', 'threadsafety', 'version_info',
 
-    "NULL","__version__",
-    ]
+    "NULL", "__version__",
+]

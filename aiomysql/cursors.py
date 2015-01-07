@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function, absolute_import
 import asyncio
 import re
 
-from ._compat import range_type, text_type, PY2
-
-from .err import (
+from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
 
 
-#: Regular expression for :meth:`Cursor.executemany`.
+# : Regular expression for :meth:`Cursor.executemany`.
 #: executemany only suports simple bulk insert.
 #: You can use it to load large dataset.
-RE_INSERT_VALUES = re.compile(r"""INSERT\s.+\sVALUES\s+(\(\s*%s\s*(,\s*%s\s*)*\))\s*\Z""",
-                              re.IGNORECASE | re.DOTALL)
+RE_INSERT_VALUES = re.compile(
+    r"""INSERT\s.+\sVALUES\s+(\(\s*%s\s*(,\s*%s\s*)*\))\s*\Z""",
+    re.IGNORECASE | re.DOTALL)
 
 
 class Cursor(object):
@@ -23,7 +20,8 @@ class Cursor(object):
 
     #: Max stetement size which :meth:`executemany` generates.
     #:
-    #: Max size of allowed statement is max_allowed_packet - packet_header_size.
+    #: Max size of allowed statement is max_allowed_packet -
+    # packet_header_size.
     #: Default value of max_allowed_packet is 1048576.
     max_stmt_length = 1024000
 
@@ -49,9 +47,7 @@ class Cursor(object):
 
     @asyncio.coroutine
     def close(self):
-        '''
-        Closing a cursor just exhausts all remaining data.
-        '''
+        """Closing a cursor just exhausts all remaining data."""
         conn = self.connection
         if conn is None:
             return
@@ -98,13 +94,13 @@ class Cursor(object):
         elif isinstance(args, dict):
             return dict((key, conn.escape(val)) for (key, val) in args.items())
         else:
-            #If it's not a dictionary let's try escaping it anyways.
-            #Worst case it will throw a Value error
+            # If it's not a dictionary let's try escaping it anyways.
+            # Worst case it will throw a Value error
             return conn.escape(args)
 
     @asyncio.coroutine
     def execute(self, query, args=None):
-        '''Execute a query'''
+        """Execute a query"""
         conn = self._get_db()
 
         while (yield from self.nextset()):
@@ -133,8 +129,8 @@ class Cursor(object):
             assert q_values[0] == '(' and q_values[-1] == ')'
             q_prefix = query[:m.start(1)]
             yield from self._do_execute_many(q_prefix, q_values, args,
-                                        self.max_stmt_length,
-                                        self._get_db().encoding)
+                                             self.max_stmt_length,
+                                             self._get_db().encoding)
         else:
             rows = 0
             for arg in args:
@@ -144,21 +140,22 @@ class Cursor(object):
         return self.rowcount
 
     @asyncio.coroutine
-    def _do_execute_many(self, prefix, values, args, max_stmt_length, encoding):
+    def _do_execute_many(self, prefix, values, args, max_stmt_length,
+                         encoding):
         conn = self._get_db()
         escape = self._escape_args
-        if isinstance(prefix, text_type):
+        if isinstance(prefix, str):
             prefix = prefix.encode(encoding)
         sql = bytearray(prefix)
         args = iter(args)
         v = values % escape(next(args), conn)
-        if isinstance(v, text_type):
+        if isinstance(v, str):
             v = v.encode(encoding)
         sql += v
         rows = 0
         for arg in args:
             v = values % escape(arg, conn)
-            if isinstance(v, text_type):
+            if isinstance(v, str):
                 v = v.encode(encoding)
             if len(sql) + len(v) + 1 > max_stmt_length:
                 print(sql)
@@ -209,7 +206,7 @@ class Cursor(object):
 
         q = "CALL %s(%s)" % (procname,
                              ','.join(['@_%s_%d' % (procname, i)
-                                       for i in range_type(len(args))]))
+                                       for i in range(len(args))]))
         yield from self._query(q)
         self._executed = q
         return args
@@ -380,8 +377,7 @@ class SSCursor(Cursor):
 
     @asyncio.coroutine
     def fetchall(self):
-        """
-        Fetch all, as per MySQLdb. Pretty useless for large queries, as
+        """Fetch all, as per MySQLdb. Pretty useless for large queries, as
         it is buffered.
         """
         rows = []
@@ -400,7 +396,7 @@ class SSCursor(Cursor):
             size = self.arraysize
 
         rows = []
-        for i in range_type(size):
+        for i in range(size):
             row = yield from self.read_next()
             if row is None:
                 break
@@ -414,9 +410,9 @@ class SSCursor(Cursor):
         if mode == 'relative':
             if value < 0:
                 raise NotSupportedError(
-                        "Backwards scrolling not supported by this cursor")
+                    "Backwards scrolling not supported by this cursor")
 
-            for _ in range_type(value):
+            for _ in range(value):
                 self.read_next()
             self.rownumber += value
         elif mode == 'absolute':
@@ -425,7 +421,7 @@ class SSCursor(Cursor):
                     "Backwards scrolling not supported by this cursor")
 
             end = value - self.rownumber
-            for _ in range_type(end):
+            for _ in range(end):
                 self.read_next()
             self.rownumber = value
         else:
