@@ -33,7 +33,7 @@ from .err import Warning, Error, InterfaceError, DataError, \
 from .times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
 
-VERSION = (0, 6, 2, None)
+VERSION = (0, 0, 1, None)
 
 threadsafety = 1
 apilevel = "2.0"
