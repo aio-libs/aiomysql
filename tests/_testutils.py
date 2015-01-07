@@ -28,11 +28,3 @@ class BaseTest(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
         del self.loop
-
-
-def get_open_port():
-    sock = socket.socket()
-    sock.bind(("", 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    return port
