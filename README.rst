@@ -1,5 +1,7 @@
 aiomysql (work in progress)
 ===========================
+.. image:: https://travis-ci.org/jettify/aiomysql.svg
+    :target: https://travis-ci.org/jettify/aiomysql
 
 Fork of https://github.com/PyMySQL/Tornado-MySQL
 
