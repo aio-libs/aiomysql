@@ -13,8 +13,9 @@ class TestExample(AIOPyMySQLTestCase):
 
         cur = conn.cursor()
         yield from cur.execute("SELECT Host,User FROM user")
-        print(cur.description)
+        # print(cur.description)
         r = cur.fetchall()
-        print(r)
+        self.assertTrue(r)
+        # print(r)
         cur.close()
         conn.close()
