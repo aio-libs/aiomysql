@@ -1,12 +1,23 @@
 language: python
-python: "2.7"
 
-install:
-    - pip install -M tox
+python:
+    - 3.3
+    - 3.4
 
 before_script:
-    - "mysql -e 'create database test_pymysql  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
-    - "mysql -e 'create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
-    - cp .travis.databases.json tornado_mysql/tests/databases.json
+    - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql; create database test_pymysql  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
+    - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql2; create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
+    - cp .travis.databases.json aiomysql/tests/databases.json
 
-script: tox
+install:
+    - pip install flake8
+    - pip install nose
+    - pip install coverage
+    - pip install .
+    - pip install coveralls
+
+script:
+  - make cov
+
+after_success:
+  - coveralls
