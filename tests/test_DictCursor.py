@@ -1,18 +1,18 @@
 import asyncio
 import datetime
 
-from tornado.testing import gen_test
-from tornado import gen
-
 from tests import base
 import aiomysql.cursors
 from tests._testutils import run_until_complete
 
 
 class TestDictCursor(base.AIOPyMySQLTestCase):
-    bob = {'name': 'bob', 'age': 21, 'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56)}
-    jim = {'name': 'jim', 'age': 56, 'DOB': datetime.datetime(1955, 5, 9, 13, 12, 45)}
-    fred = {'name': 'fred', 'age': 100, 'DOB': datetime.datetime(1911, 9, 12, 1, 1, 1)}
+    bob = {'name': 'bob', 'age': 21,
+           'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56)}
+    jim = {'name': 'jim', 'age': 56,
+           'DOB': datetime.datetime(1955, 5, 9, 13, 12, 45)}
+    fred = {'name': 'fred', 'age': 100,
+            'DOB': datetime.datetime(1911, 9, 12, 1, 1, 1)}
 
     cursor_type = aiomysql.cursors.DictCursor
 
@@ -26,26 +26,32 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
 
             # create a table ane some data to query
             yield from c.execute("drop table if exists dictcursor")
-            yield from c.execute("""CREATE TABLE dictcursor (name char(20), age int , DOB datetime)""")
+            yield from c.execute(
+                """CREATE TABLE dictcursor (name char(20), age int ,
+                DOB datetime)""")
             data = [("bob", 21, "1990-02-06 23:04:56"),
                     ("jim", 56, "1955-05-09 13:12:45"),
                     ("fred", 100, "1911-09-12 01:01:01")]
-            yield from c.executemany("insert into dictcursor values (%s,%s,%s)", data)
+            yield from c.executemany("insert into dictcursor values "
+                                     "(%s,%s,%s)",
+                                     data)
+
         self.loop.run_until_complete(prepare())
 
     def tearDown(self):
-
         @asyncio.coroutine
         def shutdown():
             c = self.conn.cursor()
             c.execute("drop table dictcursor")
+
         self.loop.run_until_complete(shutdown())
         super(TestDictCursor, self).tearDown()
 
     @run_until_complete
     def test_DictCursor(self):
         bob, jim, fred = self.bob.copy(), self.jim.copy(), self.fred.copy()
-        #all assert test compare to the structure as would come out from MySQLdb
+        # all assert test compare to the structure as would come
+        # out from MySQLdb
         conn = self.conn
         c = conn.cursor(self.cursor_type)
 
@@ -59,19 +65,23 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         # same again, but via fetchall => tuple)
         yield from c.execute("SELECT * from dictcursor where name='bob'")
         r = c.fetchall()
-        self.assertEqual([bob], r, "fetch a 1 row result via fetchall failed via DictCursor")
+        self.assertEqual([bob], r,
+                         "fetch a 1 row result via fetchall failed via "
+                         "DictCursor")
         # same test again but iterate over the
         yield from c.execute("SELECT * from dictcursor where name='bob'")
         for r in c:
-            self.assertEqual(bob, r, "fetch a 1 row result via iteration failed via DictCursor")
+            self.assertEqual(bob, r,
+                             "fetch a 1 row result via iteration failed via "
+                             "DictCursor")
         # get all 3 row via fetchall
         yield from c.execute("SELECT * from dictcursor")
         r = c.fetchall()
-        self.assertEqual([bob,jim,fred], r, "fetchall failed via DictCursor")
-        #same test again but do a list comprehension
+        self.assertEqual([bob, jim, fred], r, "fetchall failed via DictCursor")
+        # same test again but do a list comprehension
         yield from c.execute("SELECT * from dictcursor")
         r = list(c)
-        self.assertEqual([bob,jim,fred], r, "DictCursor should be iterable")
+        self.assertEqual([bob, jim, fred], r, "DictCursor should be iterable")
         # get all 2 row via fetchmany
         yield from c.execute("SELECT * from dictcursor")
         r = c.fetchmany(2)
@@ -80,12 +90,12 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_custom_dict(self):
-
         class MyDict(dict):
             pass
 
         class MyDictCursor(self.cursor_type):
             dict_type = MyDict
+
         keys = ['name', 'age', 'DOB']
         bob = MyDict([(k, self.bob[k]) for k in keys])
         jim = MyDict([(k, self.jim[k]) for k in keys])
@@ -112,5 +122,5 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
                          "list failed via MyDictCursor")
 
 
-#class TestSSDictCursor(TestDictCursor):
-#    cursor_type = aiomysql.cursors.SSDictCursor
+# class TestSSDictCursor(TestDictCursor):
+# cursor_type = aiomysql.cursors.SSDictCursor

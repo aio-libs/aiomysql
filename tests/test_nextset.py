@@ -5,7 +5,6 @@ from tests._testutils import run_until_complete
 
 
 class TestNextset(base.AIOPyMySQLTestCase):
-
     def setUp(self):
         super(TestNextset, self).setUp()
         self.con = self.connections[0]
@@ -64,5 +63,5 @@ class TestNextset(base.AIOPyMySQLTestCase):
         res = yield from cur1.nextset()
         self.assertIsNone(res)
 
-    #TODO: How about SSCursor and nextset?
-    # It's very hard to implement correctly...
+        # TODO: How about SSCursor and nextset?
+        # It's very hard to implement correctly...

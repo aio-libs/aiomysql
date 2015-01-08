@@ -2,6 +2,7 @@ import aiomysql
 from tests._testutils import run_until_complete
 from tests.base import AIOPyMySQLTestCase
 
+
 class TestExample(AIOPyMySQLTestCase):
 
     @run_until_complete
