@@ -79,17 +79,9 @@ def connect(*args, **kwargs):
     yield from conn.connect()
     return conn
 
-
-def get_client_info():  # for MySQLdb compatibility
-    return '.'.join(map(str, VERSION))
-
-
-# we include a doctored version_info here for MySQLdb compatibility
-version_info = (1, 2, 2, "final", 0)
-
 NULL = "NULL"
 
-__version__ = get_client_info()
+__version__ = '0.0.1'
 
 __all__ = [
     'BINARY', 'connect', 'Connection', 'DATE', 'Date',
@@ -100,7 +92,7 @@ __all__ = [
     'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
     'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Warning', 'apilevel',
     'connections', 'constants', 'converters', 'cursors',
-    'escape_dict', 'escape_sequence', 'escape_string', 'get_client_info',
+    'escape_dict', 'escape_sequence', 'escape_string',
     'paramstyle', 'threadsafety', 'version_info',
 
     "NULL", "__version__",
