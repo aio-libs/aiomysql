@@ -80,15 +80,6 @@ def connect(*args, **kwargs):
     return conn
 
 
-from . import connections as _orig_conn
-
-if _orig_conn.Connection.__init__.__doc__ is not None:
-    connect.__doc__ = _orig_conn.Connection.__init__.__doc__ + ("""
-See connections.Connection.__init__() for information about defaults.
-""")
-del _orig_conn
-
-
 def get_client_info():  # for MySQLdb compatibility
     return '.'.join(map(str, VERSION))
 
