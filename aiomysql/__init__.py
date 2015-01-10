@@ -22,86 +22,74 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
+
+from pymysql import (DBAPISet, NULL, Binary, DATE, NUMBER,
+                     BINARY, ROWID, STRING, TIME, TIMESTAMP)
 from pymysql.constants import FIELD_TYPE
 from pymysql.converters import escape_dict, escape_sequence, escape_string
-from pymysql.err import Warning, Error, InterfaceError, DataError, \
-    DatabaseError, OperationalError, IntegrityError, InternalError, \
-    NotSupportedError, ProgrammingError, MySQLError
-from pymysql.times import Date, Time, Timestamp, \
-    DateFromTicks, TimeFromTicks, TimestampFromTicks
 
-from .connection import connect
+from pymysql.times import (Date, Time, Timestamp,
+                           DateFromTicks, TimeFromTicks, TimestampFromTicks)
+
+from pymysql.err import (Warning, Error, InterfaceError, DataError,
+                         DatabaseError, OperationalError, IntegrityError,
+                         InternalError,
+                         NotSupportedError, ProgrammingError, MySQLError)
+
+from .connection import Connection, connect
 from .pool import create_pool, Pool
 
+__version__ = '0.0.1'
+
 __all__ = [
-    'BINARY',
-    'Connection',
-    'DATE',
     'Date',
     'Time',
     'Timestamp',
     'DateFromTicks',
     'TimeFromTicks',
     'TimestampFromTicks',
-    'DataError',
-    'DatabaseError',
-    'Error',
+    'Binary',
     'FIELD_TYPE',
-    'IntegrityError',
-    'InterfaceError',
-    'InternalError',
-    'MySQLError',
     'NULL',
     'NUMBER',
-    'NotSupportedError',
-    'DBAPISet',
-    'OperationalError',
-    'ProgrammingError',
+    'BINARY',
     'ROWID',
     'STRING',
     'TIME',
     'TIMESTAMP',
+    'DATE',
+
+    # Errors
+    'Error',
+    'DataError',
+    'DatabaseError',
+    'IntegrityError',
+    'InterfaceError',
+    'InternalError',
+    'MySQLError',
+    'NotSupportedError',
+    'OperationalError',
+    'ProgrammingError',
     'Warning',
+
+    'DBAPISet',
+
     'apilevel',
-    'connections',
-    'constants',
-    'converters',
-    'cursors',
     'escape_dict',
     'escape_sequence',
     'escape_string',
     'paramstyle',
     'threadsafety',
-    'version_info',
-    "NULL", "__version__",
+    "__version__",
 
+    'Connection',
+    'Pool'
     'connect',
     'create_pool',
-    'Pool'
 ]
 
+(Connection, Pool, connect, create_pool)  # pyflakes
 
 threadsafety = 1
-apilevel = "2.0"
-paramstyle = "format"
-
-NULL = "NULL"
-
-__version__ = '0.0.1'
-
-
-class DBAPISet(frozenset):
-    def __ne__(self, other):
-        if isinstance(other, set):
-            return super(DBAPISet, self).__ne__(self, other)
-        else:
-            return other not in self
-
-    def __eq__(self, other):
-        if isinstance(other, frozenset):
-            return frozenset.__eq__(self, other)
-        else:
-            return other in self
-
-    def __hash__(self):
-        return frozenset.__hash__(self)
+apilevel = '2.0'
+paramstyle = 'format'
