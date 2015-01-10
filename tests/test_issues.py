@@ -61,7 +61,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         conn = yield from aiomysql.connect(loop=self.loop, **kwargs)
         c = conn.cursor()
         yield from c.execute("select * from user")
-        yield from conn.close_async()
+        yield from conn.wait_closed()
 
     @run_until_complete
     def test_issue_8(self):
@@ -207,7 +207,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
         c = conn.cursor()
         print("sudo killall -9 mysqld within the next 10 seconds")
         try:
-            c.execute("select sleep(10)")
+            yield from c.execute("select sleep(10)")
             self.fail()
         except aiomysql.OperationalError as e:
             self.assertEqual(2013, e.args[0])
@@ -355,11 +355,11 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         self.assertFalse(c.fetchone()[0])
-        yield from conn.close_async()
+        yield from conn.wait_closed()
         yield from conn.ping()
         yield from c.execute("""select @@autocommit;""")
         self.assertFalse(c.fetchone()[0])
-        yield from conn.close_async()
+        yield from conn.wait_closed()
 
         # Ensure autocommit() is still working
         conn = yield from aiomysql.connect(charset="utf8", loop=self.loop,
@@ -367,12 +367,12 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         self.assertFalse(c.fetchone()[0])
-        yield from conn.close_async()
+        yield from conn.wait_closed()
         yield from conn.ping()
         yield from conn.autocommit(True)
         yield from c.execute("""select @@autocommit;""")
         self.assertTrue(c.fetchone()[0])
-        yield from conn.close_async()
+        yield from conn.wait_closed()
 
     @run_until_complete
     def test_issue_175(self):

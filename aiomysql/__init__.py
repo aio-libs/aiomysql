@@ -1,5 +1,5 @@
 """
-Tornado-MySQL: A pure-Python MySQL client library for Tornado.
+aiomysql: A pure-Python MySQL client library for asyncio.
 
 Copyright (c) 2010, 2013-2014 PyMySQL contributors
 
@@ -27,23 +27,57 @@ from pymysql.converters import escape_dict, escape_sequence, escape_string
 from pymysql.err import Warning, Error, InterfaceError, DataError, \
     DatabaseError, OperationalError, IntegrityError, InternalError, \
     NotSupportedError, ProgrammingError, MySQLError
-
 from pymysql.times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
 
-__all__ = [
-    'BINARY', 'connect', 'Connection', 'DATE', 'Date',
-    'Time', 'Timestamp', 'DateFromTicks', 'TimeFromTicks',
-    'TimestampFromTicks',
-    'DataError', 'DatabaseError', 'Error', 'FIELD_TYPE', 'IntegrityError',
-    'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER',
-    'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
-    'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Warning', 'apilevel',
-    'connections', 'constants', 'converters', 'cursors',
-    'escape_dict', 'escape_sequence', 'escape_string',
-    'paramstyle', 'threadsafety', 'version_info',
+from .connection import connect
+from .pool import create_pool, Pool
 
+__all__ = [
+    'BINARY',
+    'Connection',
+    'DATE',
+    'Date',
+    'Time',
+    'Timestamp',
+    'DateFromTicks',
+    'TimeFromTicks',
+    'TimestampFromTicks',
+    'DataError',
+    'DatabaseError',
+    'Error',
+    'FIELD_TYPE',
+    'IntegrityError',
+    'InterfaceError',
+    'InternalError',
+    'MySQLError',
+    'NULL',
+    'NUMBER',
+    'NotSupportedError',
+    'DBAPISet',
+    'OperationalError',
+    'ProgrammingError',
+    'ROWID',
+    'STRING',
+    'TIME',
+    'TIMESTAMP',
+    'Warning',
+    'apilevel',
+    'connections',
+    'constants',
+    'converters',
+    'cursors',
+    'escape_dict',
+    'escape_sequence',
+    'escape_string',
+    'paramstyle',
+    'threadsafety',
+    'version_info',
     "NULL", "__version__",
+
+    'connect',
+    'create_pool',
+    'Pool'
 ]
 
 

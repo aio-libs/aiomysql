@@ -191,13 +191,18 @@ class Connection:
         self._reader = None
         self._writer = None
 
+    @property
+    def closed(self):
+        return self._writer is None
+
     def close(self):
         """Send the quit message and close the socket"""
-        self._writer.transport.close()
-        self._writer = None
+        if self._writer:
+            self._writer.transport.close()
+            self._writer = None
 
     @asyncio.coroutine
-    def close_async(self):
+    def wait_closed(self):
         send_data = struct.pack('<i', 1) + int2byte(COM_QUIT)
         self._writer.write(send_data)
         yield from self._writer.drain()

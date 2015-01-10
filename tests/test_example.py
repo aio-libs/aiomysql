@@ -8,8 +8,8 @@ class TestExample(AIOPyMySQLTestCase):
     @run_until_complete
     def test_example(self):
         conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
-                                           user='root', passwd='', db='mysql',
-                                           loop=self.loop)
+                                           user='root', password='',
+                                           db='mysql', loop=self.loop)
 
         cur = conn.cursor()
         yield from cur.execute("SELECT Host,User FROM user")
