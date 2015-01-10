@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
-import asyncio
 from pymysql.constants import FIELD_TYPE
 from pymysql.converters import escape_dict, escape_sequence, escape_string
 from pymysql.err import Warning, Error, InterfaceError, DataError, \
@@ -32,11 +31,29 @@ from pymysql.err import Warning, Error, InterfaceError, DataError, \
 from pymysql.times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
 
-VERSION = (0, 0, 1, None)
+__all__ = [
+    'BINARY', 'connect', 'Connection', 'DATE', 'Date',
+    'Time', 'Timestamp', 'DateFromTicks', 'TimeFromTicks',
+    'TimestampFromTicks',
+    'DataError', 'DatabaseError', 'Error', 'FIELD_TYPE', 'IntegrityError',
+    'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER',
+    'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
+    'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Warning', 'apilevel',
+    'connections', 'constants', 'converters', 'cursors',
+    'escape_dict', 'escape_sequence', 'escape_string',
+    'paramstyle', 'threadsafety', 'version_info',
+
+    "NULL", "__version__",
+]
+
 
 threadsafety = 1
 apilevel = "2.0"
 paramstyle = "format"
+
+NULL = "NULL"
+
+__version__ = '0.0.1'
 
 
 class DBAPISet(frozenset):
@@ -54,46 +71,3 @@ class DBAPISet(frozenset):
 
     def __hash__(self):
         return frozenset.__hash__(self)
-
-
-STRING = DBAPISet([FIELD_TYPE.ENUM, FIELD_TYPE.STRING,
-                   FIELD_TYPE.VAR_STRING])
-BINARY = DBAPISet([FIELD_TYPE.BLOB, FIELD_TYPE.LONG_BLOB,
-                   FIELD_TYPE.MEDIUM_BLOB, FIELD_TYPE.TINY_BLOB])
-NUMBER = DBAPISet([FIELD_TYPE.DECIMAL, FIELD_TYPE.DOUBLE, FIELD_TYPE.FLOAT,
-                   FIELD_TYPE.INT24, FIELD_TYPE.LONG, FIELD_TYPE.LONGLONG,
-                   FIELD_TYPE.TINY, FIELD_TYPE.YEAR])
-DATE = DBAPISet([FIELD_TYPE.DATE, FIELD_TYPE.NEWDATE])
-TIME = DBAPISet([FIELD_TYPE.TIME])
-TIMESTAMP = DBAPISet([FIELD_TYPE.TIMESTAMP, FIELD_TYPE.DATETIME])
-DATETIME = TIMESTAMP
-ROWID = DBAPISet()
-
-
-@asyncio.coroutine
-def connect(*args, **kwargs):
-    """See connections.Connection.__init__() for information about defaults."""
-    from .connections import Connection
-
-    conn = Connection(*args, **kwargs)
-    yield from conn.connect()
-    return conn
-
-NULL = "NULL"
-
-__version__ = '0.0.1'
-
-__all__ = [
-    'BINARY', 'connect', 'Connection', 'DATE', 'Date',
-    'Time', 'Timestamp', 'DateFromTicks', 'TimeFromTicks',
-    'TimestampFromTicks',
-    'DataError', 'DatabaseError', 'Error', 'FIELD_TYPE', 'IntegrityError',
-    'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER',
-    'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
-    'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Warning', 'apilevel',
-    'connections', 'constants', 'converters', 'cursors',
-    'escape_dict', 'escape_sequence', 'escape_string',
-    'paramstyle', 'threadsafety', 'version_info',
-
-    "NULL", "__version__",
-]
