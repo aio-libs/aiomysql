@@ -41,6 +41,7 @@ class Cursor:
                 pass
         finally:
             self.connection = None
+
     @property
     def closed(self):
         return True if self.connection else False

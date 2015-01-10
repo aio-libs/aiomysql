@@ -91,24 +91,24 @@ class Connection:
         :param password: Password to use.
         :param db: Database to use, None to not use a particular one.
         :param port: MySQL port to use, default is usually OK.
-        :param unix_socket: Optionally, you can use a unix socket rather 
+        :param unix_socket: Optionally, you can use a unix socket rather
         than TCP/IP.
         :param charset: Charset you want to use.
         :param sql_mode: Default SQL_MODE to use.
-        :param read_default_file: Specifies  my.cnf file to read these 
+        :param read_default_file: Specifies  my.cnf file to read these
             parameters from under the [client] section.
-        :param conv: Decoders dictionary to use instead of the default one. 
-            This is used to provide custom marshalling of types. 
+        :param conv: Decoders dictionary to use instead of the default one.
+            This is used to provide custom marshalling of types.
             See converters.
-        :param use_unicode: Whether or not to default to unicode strings. 
-        :param  client_flag: Custom flags to send to MySQL. Find 
+        :param use_unicode: Whether or not to default to unicode strings.
+        :param  client_flag: Custom flags to send to MySQL. Find
             potential values in constants.CLIENT.
         :param cursorclass: Custom cursor class to use.
         :param init_command: Initial SQL statement to run when connection is
             established.
-        :param connect_timeout: Timeout before throwing an exception 
+        :param connect_timeout: Timeout before throwing an exception
             when connecting.
-        :param read_default_group: Group to read from in the configuration 
+        :param read_default_group: Group to read from in the configuration
             file.
         :param no_delay: Disable Nagle's algorithm on the socket
         :param autocommit: Autocommit mode. None means use server default.
@@ -186,7 +186,7 @@ class Connection:
         self.decoders = conv
         self.sql_mode = sql_mode
         self.init_command = init_command
-        
+
         # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None

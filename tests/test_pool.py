@@ -2,8 +2,6 @@ import asyncio
 import json
 import os
 import unittest
-from unittest import mock
-
 
 import aiomysql
 from aiomysql.connection import Connection
@@ -30,7 +28,7 @@ class TestPool(unittest.TestCase):
         self.pool = None
 
         self.params = {"host": "localhost", "user": "root", "password": "",
-             "db": "test_pymysql", "use_unicode": True},
+                       "db": "test_pymysql", "use_unicode": True},
 
     def tearDown(self):
         if self.pool is not None:
