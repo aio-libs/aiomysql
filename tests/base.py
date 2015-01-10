@@ -1,8 +1,6 @@
 import asyncio
 import json
-
 import os
-
 import aiomysql
 from tests._testutils import BaseTest
 
@@ -16,9 +14,9 @@ class AIOPyMySQLTestCase(BaseTest):
             databases = json.load(f)
     else:
         databases = [
-            {"host": "localhost", "user": "root", "passwd": "",
+            {"host": "localhost", "user": "root", "password": "",
              "db": "test_pymysql", "use_unicode": True},
-            {"host": "localhost", "user": "root", "passwd": "",
+            {"host": "localhost", "user": "root", "password": "",
              "db": "test_pymysql2"}]
 
     @asyncio.coroutine

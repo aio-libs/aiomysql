@@ -44,7 +44,7 @@ sha_new = partial(hashlib.new, 'sha1')
 
 @asyncio.coroutine
 def connect(host="localhost", user=None, password="",
-            database=None, port=3306, unix_socket=None,
+            db=None, port=3306, unix_socket=None,
             charset='', sql_mode=None,
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
@@ -54,7 +54,7 @@ def connect(host="localhost", user=None, password="",
     defaults."""
 
     conn = Connection(host=host, user=user, password=password,
-                      database=database, port=port, unix_socket=unix_socket,
+                      db=db, port=port, unix_socket=unix_socket,
                       charset=charset, sql_mode=sql_mode,
                       read_default_file=read_default_file, conv=conv,
                       use_unicode=use_unicode, client_flag=client_flag,
@@ -76,7 +76,7 @@ class Connection:
     """
 
     def __init__(self, host="localhost", user=None, password="",
-                 database=None, port=3306, unix_socket=None,
+                 db=None, port=3306, unix_socket=None,
                  charset='', sql_mode=None,
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
@@ -89,7 +89,7 @@ class Connection:
         :param host: Host where the database server is located
         :param user: Username to log in as
         :param password: Password to use.
-        :param database: Database to use, None to not use a particular one.
+        :param db: Database to use, None to not use a particular one.
         :param port: MySQL port to use, default is usually OK.
         :param unix_socket: Optionally, you can use a unix socket rather 
         than TCP/IP.
@@ -142,7 +142,7 @@ class Connection:
             user = _config("user", user)
             password = _config("password", password)
             host = _config("host", host)
-            database = _config("database", database)
+            db = _config("database", db)
             unix_socket = _config("socket", unix_socket)
             port = int(_config("port", port))
             charset = _config("default-character-set", charset)
@@ -151,7 +151,7 @@ class Connection:
         self.port = port
         self.user = user or DEFAULT_USER
         self.password = password or ""
-        self.db = database
+        self.db = db
         self.no_delay = no_delay
         self.unix_socket = unix_socket
         if charset:
