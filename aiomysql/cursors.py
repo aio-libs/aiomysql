@@ -1,21 +1,13 @@
 import asyncio
-import re
 
+from pymysql.cursors import RE_INSERT_VALUES
 from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
 
 
-# : Regular expression for :meth:`Cursor.executemany`.
-#: executemany only suports simple bulk insert.
-#: You can use it to load large dataset.
-RE_INSERT_VALUES = re.compile(
-    r"""INSERT\s.+\sVALUES\s+(\(\s*%s\s*(,\s*%s\s*)*\))\s*\Z""",
-    re.IGNORECASE | re.DOTALL)
-
-
-class Cursor(object):
+class Cursor:
     """Cursor is used to interact with the database."""
 
     #: Max stetement size which :meth:`executemany` generates.
@@ -26,10 +18,9 @@ class Cursor(object):
     max_stmt_length = 1024000
 
     def __init__(self, connection):
-        '''
-        Do not create an instance of a Cursor yourself. Call
+        """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
-        '''
+        """
         self.connection = connection
         self.description = None
         self.rownumber = 0
@@ -38,12 +29,6 @@ class Cursor(object):
         self._executed = None
         self._result = None
         self._rows = None
-
-    def __del__(self):
-        '''
-        When this gets GC'd close it.
-        '''
-        self.close()
 
     @asyncio.coroutine
     def close(self):
@@ -212,7 +197,7 @@ class Cursor(object):
         return args
 
     def fetchone(self):
-        ''' Fetch the next row '''
+        """Fetch the next row """
         self._check_executed()
         if self._rows is None or self.rownumber >= len(self._rows):
             return None
@@ -221,7 +206,7 @@ class Cursor(object):
         return result
 
     def fetchmany(self, size=None):
-        ''' Fetch several rows '''
+        """ Fetch several rows """
         self._check_executed()
         if self._rows is None:
             return None
@@ -231,7 +216,7 @@ class Cursor(object):
         return result
 
     def fetchall(self):
-        ''' Fetch all the rows '''
+        """Fetch all the rows """
         self._check_executed()
         if self._rows is None:
             return None
@@ -288,12 +273,12 @@ class Cursor(object):
     NotSupportedError = NotSupportedError
 
 
-class DictCursorMixin(object):
+class DictCursor(Cursor):
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
 
     def _do_get_result(self):
-        super(DictCursorMixin, self)._do_get_result()
+        super()._do_get_result()
         fields = []
         if self.description:
             for f in self._result.fields:
@@ -310,7 +295,3 @@ class DictCursorMixin(object):
         if row is None:
             return None
         return self.dict_type(zip(self._fields, row))
-
-
-class DictCursor(DictCursorMixin, Cursor):
-    """A cursor which returns results as a dictionary"""
