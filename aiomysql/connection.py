@@ -210,7 +210,7 @@ class Connection:
 
     @property
     def open(self):
-        return self._writer is not None
+        return not self.closed
 
     # def __del__(self):
     #     self.close()
@@ -223,8 +223,8 @@ class Connection:
             yield from self._send_autocommit_mode()
 
     def get_autocommit(self):
-        return bool(self.server_status &
-                    SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT)
+        status = self.server_status & SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT
+        return bool(status)
 
     @asyncio.coroutine
     def _read_ok_packet(self):
@@ -591,7 +591,8 @@ class Connection:
 
 # TODO: move OK and EOF packet parsing/logic into a proper subclass
 # of MysqlPacket like has been done with FieldDescriptorPacket.
-class MySQLResult(object):
+class MySQLResult:
+
     def __init__(self, connection):
         self.connection = connection
         self.affected_rows = None
