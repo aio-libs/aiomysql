@@ -42,6 +42,31 @@ DEFAULT_USER = getpass.getuser()
 sha_new = partial(hashlib.new, 'sha1')
 
 
+@asyncio.coroutine
+def connect(host="localhost", user=None, password="",
+            database=None, port=3306, unix_socket=None,
+            charset='', sql_mode=None,
+            read_default_file=None, conv=decoders, use_unicode=None,
+            client_flag=0, cursorclass=Cursor, init_command=None,
+            connect_timeout=None, read_default_group=None,
+            no_delay=False, autocommit=False, loop=None):
+    """See connections.Connection.__init__() for information about
+    defaults."""
+
+    conn = Connection(host=host, user=user, password=password,
+                      database=database, port=port, unix_socket=unix_socket,
+                      charset=charset, sql_mode=sql_mode,
+                      read_default_file=read_default_file, conv=conv,
+                      use_unicode=use_unicode, client_flag=client_flag,
+                      cursorclass=cursorclass, init_command=init_command,
+                      connect_timeout=connect_timeout,
+                      read_default_group=read_default_group, no_delay=no_delay,
+                      autocommit=autocommit, loop=loop)
+
+    yield from conn.connect()
+    return conn
+
+
 class Connection:
     """
     Representation of a socket with a mysql server.
@@ -50,66 +75,50 @@ class Connection:
     connect().
     """
 
-    # : :type: tornado.iostream.IOStream
-
     def __init__(self, host="localhost", user=None, password="",
                  database=None, port=3306, unix_socket=None,
                  charset='', sql_mode=None,
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 compress=None, named_pipe=None, no_delay=False,
-                 autocommit=False, db=None, passwd=None, loop=None):
+                 no_delay=False, autocommit=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
 
-        host: Host where the database server is located
-        user: Username to log in as
-        password: Password to use.
-        database: Database to use, None to not use a particular one.
-        port: MySQL port to use, default is usually OK.
-        unix_socket: Optionally, you can use a unix socket rather than TCP/IP.
-        charset: Charset you want to use.
-        sql_mode: Default SQL_MODE to use.
-        read_default_file: Specifies  my.cnf file to read these parameters
-        from under the [client] section.
-        conv: Decoders dictionary to use instead of the default one. This is
-        used to provide custom marshalling of types. See converters.
-        use_unicode: Whether or not to default to unicode strings. This option
-        defaults to true for Py3k.
-        client_flag: Custom flags to send to MySQL. Find potential values in
-        constants.CLIENT.
-        cursorclass: Custom cursor class to use.
-        init_command: Initial SQL statement to run when connection is
-        established.
-        connect_timeout: Timeout before throwing an exception when connecting.
-        ssl: A dict of arguments similar to mysql_ssl_set()'s parameters. For
-        now the capath and cipher arguments are not supported.
-        read_default_group: Group to read from in the configuration file.
-        compress; Not supported
-        named_pipe: Not supported
-        no_delay: Disable Nagle's algorithm on the socket
-        autocommit: Autocommit mode. None means use server default.
-        (default: False)
-        io_loop: Tornado IOLoop
-
-        db: Alias for database. (for compatibility to MySQLdb)
-        passwd: Alias for password. (for compatibility to MySQLdb)
+        :param host: Host where the database server is located
+        :param user: Username to log in as
+        :param password: Password to use.
+        :param database: Database to use, None to not use a particular one.
+        :param port: MySQL port to use, default is usually OK.
+        :param unix_socket: Optionally, you can use a unix socket rather 
+        than TCP/IP.
+        :param charset: Charset you want to use.
+        :param sql_mode: Default SQL_MODE to use.
+        :param read_default_file: Specifies  my.cnf file to read these 
+            parameters from under the [client] section.
+        :param conv: Decoders dictionary to use instead of the default one. 
+            This is used to provide custom marshalling of types. 
+            See converters.
+        :param use_unicode: Whether or not to default to unicode strings. 
+        :param  client_flag: Custom flags to send to MySQL. Find 
+            potential values in constants.CLIENT.
+        :param cursorclass: Custom cursor class to use.
+        :param init_command: Initial SQL statement to run when connection is
+            established.
+        :param connect_timeout: Timeout before throwing an exception 
+            when connecting.
+        :param read_default_group: Group to read from in the configuration 
+            file.
+        :param no_delay: Disable Nagle's algorithm on the socket
+        :param autocommit: Autocommit mode. None means use server default.
+            (default: False)
+        :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
 
         if use_unicode is None and sys.version_info[0] > 2:
             use_unicode = True
-
-        if db is not None and database is None:
-            database = db
-        if passwd is not None and not password:
-            password = passwd
-
-        if compress or named_pipe:
-            raise NotImplementedError("compress and named_pipe arguments "
-                                      "are not supported")
 
         if read_default_group and not read_default_file:
             if sys.platform.startswith("win"):
@@ -177,7 +186,8 @@ class Connection:
         self.decoders = conv
         self.sql_mode = sql_mode
         self.init_command = init_command
-
+        
+        # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None
 
@@ -222,7 +232,7 @@ class Connection:
 
     @asyncio.coroutine
     def _send_autocommit_mode(self):
-        ''' Set whether or not to commit after every execute() '''
+        """Set whether or not to commit after every execute() """
         yield from self._execute_command(
             COM_QUERY,
             "SET AUTOCOMMIT = %s" % self.escape(self.autocommit_mode))
@@ -236,30 +246,30 @@ class Connection:
 
     @asyncio.coroutine
     def commit(self):
-        ''' Commit changes to stable storage '''
+        """ Commit changes to stable storage """
         yield from self._execute_command(COM_QUERY, "COMMIT")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def rollback(self):
-        ''' Roll back the current transaction '''
+        """ Roll back the current transaction """
         yield from self._execute_command(COM_QUERY, "ROLLBACK")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def select_db(self, db):
-        '''Set current db'''
+        """Set current db"""
         yield from self._execute_command(COM_INIT_DB, db)
         yield from self._read_ok_packet()
 
     def escape(self, obj):
-        ''' Escape whatever value you pass to it  '''
+        """ Escape whatever value you pass to it  """
         if isinstance(obj, str):
             return "'" + self.escape_string(obj) + "'"
         return escape_item(obj, self.charset)
 
     def literal(self, obj):
-        '''Alias for escape()'''
+        """Alias for escape()"""
         return self.escape(obj)
 
     def escape_string(self, s):
@@ -269,7 +279,7 @@ class Connection:
         return escape_string(s)
 
     def cursor(self, cursor=None):
-        ''' Create a new cursor to execute queries with '''
+        """ Create a new cursor to execute queries with """
         if cursor:
             return cursor(self)
         return self.cursorclass(self)
@@ -555,6 +565,9 @@ class Connection:
             # salt_len includes auth_plugin_data_part_1 and filler
             self.salt += data[i:i + salt_len]
             # TODO: AUTH PLUGIN NAME may appeare here.
+
+    def get_transaction_status(self):
+        return bool(self.server_status & SERVER_STATUS.SERVER_STATUS_IN_TRANS)
 
     def get_server_info(self):
         return self.server_version
