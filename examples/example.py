@@ -1,18 +1,22 @@
-#!/usr/bin/env python
-from __future__ import print_function
-
-from tornado import ioloop, gen
+import asyncio
 import aiomysql
 
-@gen.coroutine
-def main():
-    conn = yield aiomysql.connect(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql')
+
+loop = asyncio.get_event_loop()
+
+
+@asyncio.coroutine
+def test_example():
+    conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                       user='root', passwd='', db='mysql',
+                                       loop=loop)
+
     cur = conn.cursor()
-    yield cur.execute("SELECT Host,User FROM user")
+    yield from cur.execute("SELECT Host,User FROM user")
     print(cur.description)
-    for row in cur:
-       print(row)
+    r = cur.fetchall()
+    print(r)
     cur.close()
     conn.close()
 
-ioloop.IOLoop.current().run_sync(main)
+loop.run_until_complete(test_example())

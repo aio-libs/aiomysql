@@ -1,33 +1,22 @@
-#!/usr/bin/env python
-from __future__ import print_function
-
-from tornado import ioloop, gen
-from aiomysql import pools
+import asyncio
+import aiomysql
 
 
-pools.DEBUG = True
+loop = asyncio.get_event_loop()
 
 
-POOL = pools.Pool(
-    dict(host='127.0.0.1', port=3306, user='root', passwd='', db='mysql'),
-    max_idle_connections=1,
-    max_recycle_sec=3)
+@asyncio.coroutine
+def test_example():
+        pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
+                                       user='root', passwd='', db='mysql',
+                                       loop=loop)
+        with (yield from pool) as conn:
+            cur = conn.cursor()
+            yield from cur.execute("SELECT 10")
+            # print(cur.description)
+            (r,) = cur.fetchone()
+            assert r == 10
+        pool.close()
+        yield from pool.wait_closed()
 
-
-@gen.coroutine
-def worker(n):
-    for i in range(10):
-        t = 1
-        print(n, "sleeping", t, "seconds")
-        cur = yield POOL.execute("SELECT SLEEP(%s)", (t,))
-        print(n, cur.fetchall())
-
-
-@gen.coroutine
-def main():
-    workers = [worker(i) for i in range(10)]
-    yield workers
-
-
-ioloop.IOLoop.current().run_sync(main)
-print(POOL._opened_conns)
+loop.run_until_complete(test_example())
