@@ -183,6 +183,26 @@ class TestConversion(base.AIOPyMySQLTestCase):
         finally:
             yield from c.execute("drop table if exists test_datetime")
 
+    @run_until_complete
+    def test_get_transaction_status(self):
+        conn = self.connections[0]
+        #  make sure that connection is clean without transactions
+        transaction_flag = conn.get_transaction_status()
+        self.assertFalse(transaction_flag)
+        # start transaction
+        yield from conn.begin()
+        # make sure transaction flag is up
+        transaction_flag = conn.get_transaction_status()
+        self.assertTrue(transaction_flag)
+        cursor = conn.cursor()
+        yield from cursor.execute('SELECT 1;')
+        (r, ) = cursor.fetchone()
+        self.assertEqual(r, 1)
+        yield from conn.commit()
+        # make sure that transaction flag is down
+        transaction_flag = conn.get_transaction_status()
+        self.assertFalse(transaction_flag)
+
 
 class TestCursor(base.AIOPyMySQLTestCase):
     # this test case does not work quite right yet, however,
