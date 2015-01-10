@@ -21,35 +21,125 @@ class Cursor:
         """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
         """
-        self.connection = connection
-        self.description = None
-        self.rownumber = 0
-        self.rowcount = -1
-        self.arraysize = 1
+        self._connection = connection
+        self._description = None
+        self._rownumber = 0
+        self._rowcount = -1
+        self._arraysize = 1
         self._executed = None
         self._result = None
         self._rows = None
+        self._lastrowid = None
+
+    @property
+    def connection(self):
+        """This read-only attribute return a reference to the Connection
+        object on which the cursor was created."""
+        return self._connection
+
+    @property
+    def description(self):
+        """This read-only attribute is a sequence of 7-item sequences.
+
+        Each of these sequences is a collections.namedtuple containing
+        information describing one result column:
+
+        0.  name: the name of the column returned.
+        1.  type_code: the type of the column.
+        2.  display_size: the actual length of the column in bytes.
+        3.  internal_size: the size in bytes of the column associated to
+            this column on the server.
+        4.  precision: total number of significant digits in columns of
+            type NUMERIC. None for other types.
+        5.  scale: count of decimal digits in the fractional part in
+            columns of type NUMERIC. None for other types.
+        6.  null_ok: always None as not easy to retrieve from the libpq.
+
+        This attribute will be None for operations that do not
+        return rows or if the cursor has not had an operation invoked
+        via the execute() method yet.
+
+        """
+        return self._description
+
+    @property
+    def rowcount(self):
+        """Returns the number of rows that has been produced of affected.
+
+        This read-only attribute specifies the number of rows that the
+        last :meth:`execute` produced (for Data Query Language
+        statements like SELECT) or affected (for Data Manipulation
+        Language statements like UPDATE or INSERT).
+
+        The attribute is -1 in case no .execute() has been performed
+        on the cursor or the row count of the last operation if it
+        can't be determined by the interface.
+
+        """
+        return self._rowcount
+
+    @property
+    def rownumber(self):
+        """Row index.
+
+        This read-only attribute provides the current 0-based index of the
+        cursor in the result set or ``None`` if the index cannot be
+        determined."""
+
+        return self._rownumber
+
+    @property
+    def arraysize(self):
+        """How many rows will be returned by fetchmany() call.
+
+        This read/write attribute specifies the number of rows to
+        fetch at a time with fetchmany(). It defaults to
+        1 meaning to fetch a single row at a time.
+
+        """
+        return self._arraysize
+
+    @arraysize.setter
+    def arraysize(self, val):
+        """How many rows will be returned by fetchmany() call.
+
+        This read/write attribute specifies the number of rows to
+        fetch at a time with fetchmany(). It defaults to
+        1 meaning to fetch a single row at a time.
+
+        """
+        self._arraysize = val
+
+    @property
+    def lastrowid(self):
+        """This read-only attribute provides the rowid of the last modified
+        row (most databases return a rowid only when a single INSERT
+        operation is performed). If the operation does not set a rowid,
+        this attribute should be set to None .
+        """
+        return self._lastrowid
+
 
     @asyncio.coroutine
     def close(self):
         """Closing a cursor just exhausts all remaining data."""
-        conn = self.connection
+        conn = self._connection
         if conn is None:
             return
         try:
             while (yield from self.nextset()):
                 pass
         finally:
-            self.connection = None
+            self._connection = None
 
     @property
     def closed(self):
-        return True if self.connection else False
+        return True if self._connection else False
 
     def _get_db(self):
-        if not self.connection:
+        if not self._connection:
             raise ProgrammingError("Cursor closed")
-        return self.connection
+        return self._connection
 
     def _check_executed(self):
         if not self._executed:
@@ -100,7 +190,7 @@ class Cursor:
 
         yield from self._query(query)
         self._executed = query
-        return self.rowcount
+        return self._rowcount
 
     @asyncio.coroutine
     def executemany(self, query, args):
@@ -124,9 +214,9 @@ class Cursor:
             rows = 0
             for arg in args:
                 yield from self.execute(query, arg)
-                rows += self.rowcount
-            self.rowcount = rows
-        return self.rowcount
+                rows += self._rowcount
+            self._rowcount = rows
+        return self._rowcount
 
     @asyncio.coroutine
     def _do_execute_many(self, prefix, values, args, max_stmt_length,
@@ -149,14 +239,14 @@ class Cursor:
             if len(sql) + len(v) + 1 > max_stmt_length:
                 print(sql)
                 yield from self.execute(bytes(sql))
-                rows += self.rowcount
+                rows += self._rowcount
                 sql = bytearray(prefix)
             else:
                 sql += b','
             sql += v
         yield from self.execute(bytes(sql))
-        rows += self.rowcount
-        self.rowcount = rows
+        rows += self._rowcount
+        self._rowcount = rows
 
     @asyncio.coroutine
     def callproc(self, procname, args=()):
@@ -203,10 +293,10 @@ class Cursor:
     def fetchone(self):
         """Fetch the next row """
         self._check_executed()
-        if self._rows is None or self.rownumber >= len(self._rows):
+        if self._rows is None or self._rownumber >= len(self._rows):
             return None
-        result = self._rows[self.rownumber]
-        self.rownumber += 1
+        result = self._rows[self._rownumber]
+        self._rownumber += 1
         return result
 
     def fetchmany(self, size=None):
@@ -214,9 +304,9 @@ class Cursor:
         self._check_executed()
         if self._rows is None:
             return None
-        end = self.rownumber + (size or self.arraysize)
-        result = self._rows[self.rownumber:end]
-        self.rownumber = min(end, len(self._rows))
+        end = self._rownumber + (size or self._arraysize)
+        result = self._rows[self._rownumber:end]
+        self._rownumber = min(end, len(self._rows))
         return result
 
     def fetchall(self):
@@ -224,17 +314,27 @@ class Cursor:
         self._check_executed()
         if self._rows is None:
             return None
-        if self.rownumber:
-            result = self._rows[self.rownumber:]
+        if self._rownumber:
+            result = self._rows[self._rownumber:]
         else:
             result = self._rows
-        self.rownumber = len(self._rows)
+        self._rownumber = len(self._rows)
         return result
 
     def scroll(self, value, mode='relative'):
+        """Scroll the cursor in the result set to a new position according
+         to mode.
+
+        If mode is relative (default), value is taken as offset to the
+        current position in the result set, if set to absolute, value
+        states an absolute target position. An IndexError should be raised in
+        case a scroll operation would leave the result set. In this case,
+        the cursor position is left undefined (ideal would be to
+        not move the cursor at all).
+        """
         self._check_executed()
         if mode == 'relative':
-            r = self.rownumber + value
+            r = self._rownumber + value
         elif mode == 'absolute':
             r = value
         else:
@@ -242,7 +342,7 @@ class Cursor:
 
         if not (0 <= r < len(self._rows)):
             raise IndexError("out of range")
-        self.rownumber = r
+        self._rownumber = r
 
     @asyncio.coroutine
     def _query(self, q):
@@ -253,13 +353,11 @@ class Cursor:
 
     def _do_get_result(self):
         conn = self._get_db()
-
-        self.rownumber = 0
+        self._rownumber = 0
         self._result = result = conn._result
-
-        self.rowcount = result.affected_rows
-        self.description = result.description
-        self.lastrowid = result.insert_id
+        self._rowcount = result.affected_rows
+        self._description = result.description
+        self._lastrowid = result.insert_id
         self._rows = result.rows
 
     def __iter__(self):
@@ -284,7 +382,7 @@ class DictCursor(Cursor):
     def _do_get_result(self):
         super()._do_get_result()
         fields = []
-        if self.description:
+        if self._description:
             for f in self._result.fields:
                 name = f.name
                 if name in fields:
