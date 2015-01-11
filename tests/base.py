@@ -9,6 +9,7 @@ class AIOPyMySQLTestCase(BaseTest):
     # You can specify your test environment creating a file named
     # "databases.json" or editing the `databases` variable below.
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
+
     if os.path.exists(fname):
         with open(fname) as f:
             databases = json.load(f)
@@ -34,3 +35,11 @@ class AIOPyMySQLTestCase(BaseTest):
         for connection in self.connections:
             self.loop.run_until_complete(connection.wait_closed())
         super(AIOPyMySQLTestCase, self).tearDown()
+
+    @asyncio.coroutine
+    def connect(self, host='localhost', user='root', password="",
+                db='test_pymysql', use_unicode=True):
+        conn = yield from aiomysql.connect(loop=self.loop, host=host,
+                                           user=user, password=password,
+                                           db=db, use_unicode=use_unicode)
+        return conn
