@@ -403,9 +403,9 @@ class Connection:
                 buff += recv_data
                 if bytes_to_read < MAX_PACKET_LEN:
                     break
-        except OSError as e:
-            raise OperationalError(2006, "MySQL server has gone away (%s)"
-                                   % (e,))
+        except (OSError, EOFError) as exc:
+            msg = "MySQL server has gone away (%s)"
+            raise OperationalError(2006, msg % (exc,)) from exc
         packet = packet_type(buff, self.encoding)
         packet.check_error()
         return packet
