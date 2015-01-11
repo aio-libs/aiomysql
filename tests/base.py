@@ -32,5 +32,5 @@ class AIOPyMySQLTestCase(BaseTest):
 
     def tearDown(self):
         for connection in self.connections:
-            connection.close()
+            self.loop.run_until_complete(connection.wait_closed())
         super(AIOPyMySQLTestCase, self).tearDown()
