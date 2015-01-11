@@ -112,13 +112,13 @@ class Cursor:
 
     @property
     def lastrowid(self):
-        """This read-only attribute provides the rowid of the last modified
-        row (most databases return a rowid only when a single INSERT
-        operation is performed). If the operation does not set a rowid,
-        this attribute should be set to None .
+        """This read-only property returns the value generated for an
+        AUTO_INCREMENT column by the previous INSERT or UPDATE statement
+        or None when there is no such value available. For example,
+        if you perform an INSERT into a table that contains an AUTO_INCREMENT
+        column, lastrowid returns the AUTO_INCREMENT value for the new row.
         """
         return self._lastrowid
-
 
     @asyncio.coroutine
     def close(self):
@@ -252,12 +252,6 @@ class Cursor:
     def callproc(self, procname, args=()):
         """Execute stored procedure procname with args
 
-        procname -- string, name of procedure to execute on server
-
-        args -- Sequence of parameters to use with procedure
-
-        Returns the original args.
-
         Compatibility warning: PEP-249 specifies that any modified
         parameters must be returned. This is currently impossible
         as they are only available by storing them in a server
@@ -276,6 +270,10 @@ class Cursor:
         behavior with respect to the DB-API. Be sure to use nextset()
         to advance through all result sets; otherwise you may get
         disconnected.
+
+        :param procname: ``str``, name of procedure to execute on server
+        :param args: `sequence of parameters to use with procedure
+        :returns: the original args.
         """
         conn = self._get_db()
         for index, arg in enumerate(args):
@@ -283,9 +281,8 @@ class Cursor:
             yield from self._query(q)
             yield from self.nextset()
 
-        q = "CALL %s(%s)" % (procname,
-                             ','.join(['@_%s_%d' % (procname, i)
-                                       for i in range(len(args))]))
+        _args = ','.join('@_%s_%d' % (procname, i) for i in range(len(args)))
+        q = "CALL %s(%s)" % (procname, _args)
         yield from self._query(q)
         self._executed = q
         return args
