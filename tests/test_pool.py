@@ -268,17 +268,18 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_cursor(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            with (yield from pool.cursor()) as cur:
-                yield from cur.execute('SELECT 1')
-                ret = cur.fetchone()
-                self.assertEqual((1,), ret)
-            self.assertTrue(cur.closed)
-
-        self.loop.run_until_complete(go())
+    # Not supported, since close in cursor is coroutine
+    # def test_cursor(self):
+    #     @asyncio.coroutine
+    #     def go():
+    #         pool = yield from self.create_pool()
+    #         with (yield from pool.cursor()) as cur:
+    #             yield from cur.execute('SELECT 1')
+    #             ret = cur.fetchone()
+    #             self.assertEqual((1,), ret)
+    #         self.assertTrue(cur.closed)
+    #
+    #     self.loop.run_until_complete(go())
 
     # @mock.patch("aiopg.pool.logger")
     def test_release_with_invalid_status(self):
@@ -344,17 +345,6 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertEqual(timeout, conn.timeout)
             pool.release(conn)
-
-        self.loop.run_until_complete(go())
-
-    @unittest.skip('Not implemented')
-    def test_cursor_with_timeout(self):
-        @asyncio.coroutine
-        def go():
-            timeout = 0.1
-            pool = yield from self.create_pool()
-            with (yield from pool.cursor(timeout=timeout)) as cur:
-                self.assertEqual(timeout, cur.timeout)
 
         self.loop.run_until_complete(go())
 

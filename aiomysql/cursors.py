@@ -134,7 +134,7 @@ class Cursor:
 
     @property
     def closed(self):
-        return True if self._connection else False
+        return True if not self._connection else False
 
     def _get_db(self):
         if not self._connection:
