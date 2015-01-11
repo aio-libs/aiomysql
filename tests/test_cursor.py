@@ -17,8 +17,8 @@ class TestCursor(base.AIOPyMySQLTestCase):
         for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
             yield from cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
         yield from cur.execute("DROP TABLE IF EXISTS tbl2")
-        # yield from cur.execute("""CREATE TABLE tbl2
-        #                           (id int, name varchar(255))""")
+        yield from cur.execute("""CREATE TABLE tbl2
+                                  (id int, name varchar(255))""")
         # yield from cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
         # yield from cur.execute("""CREATE FUNCTION inc(val integer)
         #                           RETURNS integer AS $$
@@ -29,26 +29,31 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_description(self):
-        columns = ['Host', 'User', 'Password', 'Select_priv', 'Insert_priv',
-                   'Update_priv', 'Delete_priv', 'Create_priv', 'Drop_priv',
-                   'Reload_priv', 'Shutdown_priv', 'Process_priv', 'File_priv',
-                   'Grant_priv', 'References_priv', 'Index_priv', 'Alter_priv',
-                   'Show_db_priv', 'Super_priv', 'Create_tmp_table_priv',
-                   'Lock_tables_priv', 'Execute_priv', 'Repl_slave_priv',
-                   'Repl_client_priv', 'Create_view_priv', 'Show_view_priv',
-                   'Create_routine_priv', 'Alter_routine_priv',
-                   'Create_user_priv',
-                   'Event_priv', 'Trigger_priv', 'Create_tablespace_priv',
-                   'ssl_type', 'ssl_cipher', 'x509_issuer', 'x509_subject',
-                   'max_questions', 'max_updates', 'max_connections',
-                   'max_user_connections', 'plugin', 'authentication_string']
-
         conn = self.connections[0]
+        yield from self._prepare(conn)
         cur = conn.cursor()
         self.assertEqual(None, cur.description)
-        yield from cur.execute('SELECT * FROM mysql.user;')
-        fetched_columns = [c[0] for c in cur.description]
-        self.assertEqual(columns, fetched_columns)
+        yield from cur.execute('SELECT * from tbl;')
+
+        self.assertEqual(len(cur.description), 2,
+                         'cursor.description describes too many columns')
+
+        self.assertEqual(len(cur.description[0]), 7,
+                         'cursor.description[x] tuples must have '
+                         '7 elements')
+
+        self.assertEqual(cur.description[0][0].lower(), 'id',
+                         'cursor.description[x][0] must return column '
+                         'name')
+
+        self.assertEqual(cur.description[1][0].lower(), 'name',
+                         'cursor.description[x][0] must return column '
+                         'name')
+
+        # Make sure self.description gets reset, cursor should be
+        # set to None in case of none resulting queries like DDL
+        yield from cur.execute('DROP TABLE IF EXISTS foobar;')
+        self.assertEqual(None, cur.description)
 
     def test_connection(self):
         conn = self.connections[0]
