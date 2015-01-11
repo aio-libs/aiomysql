@@ -26,12 +26,17 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from cur.execute("DROP TABLE IF EXISTS tbl2")
         yield from cur.execute("""CREATE TABLE tbl2
                                   (id int, name varchar(255))""")
-        # yield from cur.execute("DROP FUNCTION IF EXISTS inc(val integer)")
-        # yield from cur.execute("""CREATE FUNCTION inc(val integer)
-        #                           RETURNS integer AS $$
-        #                           BEGIN
-        #                           RETURN val + 1;
-        #                           END; $$ ;""")
+        yield from conn.commit()
+
+    @asyncio.coroutine
+    def _prepare_procedure(self, conn):
+        cur = conn.cursor()
+        yield from cur.execute("DROP PROCEDURE IF EXISTS myinc;")
+        yield from cur.execute("""CREATE PROCEDURE myinc(p1 INT)
+                               BEGIN
+                                   SELECT p1 + 1;
+                               END
+                               """)
         yield from conn.commit()
 
     @run_until_complete
@@ -143,8 +148,21 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from conn.commit()
 
     @run_until_complete
+    def test_callproc(self):
+        conn = yield from self.connect()
+        yield from self._prepare_procedure(conn)
+        cur = conn.cursor()
+        yield from cur.callproc('myinc', [1])
+        ret = cur.fetchone()
+        self.assertEqual((2,), ret)
+        yield from cur.close()
+        with self.assertRaises(ProgrammingError):
+            yield from cur.callproc('myinc', [1])
+        conn.close()
+
+    @run_until_complete
     def test_fetch_no_result(self):
-        """ test a fetchone() with no rows """
+        # test a fetchone() with no rows
         conn = self.connections[0]
         c = conn.cursor()
         yield from c.execute("create table test_nr (b varchar(32))")
