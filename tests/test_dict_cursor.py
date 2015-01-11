@@ -121,6 +121,6 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         self.assertEqual([bob, jim], r,
                          "list failed via MyDictCursor")
 
-
+# TODO: implement tests for ssdictcursor
 # class TestSSDictCursor(TestDictCursor):
 # cursor_type = aiomysql.cursors.SSDictCursor

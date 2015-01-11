@@ -2,6 +2,8 @@ import asyncio
 from tests import base
 from tests._testutils import run_until_complete
 
+from aiomysql import ProgrammingError
+
 
 class TestCursor(base.AIOPyMySQLTestCase):
     # this test case does not work quite right yet, however,
@@ -12,8 +14,13 @@ class TestCursor(base.AIOPyMySQLTestCase):
     @asyncio.coroutine
     def _prepare(self, conn):
         cur = conn.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS tbl")
-        yield from cur.execute("CREATE TABLE tbl (id int, name varchar(255))")
+        yield from cur.execute("DROP TABLE IF EXISTS tbl;")
+
+        yield from cur.execute("""CREATE TABLE tbl (
+                 id MEDIUMINT NOT NULL AUTO_INCREMENT,
+                 name VARCHAR(255) NOT NULL,
+                 PRIMARY KEY (id));""")
+
         for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
             yield from cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
         yield from cur.execute("DROP TABLE IF EXISTS tbl2")
@@ -25,7 +32,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         #                           BEGIN
         #                           RETURN val + 1;
         #                           END; $$ ;""")
-        yield from cur.execute('commit;')
+        yield from conn.commit()
 
     @run_until_complete
     def test_description(self):
@@ -55,21 +62,62 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from cur.execute('DROP TABLE IF EXISTS foobar;')
         self.assertEqual(None, cur.description)
 
-    def test_connection(self):
+    def test_connection_property(self):
         conn = self.connections[0]
         cur = conn.cursor()
         self.assertIs(cur.connection, conn)
 
-    # @run_until_complete
-    # def test_scroll(self):
-    #     import ipdb; ipdb.set_trace()
-    #     conn = self.connections[0]
-    #     self._prepare(conn)
-    #     cur = conn.cursor()
-    #     yield from cur.execute('SELECT * FROM tbl;')
-    #     cur.scroll(1)
-    #     ret = cur.fetchone()
-    #     self.assertEqual((2, 'b'), ret)
+    @run_until_complete
+    def test_scroll_relative(self):
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+        cur.scroll(1)
+        ret = cur.fetchone()
+        self.assertEqual((2, 'b'), ret)
+
+    @run_until_complete
+    def test_scroll_absolute(self):
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+        cur.scroll(2, mode='absolute')
+        ret = cur.fetchone()
+        self.assertEqual((3, 'c'), ret)
+
+    @run_until_complete
+    def test_scroll_errors(self):
+        conn = self.connections[0]
+        cur = conn.cursor()
+
+        with self.assertRaises(ProgrammingError):
+            cur.scroll(2, mode='absolute')
+
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+
+        with self.assertRaises(ProgrammingError):
+            cur.scroll(2, mode='not_valid_mode')
+
+    @run_until_complete
+    def test_scroll_index_error(self):
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+        with self.assertRaises(IndexError):
+            cur.scroll(1000)
+
+    @run_until_complete
+    def test_close(self):
+        conn = self.connections[0]
+        cur = conn.cursor()
+        yield from cur.close()
+        self.assertTrue(cur.closed)
+        with self.assertRaises(ProgrammingError):
+            yield from cur.execute('SELECT 1')
 
     def test_arraysize(self):
         conn = self.connections[0]
@@ -77,6 +125,22 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertEqual(1, cur.arraysize)
         cur.arraysize = 10
         self.assertEqual(10, cur.arraysize)
+
+    @run_until_complete
+    def test_rows(self):
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * from tbl')
+        self.assertEqual(3, cur.rowcount)
+        self.assertEqual(0, cur.rownumber)
+        cur.fetchone()
+        self.assertEqual(1, cur.rownumber)
+        self.assertEqual(None, cur.lastrowid)
+        yield from cur.execute('INSERT INTO tbl VALUES (%s, %s)', (4, 'd'))
+        self.assertNotEqual(0, cur.lastrowid)
+        yield from conn.commit()
 
     @run_until_complete
     def test_fetch_no_result(self):
@@ -123,4 +187,3 @@ class TestCursor(base.AIOPyMySQLTestCase):
             self.assertEqual([(1,)], list(c.fetchall()))
         finally:
             yield from c.execute("drop table mystuff")
-
