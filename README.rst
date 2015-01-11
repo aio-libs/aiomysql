@@ -49,8 +49,8 @@ Connection pooling ported from aiopg_ :
     @asyncio.coroutine
     def test_example():
             pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                           user='root', passwd='', db='mysql',
-                                           loop=loop)
+                                                   user='root', passwd='',
+                                                   db='mysql', loop=loop)
             with (yield from pool) as conn:
                 cur = conn.cursor()
                 yield from cur.execute("SELECT 10")
@@ -62,6 +62,13 @@ Connection pooling ported from aiopg_ :
 
     loop.run_until_complete(test_example())
 
+TODO
+----
+* refactor connection closing
+* increase coverage
+* implement SSDictCursor
+* documentation
+* implement ssl transport support
 
 Requirements
 ------------
