@@ -184,6 +184,24 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertEqual(None, cur.fetchmany())
 
     @run_until_complete
+    def test_fetchall_no_result(self):
+        # test a fetchone() with no rows
+        conn = self.connections[0]
+        cur = conn.cursor()
+        yield from cur.execute('DROP TABLE IF EXISTS foobar;')
+        self.assertEqual(None, cur.fetchall())
+
+    @run_until_complete
+    def test_fetchall_with_scroll(self):
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+        cur = conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+        cur.scroll(1)
+        ret = cur.fetchall()
+        self.assertEquals(((2, 'b'), (3, 'c')), ret)
+
+    @run_until_complete
     def test_aggregates(self):
         """ test aggregate functions """
         conn = self.connections[0]
