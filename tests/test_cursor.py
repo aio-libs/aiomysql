@@ -177,6 +177,13 @@ class TestCursor(base.AIOPyMySQLTestCase):
             yield from c.execute("drop table test_nr")
 
     @run_until_complete
+    def test_fetchmany_no_result(self):
+        conn = self.connections[0]
+        cur = conn.cursor()
+        yield from cur.execute('DROP TABLE IF EXISTS foobar;')
+        self.assertEqual(None, cur.fetchmany())
+
+    @run_until_complete
     def test_aggregates(self):
         """ test aggregate functions """
         conn = self.connections[0]
