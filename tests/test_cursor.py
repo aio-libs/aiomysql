@@ -123,6 +123,8 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertTrue(cur.closed)
         with self.assertRaises(ProgrammingError):
             yield from cur.execute('SELECT 1')
+        # try to close for second time
+        yield from cur.close()
 
     def test_arraysize(self):
         conn = self.connections[0]
