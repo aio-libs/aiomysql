@@ -37,6 +37,7 @@ from pymysql.err import (Warning, Error, InterfaceError, DataError,
                          NotSupportedError, ProgrammingError, MySQLError)
 
 from .connection import Connection, connect
+from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
 
 __version__ = '0.0.1'
@@ -86,9 +87,14 @@ __all__ = [
     'Pool'
     'connect',
     'create_pool',
+    'Cursor',
+    'SSCursor',
+    'DictCursor',
+    'SSDictCursor'
 ]
 
-(Connection, Pool, connect, create_pool)  # pyflakes
+(Connection, Pool, connect, create_pool, Cursor, SSCursor, DictCursor,
+ SSDictCursor)  # pyflakes
 
 threadsafety = 1
 apilevel = '2.0'
