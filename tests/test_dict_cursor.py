@@ -48,7 +48,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         super(TestDictCursor, self).tearDown()
 
     @run_until_complete
-    def test_DictCursor(self):
+    def test_dictcursor(self):
         bob, jim, fred = self.bob.copy(), self.jim.copy(), self.fred.copy()
         # all assert test compare to the structure as would come
         # out from MySQLdb
@@ -121,6 +121,12 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         self.assertEqual([bob, jim], r,
                          "list failed via MyDictCursor")
 
-# TODO: implement tests for ssdictcursor
-# class TestSSDictCursor(TestDictCursor):
-# cursor_type = aiomysql.cursors.SSDictCursor
+    @run_until_complete
+    def test_ssdictcursor(self):
+        conn = self.conn
+        c = conn.cursor(aiomysql.cursors.SSDictCursor)
+        yield from c.execute("SELECT * from dictcursor where name='bob'")
+        r = yield from c.fetchall()
+        self.assertEqual([self.bob], r,
+                         "fetch a 1 row result via fetchall failed via "
+                         "DictCursor")
