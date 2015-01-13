@@ -2,11 +2,11 @@
 # http://dev.mysql.com/doc/internals/en/client-server-protocol.html
 
 import asyncio
-import os
+# import os
 import hashlib
 import struct
 import sys
-import configparser
+# import configparser
 import getpass
 from functools import partial
 
@@ -121,36 +121,38 @@ class Connection:
             use_unicode = True
 
         if read_default_group and not read_default_file:
-            if sys.platform.startswith("win"):
-                read_default_file = "c:\\my.ini"
-            else:
-                read_default_file = "/etc/my.cnf"
+            raise NotImplementedError
+            # if sys.platform.startswith("win"):
+            #     read_default_file = "c:\\my.ini"
+            # else:
+            #     read_default_file = "/etc/my.cnf"
 
         if read_default_file:
-            if not read_default_group:
-                read_default_group = "client"
-
-            cfg = configparser.RawConfigParser()
-            cfg.read(os.path.expanduser(read_default_file))
-
-            def _config(key, default):
-                try:
-                    return cfg.get(read_default_group, key)
-                except Exception:
-                    return default
-
-            user = _config("user", user)
-            password = _config("password", password)
-            host = _config("host", host)
-            db = _config("database", db)
-            unix_socket = _config("socket", unix_socket)
-            port = int(_config("port", port))
-            charset = _config("default-character-set", charset)
+            raise NotImplementedError
+            # if not read_default_group:
+            #     read_default_group = "client"
+            #
+            # cfg = configparser.RawConfigParser()
+            # cfg.read(os.path.expanduser(read_default_file))
+            #
+            # def _config(key, default):
+            #     try:
+            #         return cfg.get(read_default_group, key)
+            #     except Exception:
+            #         return default
+            #
+            # user = _config("user", user)
+            # password = _config("password", password)
+            # host = _config("host", host)
+            # db = _config("database", db)
+            # unix_socket = _config("socket", unix_socket)
+            # port = int(_config("port", port))
+            # charset = _config("default-character-set", charset)
 
         self.host = host
         self.port = port
         self.user = user or DEFAULT_USER
-        self.password = password or ""
+        self._password = password or ""
         self.db = db
         self.no_delay = no_delay
         self.unix_socket = unix_socket
@@ -199,7 +201,8 @@ class Connection:
         """Send the quit message and close the socket"""
         if self._writer:
             self._writer.transport.close()
-            self._writer = None
+        self._writer = None
+        self._reader = None
 
     @asyncio.coroutine
     def wait_closed(self):
@@ -314,7 +317,7 @@ class Connection:
     @asyncio.coroutine
     def ping(self, reconnect=True):
         """Check if the server is alive"""
-        if self._writer and self._reader is None:
+        if self._writer is None and self._reader is None:
             if reconnect:
                 yield from self.connect()
                 reconnect = False
@@ -491,7 +494,7 @@ class Connection:
         next_packet = 1
 
         data = data_init + self.user + b'\0' + _scramble(
-            self.password.encode('latin1'), self.salt)
+            self._password.encode('latin1'), self.salt)
 
         if self.db:
             if isinstance(self.db, str):
@@ -510,7 +513,7 @@ class Connection:
 
         if auth_packet.is_eof_packet():
             # send legacy handshake
-            data = _scramble_323(self.password.encode('latin1'),
+            data = _scramble_323(self._password.encode('latin1'),
                                  self.salt) + b'\0'
             data = pack_int24(len(data)) + int2byte(next_packet) + data
             self._write_bytes(data)
