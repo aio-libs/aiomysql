@@ -31,6 +31,8 @@ class TestConnection(AIOPyMySQLTestCase):
         cur = con.cursor()
 
         self.assertEqual(con.escape("foo'bar"), "'foo\\'bar'")
+        # literal is alias for escape
+        self.assertEqual(con.literal("foo'bar"), "'foo\\'bar'")
         yield from cur.execute("SET sql_mode='NO_BACKSLASH_ESCAPES'")
         self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
 
@@ -78,3 +80,31 @@ class TestConnection(AIOPyMySQLTestCase):
         # self.assertEquals(cm.exception.args[0], 2006)
         self.assertIn(cm.exception.args[0], (2006, 2013))
         conn.close()
+
+    @run_until_complete
+    def test_connection_info_methods(self):
+        conn = yield from self.connect()
+        # trhead id is int
+        self.assertIsInstance(conn.thread_id(), int)
+        self.assertEqual(conn.character_set_name(), 'latin1')
+        self.assertTrue(str(conn.port) in conn.get_host_info())
+        self.assertIsInstance(conn.get_server_info(), str)
+        # protocol id is int
+        self.assertIsInstance(conn.get_proto_info(), int)
+        conn.close()
+
+    @run_until_complete
+    def test_connection_set_charset(self):
+        conn = yield from self.connect()
+        self.assertEqual(conn.character_set_name(), 'latin1')
+        yield from conn.set_charset('utf8')
+        self.assertEqual(conn.character_set_name(), 'utf8')
+
+    @run_until_complete
+    def test_connection_ping(self):
+        conn = yield from self.connect()
+        yield from conn.ping()
+        self.assertEqual(conn.open, True)
+        conn.close()
+        yield from conn.ping()
+        self.assertEqual(conn.open, True)
