@@ -200,3 +200,28 @@ class TestConversion(base.AIOPyMySQLTestCase):
         # make sure that transaction flag is down
         transaction_flag = conn.get_transaction_status()
         self.assertFalse(transaction_flag)
+
+    @run_until_complete
+    def test_rollback(self):
+        conn = self.connections[0]
+        cursor = conn.cursor()
+
+        yield from cursor.execute('DROP TABLE IF EXISTS tz_data;')
+        yield from cursor.execute('CREATE TABLE tz_data ('
+                                  'region VARCHAR(64),'
+                                  'zone VARCHAR(64),'
+                                  'name VARCHAR(64))')
+        yield from conn.commit()
+
+        args = ('America', '', 'America/New_York')
+        yield from cursor.execute('INSERT INTO tz_data VALUES (%s, %s, %s)',
+                                  args)
+        yield from cursor.execute('SELECT * FROM tz_data;')
+        data = cursor.fetchall()
+        self.assertEqual(len(data), 1)
+
+        yield from conn.rollback()
+        yield from cursor.execute('SELECT * FROM tz_data;')
+        data = cursor.fetchall()
+        self.assertEqual(len(data), 0, 'should not return any rows since no '
+                                       'inserts was commited')
