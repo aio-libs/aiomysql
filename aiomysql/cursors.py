@@ -372,7 +372,7 @@ class Cursor:
     NotSupportedError = NotSupportedError
 
 
-class DictCursor(Cursor):
+class DictCursorMixin:
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
 
@@ -394,3 +394,121 @@ class DictCursor(Cursor):
         if row is None:
             return None
         return self.dict_type(zip(self._fields, row))
+
+
+class DictCursor(DictCursorMixin, Cursor):
+    """A cursor which returns results as a dictionary"""
+
+
+class SSCursor(Cursor):
+    """Unbuffered Cursor, mainly useful for queries that return a lot of
+    data, or for connections to remote servers over a slow network.
+
+    Instead of copying every row of data into a buffer, this will fetch
+    rows as needed. The upside of this, is the client uses much less memory,
+    and rows are returned much faster when traveling over a slow network,
+    or if the result set is very big.
+
+    There are limitations, though. The MySQL protocol doesn't support
+    returning the total number of rows, so the only way to tell how many rows
+    there are is to iterate over every row returned. Also, it currently isn't
+    possible to scroll backwards, as only the current row is held in memory.
+    """
+
+    @asyncio.coroutine
+    def close(self):
+        conn = self._connection
+        if conn is None:
+            return
+
+        if self._result is not None and self._result is conn._result:
+            yield from self._result._finish_unbuffered_query()
+
+        try:
+            while (yield from self.nextset()):
+                pass
+        finally:
+            self._connection = None
+
+    @asyncio.coroutine
+    def _query(self, q):
+        conn = self._get_db()
+        self._last_executed = q
+        yield from conn.query(q, unbuffered=True)
+        self._do_get_result()
+        return self._rowcount
+
+    @asyncio.coroutine
+    def read_next(self):
+        """ Read next row """
+        row = yield from self._result._read_rowdata_packet_unbuffered()
+        row = self._conv_row(row)
+        return row
+
+    @asyncio.coroutine
+    def fetchone(self):
+        """ Fetch next row """
+        self._check_executed()
+        row = yield from self.read_next()
+        if row is None:
+            return
+        self._rownumber += 1
+        return row
+
+    @asyncio.coroutine
+    def fetchall(self):
+        """
+        Fetch all, as per MySQLdb. Pretty useless for large queries, as
+        it is buffered.
+        """
+        rows = []
+        while True:
+            row = yield from self.fetchone()
+            if row is None:
+                break
+            rows.append(row)
+        return rows
+
+    @asyncio.coroutine
+    def fetchmany(self, size=None):
+        """Fetch many"""
+        self._check_executed()
+        if size is None:
+            size = self._arraysize
+
+        rows = []
+        for i in range(size):
+            row = yield from self.read_next()
+            if row is None:
+                break
+            rows.append(row)
+            self._rownumber += 1
+        return rows
+
+    @asyncio.coroutine
+    def scroll(self, value, mode='relative'):
+        self._check_executed()
+
+        if mode == 'relative':
+            if value < 0:
+                raise NotSupportedError("Backwards scrolling not supported "
+                                        "by this cursor")
+
+            for _ in range(value):
+                yield from self.read_next()
+            self._rownumber += value
+        elif mode == 'absolute':
+            if value < self._rownumber:
+                raise NotSupportedError(
+                    "Backwards scrolling not supported by this cursor")
+
+            end = value - self._rownumber
+            for _ in range(end):
+                yield from self.read_next()
+            self._rownumber = value
+        else:
+            raise ProgrammingError("unknown scroll mode %s" % mode)
+
+
+class SSDictCursor(DictCursorMixin, SSCursor):
+    """An unbuffered cursor, which returns results as a dictionary """
