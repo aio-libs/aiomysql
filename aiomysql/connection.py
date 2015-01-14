@@ -3,6 +3,7 @@
 
 import asyncio
 # import os
+import socket
 import hashlib
 import struct
 import sys
@@ -154,7 +155,7 @@ class Connection:
         self.user = user or DEFAULT_USER
         self._password = password or ""
         self.db = db
-        self.no_delay = no_delay
+        self._no_delay = no_delay
         self.unix_socket = unix_socket
         if charset:
             self.charset = charset
@@ -365,8 +366,10 @@ class Connection:
                                             loop=self._loop)
                 self.host_info = "socket %s:%d" % (self.host, self.port)
             # TODO: fix this
-            # if self.no_delay:
-            #     stream.set_nodelay(True)
+
+            if self._no_delay:
+                self._set_nodelay(True)
+
             yield from self._get_server_information()
             yield from self._request_authentication()
 
@@ -386,6 +389,19 @@ class Connection:
             raise OperationalError(
                 2003, "Can't connect to MySQL server on %r (%s)"
                 % (self.host, e))
+
+    def _set_nodelay(self, value):
+        flag = int(bool(value))
+        transport = self._writer.transport
+        transport.pause_reading()
+        raw_sock = transport.get_extra_info('socket', default=None)
+
+        if raw_sock is None:
+            raise RuntimeError("Transport does not expose socket instance")
+
+        raw_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, flag)
+        self._reader, self._writer = yield from asyncio.open_connection(
+            sock=raw_sock, loop=self._loop)
 
     @asyncio.coroutine
     def _read_packet(self, packet_type=MysqlPacket):

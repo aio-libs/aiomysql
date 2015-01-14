@@ -113,3 +113,11 @@ class TestConnection(AIOPyMySQLTestCase):
         conn.close()
         yield from conn.ping()
         self.assertEqual(conn.open, True)
+
+    @run_until_complete
+    def test_connection_set_nodelay_option(self):
+        conn = yield from self.connect(no_delay=True)
+        cur = conn.cursor()
+        yield from cur.execute("SELECT 1;")
+        (r, ) = yield from cur.fetchone()
+        self.assertEqual(r, 1)

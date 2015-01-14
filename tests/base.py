@@ -38,8 +38,9 @@ class AIOPyMySQLTestCase(BaseTest):
 
     @asyncio.coroutine
     def connect(self, host='localhost', user='root', password="",
-                db='test_pymysql', use_unicode=True):
+                db='test_pymysql', use_unicode=True, no_delay=None):
         conn = yield from aiomysql.connect(loop=self.loop, host=host,
                                            user=user, password=password,
-                                           db=db, use_unicode=use_unicode)
+                                           db=db, use_unicode=use_unicode,
+                                           no_delay=no_delay)
         return conn
