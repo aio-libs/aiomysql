@@ -70,7 +70,6 @@ class TestCursor(base.AIOPyMySQLTestCase):
         cur.setinputsizes()
         cur.setoutputsizes()
 
-
     @run_until_complete
     def test_scroll_relative(self):
         conn = self.connections[0]
@@ -250,7 +249,6 @@ class TestCursor(base.AIOPyMySQLTestCase):
         # TODO: if this right behaviour
         self.assertEquals(((3, 'c'),),  r)
 
-        #calling execute many without args
+        # calling execute many without args
         row_count = yield from cur.executemany('SELECT 1;', ())
         self.assertIsNone(row_count)
-

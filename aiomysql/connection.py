@@ -365,7 +365,6 @@ class Connection:
                     asyncio.open_connection(self.host, self.port,
                                             loop=self._loop)
                 self.host_info = "socket %s:%d" % (self.host, self.port)
-            # TODO: fix this
 
             if self._no_delay:
                 self._set_nodelay(True)
@@ -395,13 +394,10 @@ class Connection:
         transport = self._writer.transport
         transport.pause_reading()
         raw_sock = transport.get_extra_info('socket', default=None)
-
         if raw_sock is None:
             raise RuntimeError("Transport does not expose socket instance")
-
         raw_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, flag)
-        self._reader, self._writer = yield from asyncio.open_connection(
-            sock=raw_sock, loop=self._loop)
+        transport.resume_reading()
 
     @asyncio.coroutine
     def _read_packet(self, packet_type=MysqlPacket):
