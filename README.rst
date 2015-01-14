@@ -31,7 +31,7 @@ Basic Example
         print(cur.description)
         r = cur.fetchall()
         print(r)
-        cur.close()
+        yield from cur.close()
         conn.close()
 
     loop.run_until_complete(test_example())
@@ -55,10 +55,10 @@ Server Side Cursor
         cur = conn.cursor(aiomysql.SSCursor)
         yield from cur.execute("SELECT Host,User FROM user")
         print(cur.description)
-        yield from cursor.scroll(1)
+        yield from cur.scroll(1)
         row = yield from cursor.fetchone()
         print(row)
-        cur.close()
+        yield from cur.close()
         conn.close()
 
     loop.run_until_complete(test_example())
