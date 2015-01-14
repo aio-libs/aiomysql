@@ -175,14 +175,6 @@ class Pool(asyncio.AbstractServer):
                 self._free.append(conn)
             asyncio.Task(self._wakeup(), loop=self._loop)
 
-    # Not supported, since close in cursor is coroutine
-    # @asyncio.coroutine
-    # def cursor(self, cursor_factory=None):
-    #     """XXX"""
-    #     conn = yield from self.acquire()
-    #     cur = conn.cursor(cursor=cursor_factory)
-    #     return _CursorContextManager(self, conn, cur)
-
     def __enter__(self):
         raise RuntimeError(
             '"yield from" should be used as context manager expression')

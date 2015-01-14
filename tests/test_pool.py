@@ -268,19 +268,6 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    # Not supported, since close in cursor is coroutine
-    # def test_cursor(self):
-    #     @asyncio.coroutine
-    #     def go():
-    #         pool = yield from self.create_pool()
-    #         with (yield from pool.cursor()) as cur:
-    #             yield from cur.execute('SELECT 1')
-    #             ret = cur.fetchone()
-    #             self.assertEqual((1,), ret)
-    #         self.assertTrue(cur.closed)
-    #
-    #     self.loop.run_until_complete(go())
-
     # @mock.patch("aiopg.pool.logger")
     def test_release_with_invalid_status(self):
         @asyncio.coroutine
