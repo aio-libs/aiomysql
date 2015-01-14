@@ -35,7 +35,7 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
         cursor = conn.cursor()
         yield from cursor.execute(
             "SELECT id, name, age, height from bulkinsert")
-        result = cursor.fetchall()
+        result = yield from cursor.fetchall()
         yield from cursor.execute('commit')
         self.assertEqual(sorted(data), sorted(result))
 

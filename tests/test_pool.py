@@ -80,7 +80,7 @@ class TestPool(unittest.TestCase):
             self.assertFalse(conn.closed)
             cur = conn.cursor()
             yield from cur.execute('SELECT 1')
-            val = cur.fetchone()
+            val = yield from cur.fetchone()
             self.assertEqual((1,), val)
             pool.release(conn)
 

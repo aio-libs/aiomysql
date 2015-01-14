@@ -60,31 +60,30 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         bob['age'] = 20
         # pull back the single row dict for bob and check
         yield from c.execute("SELECT * from dictcursor where name='bob'")
-        r = c.fetchone()
+        r = yield from c.fetchone()
         self.assertEqual(bob, r, "fetchone via DictCursor failed")
         # same again, but via fetchall => tuple)
         yield from c.execute("SELECT * from dictcursor where name='bob'")
-        r = c.fetchall()
+        r = yield from c.fetchall()
         self.assertEqual([bob], r,
                          "fetch a 1 row result via fetchall failed via "
                          "DictCursor")
-        # same test again but iterate over the
-        yield from c.execute("SELECT * from dictcursor where name='bob'")
-        for r in c:
-            self.assertEqual(bob, r,
-                             "fetch a 1 row result via iteration failed via "
-                             "DictCursor")
+
         # get all 3 row via fetchall
         yield from c.execute("SELECT * from dictcursor")
-        r = c.fetchall()
+        r = yield from c.fetchall()
         self.assertEqual([bob, jim, fred], r, "fetchall failed via DictCursor")
+
         # same test again but do a list comprehension
         yield from c.execute("SELECT * from dictcursor")
-        r = list(c)
-        self.assertEqual([bob, jim, fred], r, "DictCursor should be iterable")
+
+        # iteration not supported
+        with self.assertRaises(NotImplementedError):
+            list(c)
+
         # get all 2 row via fetchmany
         yield from c.execute("SELECT * from dictcursor")
-        r = c.fetchmany(2)
+        r = yield from c.fetchmany(2)
         self.assertEqual([bob, jim], r, "fetchmany failed via DictCursor")
         yield from c.execute('commit')
 
@@ -103,21 +102,22 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
 
         cur = self.conn.cursor(MyDictCursor)
         yield from cur.execute("SELECT * FROM dictcursor WHERE name='bob'")
-        r = cur.fetchone()
+        r = yield from cur.fetchone()
         self.assertEqual(bob, r, "fetchone() returns MyDictCursor")
 
         yield from cur.execute("SELECT * FROM dictcursor")
-        r = cur.fetchall()
+        r = yield from cur.fetchall()
         self.assertEqual([bob, jim, fred], r,
                          "fetchall failed via MyDictCursor")
 
         yield from cur.execute("SELECT * FROM dictcursor")
-        r = list(cur)
-        self.assertEqual([bob, jim, fred], r,
-                         "list failed via MyDictCursor")
+
+        # iteration not supported
+        with self.assertRaises(NotImplementedError):
+            list(cur)
 
         yield from cur.execute("SELECT * FROM dictcursor")
-        r = cur.fetchmany(2)
+        r = yield from cur.fetchmany(2)
         self.assertEqual([bob, jim], r,
                          "list failed via MyDictCursor")
 
