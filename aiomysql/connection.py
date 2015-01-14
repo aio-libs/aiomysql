@@ -194,6 +194,10 @@ class Connection:
         self._writer = None
 
     @property
+    def loop(self):
+        return self._loop
+
+    @property
     def closed(self):
         return self._writer is None
 

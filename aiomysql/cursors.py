@@ -22,6 +22,7 @@ class Cursor:
         connections.Connection.cursor().
         """
         self._connection = connection
+        self._loop = self._connection.loop
         self._description = None
         self._rownumber = 0
         self._rowcount = -1
@@ -290,33 +291,48 @@ class Cursor:
     def fetchone(self):
         """Fetch the next row """
         self._check_executed()
+        fut = asyncio.Future(loop=self._loop)
+
         if self._rows is None or self._rownumber >= len(self._rows):
-            return None
+            fut.set_result(None)
+            return fut
         result = self._rows[self._rownumber]
         self._rownumber += 1
-        return result
+
+        fut = asyncio.Future(loop=self._loop)
+        fut.set_result(result)
+        return fut
 
     def fetchmany(self, size=None):
         """ Fetch several rows """
         self._check_executed()
+        fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
-            return None
+            fut.set_result(None)
+            return fut
         end = self._rownumber + (size or self._arraysize)
         result = self._rows[self._rownumber:end]
         self._rownumber = min(end, len(self._rows))
-        return result
+
+        fut.set_result(result)
+        return fut
 
     def fetchall(self):
         """Fetch all the rows """
         self._check_executed()
+        fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
-            return None
+            fut.set_result(None)
+            return fut
+
         if self._rownumber:
             result = self._rows[self._rownumber:]
         else:
             result = self._rows
         self._rownumber = len(self._rows)
-        return result
+
+        fut.set_result(result)
+        return fut
 
     def scroll(self, value, mode='relative'):
         """Scroll the cursor in the result set to a new position according
@@ -341,6 +357,10 @@ class Cursor:
             raise IndexError("out of range")
         self._rownumber = r
 
+        fut = asyncio.Future(loop=self._loop)
+        fut.set_result(None)
+        return fut
+
     @asyncio.coroutine
     def _query(self, q):
         conn = self._get_db()
@@ -358,7 +378,7 @@ class Cursor:
         self._rows = result.rows
 
     def __iter__(self):
-        return iter(self.fetchone, None)
+        raise NotImplementedError
 
     Warning = Warning
     Error = Error
