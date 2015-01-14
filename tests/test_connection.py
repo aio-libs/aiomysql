@@ -18,12 +18,14 @@ class TestConnection(AIOPyMySQLTestCase):
         """Large query and response (>=16MB)"""
         cur = self.connections[0].cursor()
         yield from cur.execute("SELECT @@max_allowed_packet")
-        if cur.fetchone()[0] < 16 * 1024 * 1024 + 10:
+        r = yield from cur.fetchone()
+        if r[0] < 16 * 1024 * 1024 + 10:
             self.skipTest('Set max_allowed_packet to bigger than 17MB')
         else:
             t = 'a' * (16 * 1024 * 1024)
             yield from cur.execute("SELECT '" + t + "'")
-            self.assertEqual(cur.fetchone()[0], t)
+            r = yield from cur.fetchone()
+            self.assertEqual(r[0], t)
 
     @run_until_complete
     def test_escape_string(self):
@@ -48,7 +50,8 @@ class TestConnection(AIOPyMySQLTestCase):
         yield from con.autocommit(False)
         self.assertFalse(con.get_autocommit())
         yield from cur.execute("SELECT @@AUTOCOMMIT")
-        self.assertEqual(cur.fetchone()[0], 0)
+        r = yield from cur.fetchone()
+        self.assertEqual(r[0], 0)
 
     @run_until_complete
     def test_select_db(self):
@@ -58,11 +61,13 @@ class TestConnection(AIOPyMySQLTestCase):
 
         cur = con.cursor()
         yield from cur.execute('SELECT database()')
-        self.assertEqual(cur.fetchone()[0], current_db)
+        r = yield from cur.fetchone()
+        self.assertEqual(r[0], current_db)
 
         yield from con.select_db(other_db)
         yield from cur.execute('SELECT database()')
-        self.assertEqual(cur.fetchone()[0], other_db)
+        r = yield from cur.fetchone()
+        self.assertEqual(r[0], other_db)
 
     @run_until_complete
     def test_connection_gone_away(self):
