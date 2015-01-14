@@ -29,7 +29,7 @@ Basic Example
         cur = conn.cursor()
         yield from cur.execute("SELECT Host,User FROM user")
         print(cur.description)
-        r = cur.fetchall()
+        r = yield from cur.fetchall()
         print(r)
         yield from cur.close()
         conn.close()
@@ -86,7 +86,7 @@ Connection pooling ported from aiopg_ :
                 cur = conn.cursor()
                 yield from cur.execute("SELECT 10")
                 # print(cur.description)
-                (r,) = cur.fetchone()
+                (r,) = yield from cur.fetchone()
                 assert r == 10
             pool.close()
             yield from pool.wait_closed()
@@ -97,7 +97,6 @@ TODO
 ----
 * refactor connection closing
 * implement ssl transport support
-* implement set_nodelay(True)
 * increase coverage
 * documentation
 * implement echoe like in aiopg
