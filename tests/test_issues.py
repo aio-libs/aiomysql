@@ -20,13 +20,17 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
                 "insert into issue3 (d, t, dt, ts) values (%s,%s,%s,%s)",
                 (None, None, None, None))
             yield from c.execute("select d from issue3")
-            self.assertEqual(None, c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(None, r[0])
             yield from c.execute("select t from issue3")
-            self.assertEqual(None, c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(None, r[0])
             yield from c.execute("select dt from issue3")
-            self.assertEqual(None, c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(None, r[0])
             yield from c.execute("select ts from issue3")
-            self.assertTrue(isinstance(c.fetchone()[0], datetime.datetime))
+            r = yield from c.fetchone()
+            self.assertTrue(isinstance(r[0], datetime.datetime))
         finally:
             yield from c.execute("drop table issue3")
 
@@ -40,7 +44,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         try:
             yield from c.execute("insert into issue4 (ts) values (now())")
             yield from c.execute("select ts from issue4")
-            self.assertTrue(isinstance(c.fetchone()[0], datetime.datetime))
+            r = yield from c.fetchone()
+            self.assertTrue(isinstance(r[0], datetime.datetime))
         finally:
             yield from c.execute("drop table issue4")
 
@@ -100,8 +105,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
                                    ("x" * size,))
             yield from cur.execute("select t from issue13")
             # use assertTrue so that obscenely huge error messages don't print
-            r = cur.fetchone()[0]
-            self.assertTrue("x" * size == r)
+            r = yield from cur.fetchone()
+            self.assertTrue("x" * size == r[0])
         finally:
             yield from cur.execute("drop table issue13")
 
@@ -116,7 +121,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
             yield from c.execute("insert into issue15 (t) values (%s)",
                                  (u'\xe4\xf6\xfc',))
             yield from c.execute("select t from issue15")
-            self.assertEqual(u'\xe4\xf6\xfc', c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(u'\xe4\xf6\xfc', r[0])
         finally:
             yield from c.execute("drop table issue15")
 
@@ -133,7 +139,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
                                  "('pete', 'floydophone')")
             yield from c.execute("select email from issue16 where name=%s",
                                  ("pete",))
-            self.assertEqual("floydophone", c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual("floydophone", r[0])
         finally:
             yield from c.execute("drop table issue16")
 
@@ -164,7 +171,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
                                                 loop=self.loop)
             c2 = conn2.cursor()
             yield from c2.execute("select x from issue17")
-            self.assertEqual("hello, world!", c2.fetchone()[0])
+            r = yield from c2.fetchone()
+            self.assertEqual("hello, world!", r[0])
         finally:
             yield from c.execute("drop table issue17")
 
@@ -196,7 +204,8 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
                                  decode("utf8"))
             yield from c.execute(
                 b"select name from hei\xc3\x9fe".decode("utf8"))
-            self.assertEqual(b"Pi\xc3\xb1ata".decode("utf8"), c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(b"Pi\xc3\xb1ata".decode("utf8"), r[0])
         finally:
             yield from c.execute(b"drop table hei\xc3\x9fe".decode("utf8"))
 
@@ -219,7 +228,8 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
         # kill connections[0]
         yield from c.execute("show processlist")
         kill_id = None
-        for row in c.fetchall():
+        rows = yield from c.fetchall()
+        for row in rows:
             id = row[0]
             info = row[7]
             if info == "show processlist":
@@ -237,7 +247,9 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
         try:
             c = self.connections[1].cursor()
             yield from c.execute("show processlist")
-            ids = [row[0] for row in c.fetchall()]
+            rows = yield from c.fetchall()
+            ids = [row[0] for row in rows]
+
             self.assertFalse(kill_id in ids)
         finally:
             del self.connections[0]
@@ -247,7 +259,9 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         c = conn.cursor()
         self.assertEqual(1, (yield from c.execute("SELECT @foo")))
-        self.assertEqual((None,), c.fetchone())
+
+        r = yield from c.fetchone()
+        self.assertEqual((None,), r)
         self.assertEqual(0, (yield from c.execute("SET @foo = 'bar'")))
         yield from c.execute("set @foo = 'bar'")
 
@@ -280,7 +294,9 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
                 "create table issue54 (id integer primary key)")
             yield from c.execute("insert into issue54 (id) values (7)")
             yield from c.execute(big_sql)
-            self.assertEqual(7, c.fetchone()[0])
+
+            r = yield from c.fetchone()
+            self.assertEqual(7, r[0])
         finally:
             yield from c.execute("drop table issue54")
 
@@ -321,7 +337,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
             yield from c.execute("insert into b values (%s, %s)", b)
 
             yield from c.execute("SELECT * FROM a inner join b on a.id = b.id")
-            r = c.fetchall()[0]
+            r, *_ = yield from c.fetchall()
             self.assertEqual(r['id'], 1)
             self.assertEqual(r['value'], 11)
             self.assertEqual(r['b.value'], 22)
@@ -342,7 +358,8 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         try:
             yield from cur.execute("""CALL foo()""")
             yield from cur.execute("""SELECT 1""")
-            self.assertEqual(cur.fetchone()[0], 1)
+            r = yield from cur.fetchone()
+            self.assertEqual(r[0], 1)
         finally:
             yield from cur.execute("DROP PROCEDURE IF EXISTS `foo`")
 
@@ -354,11 +371,13 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         yield from conn.autocommit(False)
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
-        self.assertFalse(c.fetchone()[0])
+        r = yield from c.fetchone()
+        self.assertFalse(r[0])
         yield from conn.wait_closed()
         yield from conn.ping()
         yield from c.execute("""select @@autocommit;""")
-        self.assertFalse(c.fetchone()[0])
+        r = yield from c.fetchone()
+        self.assertFalse(r[0])
         yield from conn.wait_closed()
 
         # Ensure autocommit() is still working
@@ -366,12 +385,14 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
                                            **self.databases[0])
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
-        self.assertFalse(c.fetchone()[0])
+        r = yield from c.fetchone()
+        self.assertFalse(r[0])
         yield from conn.wait_closed()
         yield from conn.ping()
         yield from conn.autocommit(True)
         yield from c.execute("""select @@autocommit;""")
-        self.assertTrue(c.fetchone()[0])
+        r = yield from c.fetchone()
+        self.assertTrue(r[0])
         yield from conn.wait_closed()
 
     @run_until_complete

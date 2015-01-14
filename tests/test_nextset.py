@@ -13,12 +13,14 @@ class TestNextset(base.AIOPyMySQLTestCase):
     def test_nextset(self):
         cur = self.con.cursor()
         yield from cur.execute("SELECT 1; SELECT 2;")
-        self.assertEqual([(1,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(1,)], list(r))
 
         r = yield from cur.nextset()
         self.assertTrue(r)
 
-        self.assertEqual([(2,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(2,)], list(r))
         res = yield from cur.nextset()
         self.assertIsNone(res)
 
@@ -26,21 +28,25 @@ class TestNextset(base.AIOPyMySQLTestCase):
     def test_skip_nextset(self):
         cur = self.con.cursor()
         yield from cur.execute("SELECT 1; SELECT 2;")
-        self.assertEqual([(1,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(1,)], list(r))
 
         yield from cur.execute("SELECT 42")
-        self.assertEqual([(42,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(42,)], list(r))
 
     @run_until_complete
     def test_ok_and_next(self):
         cur = self.con.cursor()
         yield from cur.execute("SELECT 1; commit; SELECT 2;")
-        self.assertEqual([(1,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(1,)], list(r))
         res = yield from cur.nextset()
         self.assertTrue(res)
         res = yield from cur.nextset()
         self.assertTrue(res)
-        self.assertEqual([(2,)], list(cur))
+        r = yield from cur.fetchall()
+        self.assertEqual([(2,)], list(r))
         res = yield from cur.nextset()
         self.assertIsNone(res)
 
@@ -53,13 +59,16 @@ class TestNextset(base.AIOPyMySQLTestCase):
         yield from cur1.execute("SELECT 1; SELECT 2;")
         yield from cur2.execute("SELECT 42")
 
-        self.assertEqual([(1,)], list(cur1))
-        self.assertEqual([(42,)], list(cur2))
+        r1 = yield from cur1.fetchall()
+        r2 = yield from cur2.fetchall()
+
+        self.assertEqual([(1,)], list(r1))
+        self.assertEqual([(42,)], list(r2))
 
         res = yield from cur1.nextset()
         self.assertTrue(res)
 
-        self.assertEqual([(2,)], list(cur1))
+        self.assertEqual([(2,)], list(r1))
         res = yield from cur1.nextset()
         self.assertIsNone(res)
 

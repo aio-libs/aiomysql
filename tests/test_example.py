@@ -13,10 +13,10 @@ class TestExample(AIOPyMySQLTestCase):
         cur = conn.cursor()
         yield from cur.execute("SELECT Host,User FROM user")
         # print(cur.description)
-        r = cur.fetchall()
+        r = yield from cur.fetchall()
         self.assertTrue(r)
         # print(r)
-        cur.close()
+        yield from cur.close()
         conn.close()
 
     @run_until_complete
@@ -29,7 +29,7 @@ class TestExample(AIOPyMySQLTestCase):
             cur = conn.cursor()
             yield from cur.execute("SELECT 10")
             # print(cur.description)
-            (r,) = cur.fetchone()
+            (r,) = yield from cur.fetchone()
             self.assertTrue(r, 10)
         pool.close()
         yield from pool.wait_closed()
