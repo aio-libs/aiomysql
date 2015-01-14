@@ -231,38 +231,3 @@ class _ConnectionContextManager:
         finally:
             self._pool = None
             self._conn = None
-
-
-# class _CursorContextManager:
-#     """Context manager.
-#
-#     This enables the following idiom for acquiring and releasing a
-#     cursor around a block:
-#
-#         with (yield from pool.cursor()) as cur:
-#             yield from cur.execute("SELECT 1")
-#
-#     while failing loudly when accidentally using:
-#
-#         with pool:
-#             <block>
-#     """
-#
-#     __slots__ = ('_pool', '_conn', '_cur')
-#
-#     def __init__(self, pool, conn, cur):
-#         self._pool = pool
-#         self._conn = conn
-#         self._cur = cur
-#
-#     def __enter__(self):
-#         return self._cur
-#
-#     def __exit__(self, *args):
-#         try:
-#             self._cur.close()
-#             self._pool.release(self._conn)
-#         finally:
-#             self._pool = None
-#             self._conn = None
-#             self._cur = None
