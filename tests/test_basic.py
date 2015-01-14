@@ -9,6 +9,7 @@ from tests._testutils import run_until_complete
 
 
 class TestConversion(base.AIOPyMySQLTestCase):
+
     @run_until_complete
     def test_datatypes(self):
         """ test every data type """
@@ -34,7 +35,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
                 v)
             yield from c.execute(
                 "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
-            r = c.fetchone()
+            r = yield from c.fetchone()
             self.assertEqual(util.int2byte(1), r[0])
             # self.assertEqual(v[1:8], r[1:8])
             self.assertEqual(v[1:9], r[1:9])
@@ -56,7 +57,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
                 [None] * 12)
             yield from c.execute(
                 "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
-            r = c.fetchone()
+            r = yield from c.fetchone()
             self.assertEqual(tuple([None] * 12), r)
 
             yield from c.execute("delete from test_datatypes")
@@ -68,7 +69,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
             yield from c.execute(
                 "select l from test_datatypes where i in %s order by i",
                 ((2, 6),))
-            r = c.fetchall()
+            r = yield from c.fetchall()
             self.assertEqual(((4,), (8,)), r)
         finally:
             yield from c.execute("drop table test_datatypes")
@@ -85,7 +86,8 @@ class TestConversion(base.AIOPyMySQLTestCase):
                 "insert into test_dict (a,b,c) values (%(a)s, %(b)s, %(c)s)",
                 {"a": 1, "b": 2, "c": 3})
             yield from c.execute("select a,b,c from test_dict")
-            self.assertEqual((1, 2, 3), c.fetchone())
+            r = yield from c.fetchone()
+            self.assertEqual((1, 2, 3), r)
         finally:
             yield from c.execute("drop table test_dict")
 
@@ -93,13 +95,15 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_string(self):
         conn = self.connections[0]
         c = conn.cursor()
+        yield from c.execute("DROP TABLE IF EXISTS test_dict;")
         yield from c.execute("create table test_dict (a text)")
         test_value = "I am a test string"
         try:
             yield from c.execute("insert into test_dict (a) values (%s)",
                                  test_value)
             yield from c.execute("select a from test_dict")
-            self.assertEqual((test_value,), c.fetchone())
+            r = yield from c.fetchone()
+            self.assertEqual((test_value,), r)
         finally:
             yield from c.execute("drop table test_dict")
 
@@ -113,7 +117,8 @@ class TestConversion(base.AIOPyMySQLTestCase):
             yield from c.execute("insert into test_dict (a) values (%s)",
                                  test_value)
             yield from c.execute("select a from test_dict")
-            self.assertEqual((test_value,), c.fetchone())
+            r = yield from c.fetchone()
+            self.assertEqual((test_value,), r)
         finally:
             yield from c.execute("drop table test_dict")
 
@@ -128,7 +133,8 @@ class TestConversion(base.AIOPyMySQLTestCase):
             yield from c.execute("insert into test_big_blob (b) values (%s)",
                                  (data,))
             yield from c.execute("select b from test_big_blob")
-            self.assertEqual(data.encode(conn.charset), c.fetchone()[0])
+            r = yield from c.fetchone()
+            self.assertEqual(data.encode(conn.charset), r[0])
         finally:
             yield from c.execute("drop table test_big_blob")
 
@@ -138,9 +144,11 @@ class TestConversion(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         c = conn.cursor()
         yield from c.execute("select null,''")
-        self.assertEqual((None, u''), c.fetchone())
+        r = yield from c.fetchone()
+        self.assertEqual((None, u''), r)
         yield from c.execute("select '',null")
-        self.assertEqual((u'', None), c.fetchone())
+        r = yield from c.fetchone()
+        self.assertEqual((u'', None), r)
 
     @run_until_complete
     def test_timedelta(self):
@@ -151,6 +159,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
             "select time('12:30'), time('23:12:59'), time('23:12:59.05100'), "
             "time('-12:30'), time('-23:12:59'), time('-23:12:59.05100'), "
             "time('-00:30')")
+        r = yield from c.fetchone()
         self.assertEqual((datetime.timedelta(0, 45000),
                           datetime.timedelta(0, 83579),
                           datetime.timedelta(0, 83579, 51000),
@@ -158,7 +167,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
                           -datetime.timedelta(0, 83579),
                           -datetime.timedelta(0, 83579, 51000),
                           -datetime.timedelta(0, 1800)),
-                         c.fetchone())
+                         r)
 
     @run_until_complete
     def test_datetime(self):
@@ -173,7 +182,8 @@ class TestConversion(base.AIOPyMySQLTestCase):
                 "insert into test_datetime values "
                 "(1,'2013-11-12 09:09:09.12345')")
             yield from c.execute("select ts from test_datetime")
-            self.assertEqual((dt,), c.fetchone())
+            r = yield from c.fetchone()
+            self.assertEqual((dt,), r)
         except ProgrammingError:
             # User is running a version of MySQL that doesn't support
             # msecs within datetime
@@ -194,7 +204,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
         self.assertTrue(transaction_flag)
         cursor = conn.cursor()
         yield from cursor.execute('SELECT 1;')
-        (r, ) = cursor.fetchone()
+        (r, ) = yield from cursor.fetchone()
         self.assertEqual(r, 1)
         yield from conn.commit()
         # make sure that transaction flag is down
@@ -217,11 +227,11 @@ class TestConversion(base.AIOPyMySQLTestCase):
         yield from cursor.execute('INSERT INTO tz_data VALUES (%s, %s, %s)',
                                   args)
         yield from cursor.execute('SELECT * FROM tz_data;')
-        data = cursor.fetchall()
+        data = yield from cursor.fetchall()
         self.assertEqual(len(data), 1)
 
         yield from conn.rollback()
         yield from cursor.execute('SELECT * FROM tz_data;')
-        data = cursor.fetchall()
+        data = yield from cursor.fetchall()
         self.assertEqual(len(data), 0, 'should not return any rows since no '
                                        'inserts was commited')
