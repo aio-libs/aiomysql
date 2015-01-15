@@ -109,27 +109,27 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         yield from self._prepare(conn)
         cursor = conn.cursor(SSCursor)
-        yield from cursor.execute('SELECT * FROM tbl;')
+        yield from cursor.execute('SELECT * FROM tz_data;')
         yield from cursor.scroll(1)
         ret = yield from cursor.fetchone()
-        self.assertEqual((2, 'b'), ret)
+        self.assertEqual(('America', '', 'America/Los_Angeles'), ret)
 
     @run_until_complete
     def test_sscursor_scroll_absolute(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
         cursor = conn.cursor(SSCursor)
-        yield from cursor.execute('SELECT * FROM tbl;')
+        yield from cursor.execute('SELECT * FROM tz_data;')
         yield from cursor.scroll(2, mode='absolute')
         ret = yield from cursor.fetchone()
-        self.assertEqual((3, 'c'), ret)
+        self.assertEqual(('America', '', 'America/Lima'), ret)
 
     @run_until_complete
     def test_sscursor_scroll_errors(self):
         conn = self.connections[0]
         cursor = conn.cursor(SSCursor)
 
-        yield from cursor.execute('SELECT * FROM tbl;')
+        yield from cursor.execute('SELECT * FROM tz_data;')
 
         with self.assertRaises(NotSupportedError):
             yield from cursor.scroll(-2, mode='relative')

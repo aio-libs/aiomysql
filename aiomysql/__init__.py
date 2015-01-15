@@ -95,7 +95,3 @@ __all__ = [
 
 (Connection, Pool, connect, create_pool, Cursor, SSCursor, DictCursor,
  SSDictCursor)  # pyflakes
-
-threadsafety = 1
-apilevel = '2.0'
-paramstyle = 'format'
