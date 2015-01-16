@@ -50,7 +50,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, loop=None):
+            no_delay=False, autocommit=False, echo=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
 
@@ -62,7 +62,7 @@ def connect(host="localhost", user=None, password="",
                       cursorclass=cursorclass, init_command=init_command,
                       connect_timeout=connect_timeout,
                       read_default_group=read_default_group, no_delay=no_delay,
-                      autocommit=autocommit, loop=loop)
+                      autocommit=autocommit, echo=echo, loop=loop)
 
     yield from conn.connect()
     return conn
@@ -82,7 +82,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=False, autocommit=False, loop=None):
+                 no_delay=False, autocommit=False, echo=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -150,12 +150,15 @@ class Connection:
             # port = int(_config("port", port))
             # charset = _config("default-character-set", charset)
 
-        self.host = host
-        self.port = port
-        self.user = user or DEFAULT_USER
+        self._host = host
+        self._port = port
+        self._user = user or DEFAULT_USER
         self._password = password or ""
-        self.db = db
+        self._db = db
         self._no_delay = no_delay
+        self._echo = echo
+
+
         self.unix_socket = unix_socket
         if charset:
             self.charset = charset
@@ -171,7 +174,7 @@ class Connection:
 
         client_flag |= CAPABILITIES
         client_flag |= MULTI_STATEMENTS
-        if self.db:
+        if self._db:
             client_flag |= CONNECT_WITH_DB
         self.client_flag = client_flag
 
@@ -193,6 +196,27 @@ class Connection:
         # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None
+
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def db(self):
+        return self._db
+
+    @property
+    def user(self):
+        return self._user
+
+    @property
+    def echo(self):
+        """Return echo mode status."""
+        return self._echo
 
     @property
     def loop(self):
@@ -293,9 +317,8 @@ class Connection:
 
     def cursor(self, cursor=None):
         """ Create a new cursor to execute queries with """
-        if cursor:
-            return cursor(self)
-        return self.cursorclass(self)
+        cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
+        return cur
 
     # The following methods are INTERNAL USE ONLY (called from Cursor)
     @asyncio.coroutine
@@ -354,7 +377,7 @@ class Connection:
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
         try:
-            if self.unix_socket and self.host in ('localhost', '127.0.0.1'):
+            if self.unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
                     asyncio.open_unix_connection(self.unix_socket,
                                                  loop=self._loop)
@@ -362,9 +385,9 @@ class Connection:
                                  self.unix_socket
             else:
                 self._reader, self._writer = yield from \
-                    asyncio.open_connection(self.host, self.port,
+                    asyncio.open_connection(self._host, self._port,
                                             loop=self._loop)
-                self.host_info = "socket %s:%d" % (self.host, self.port)
+                self.host_info = "socket %s:%d" % (self._host, self._port)
 
             if self._no_delay:
                 self._set_nodelay(True)
@@ -387,7 +410,7 @@ class Connection:
             self._reader, self._writer = None, None
             raise OperationalError(
                 2003, "Can't connect to MySQL server on %r (%s)"
-                % (self.host, e))
+                % (self._host, e))
 
     def _set_nodelay(self, value):
         flag = int(bool(value))
@@ -496,12 +519,12 @@ class Connection:
         if self.server_version.startswith('5'):
             self.client_flag |= MULTI_RESULTS
 
-        if self.user is None:
+        if self._user is None:
             raise ValueError("Did not specify a username")
 
         charset_id = charset_by_name(self.charset).id
-        if isinstance(self.user, str):
-            self.user = self.user.encode(self.encoding)
+        if isinstance(self._user, str):
+            self._user = self._user.encode(self.encoding)
 
         data_init = (
             struct.pack('<i', self.client_flag) + struct.pack("<I", 1) +
@@ -509,13 +532,13 @@ class Connection:
 
         next_packet = 1
 
-        data = data_init + self.user + b'\0' + _scramble(
+        data = data_init + self._user + b'\0' + _scramble(
             self._password.encode('latin1'), self.salt)
 
-        if self.db:
-            if isinstance(self.db, str):
-                self.db = self.db.encode(self.encoding)
-            data += self.db + int2byte(0)
+        if self._db:
+            if isinstance(self._db, str):
+                self._db = self._db.encode(self.encoding)
+            data += self._db + int2byte(0)
 
         data = pack_int24(len(data)) + int2byte(next_packet) + data
         next_packet += 2
