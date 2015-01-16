@@ -54,6 +54,7 @@ class TestPool(unittest.TestCase):
             self.assertEqual(10, pool.maxsize)
             self.assertEqual(10, pool.size)
             self.assertEqual(10, pool.freesize)
+            self.assertFalse(pool.echo)
 
         self.loop.run_until_complete(go())
 
@@ -436,7 +437,6 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    @unittest.skip('Not implemented')
     def test_echo(self):
         @asyncio.coroutine
         def go():

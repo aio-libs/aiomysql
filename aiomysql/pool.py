@@ -8,11 +8,12 @@ from .connection import connect
 
 
 @asyncio.coroutine
-def create_pool(minsize=10, maxsize=10, loop=None, **kwargs):
+def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    pool = Pool(minsize=minsize, maxsize=maxsize, loop=loop, **kwargs)
+    pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo, loop=loop,
+                **kwargs)
     if minsize > 0:
         with (yield from pool._cond):
             yield from pool._fill_free_pool(False)
@@ -22,7 +23,7 @@ def create_pool(minsize=10, maxsize=10, loop=None, **kwargs):
 class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
-    def __init__(self, minsize, maxsize, loop, **kwargs):
+    def __init__(self, minsize, maxsize, echo, loop, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize:
@@ -37,6 +38,12 @@ class Pool(asyncio.AbstractServer):
         self._terminated = set()
         self._closing = False
         self._closed = False
+        self._echo = echo
+
+    @property
+    def echo(self):
+        return self._echo
+
 
     @property
     def minsize(self):
@@ -129,7 +136,8 @@ class Pool(asyncio.AbstractServer):
         while self.size < self.minsize:
             self._acquiring += 1
             try:
-                conn = yield from connect(loop=self._loop, **self._conn_kwargs)
+                conn = yield from connect(echo=self._echo, loop=self._loop,
+                                          **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
@@ -141,7 +149,8 @@ class Pool(asyncio.AbstractServer):
         if override_min and self.size < self.maxsize:
             self._acquiring += 1
             try:
-                conn = yield from connect(loop=self._loop, **self._conn_kwargs)
+                conn = yield from connect(echo=self._echo, loop=self._loop,
+                                          **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()

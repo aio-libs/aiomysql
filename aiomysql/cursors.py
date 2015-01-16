@@ -6,6 +6,8 @@ from pymysql.err import (
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
 
+from aiomysql.log import logger
+
 
 class Cursor:
     """Cursor is used to interact with the database."""
@@ -17,7 +19,7 @@ class Cursor:
     #: Default value of max_allowed_packet is 1048576.
     max_stmt_length = 1024000
 
-    def __init__(self, connection):
+    def __init__(self, connection, echo=False):
         """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
         """
@@ -31,6 +33,7 @@ class Cursor:
         self._result = None
         self._rows = None
         self._lastrowid = None
+        self._echo = echo
 
     @property
     def connection(self):
@@ -121,6 +124,15 @@ class Cursor:
         """
         return self._lastrowid
 
+    @property
+    def echo(self):
+        """Return echo mode status."""
+        return self._echo
+
+    @property
+    def closed(self):
+        return True if not self._connection else False
+
     @asyncio.coroutine
     def close(self):
         """Closing a cursor just exhausts all remaining data."""
@@ -132,10 +144,6 @@ class Cursor:
                 pass
         finally:
             self._connection = None
-
-    @property
-    def closed(self):
-        return True if not self._connection else False
 
     def _get_db(self):
         if not self._connection:
@@ -191,6 +199,9 @@ class Cursor:
 
         yield from self._query(query)
         self._executed = query
+        if self._echo:
+            logger.info(query)
+            logger.info("%r", args)
         return self._rowcount
 
     @asyncio.coroutine
@@ -202,6 +213,10 @@ class Cursor:
         """
         if not args:
             return
+
+        if self._echo:
+            logger.info("CALL %s", query)
+            logger.info("%r", args)
 
         m = RE_INSERT_VALUES.match(query)
         if m:
@@ -277,6 +292,10 @@ class Cursor:
         :returns: the original args.
         """
         conn = self._get_db()
+        if self._echo:
+            logger.info("CALL %s", procname)
+            logger.info("%r", args)
+
         for index, arg in enumerate(args):
             q = "SET @_%s_%d=%s" % (procname, index, conn.escape(arg))
             yield from self._query(q)
