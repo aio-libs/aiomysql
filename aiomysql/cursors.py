@@ -389,7 +389,7 @@ class Cursor:
     NotSupportedError = NotSupportedError
 
 
-class DictCursorMixin:
+class _DictCursorMixin:
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
 
@@ -413,7 +413,7 @@ class DictCursorMixin:
         return self.dict_type(zip(self._fields, row))
 
 
-class DictCursor(DictCursorMixin, Cursor):
+class DictCursor(_DictCursorMixin, Cursor):
     """A cursor which returns results as a dictionary"""
 
 
@@ -456,7 +456,7 @@ class SSCursor(Cursor):
         return self._rowcount
 
     @asyncio.coroutine
-    def read_next(self):
+    def _read_next(self):
         """ Read next row """
         row = yield from self._result._read_rowdata_packet_unbuffered()
         row = self._conv_row(row)
@@ -466,7 +466,7 @@ class SSCursor(Cursor):
     def fetchone(self):
         """ Fetch next row """
         self._check_executed()
-        row = yield from self.read_next()
+        row = yield from self._read_next()
         if row is None:
             return
         self._rownumber += 1
@@ -495,7 +495,7 @@ class SSCursor(Cursor):
 
         rows = []
         for i in range(size):
-            row = yield from self.read_next()
+            row = yield from self._read_next()
             if row is None:
                 break
             rows.append(row)
@@ -512,7 +512,7 @@ class SSCursor(Cursor):
                                         "by this cursor")
 
             for _ in range(value):
-                yield from self.read_next()
+                yield from self._read_next()
             self._rownumber += value
         elif mode == 'absolute':
             if value < self._rownumber:
@@ -521,11 +521,11 @@ class SSCursor(Cursor):
 
             end = value - self._rownumber
             for _ in range(end):
-                yield from self.read_next()
+                yield from self._read_next()
             self._rownumber = value
         else:
             raise ProgrammingError("unknown scroll mode %s" % mode)
 
 
-class SSDictCursor(DictCursorMixin, SSCursor):
+class SSDictCursor(_DictCursorMixin, SSCursor):
     """An unbuffered cursor, which returns results as a dictionary """
