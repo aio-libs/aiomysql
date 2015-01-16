@@ -14,7 +14,7 @@ def test_example():
             cur = conn.cursor()
             yield from cur.execute("SELECT 10")
             # print(cur.description)
-            (r,) = cur.fetchone()
+            (r,) = yield from cur.fetchone()
             assert r == 10
         pool.close()
         yield from pool.wait_closed()
