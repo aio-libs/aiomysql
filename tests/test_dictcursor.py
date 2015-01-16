@@ -1,8 +1,8 @@
 import asyncio
 import datetime
 
-from tests import base
 import aiomysql.cursors
+from tests import base
 from tests._testutils import run_until_complete
 
 
@@ -74,13 +74,6 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         r = yield from c.fetchall()
         self.assertEqual([bob, jim, fred], r, "fetchall failed via DictCursor")
 
-        # same test again but do a list comprehension
-        yield from c.execute("SELECT * from dictcursor")
-
-        # iteration not supported
-        with self.assertRaises(NotImplementedError):
-            list(c)
-
         # get all 2 row via fetchmany
         yield from c.execute("SELECT * from dictcursor")
         r = yield from c.fetchmany(2)
@@ -109,12 +102,6 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         r = yield from cur.fetchall()
         self.assertEqual([bob, jim, fred], r,
                          "fetchall failed via MyDictCursor")
-
-        yield from cur.execute("SELECT * FROM dictcursor")
-
-        # iteration not supported
-        with self.assertRaises(NotImplementedError):
-            list(cur)
 
         yield from cur.execute("SELECT * FROM dictcursor")
         r = yield from cur.fetchmany(2)

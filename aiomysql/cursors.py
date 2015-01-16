@@ -377,9 +377,6 @@ class Cursor:
         self._lastrowid = result.insert_id
         self._rows = result.rows
 
-    def __iter__(self):
-        raise NotImplementedError
-
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
