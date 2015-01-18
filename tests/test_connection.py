@@ -8,9 +8,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_utf8mb4(self):
         """This test requires MySQL >= 5.5"""
-        arg = self.databases[0].copy()
-        arg['charset'] = 'utf8mb4'
-        conn = yield from aiomysql.connect(loop=self.loop, **arg)
+        conn = yield from aiomysql.connect(loop=self.loop, charset='utf8mb4')
         assert conn  # pyflakes
 
     @run_until_complete
@@ -56,9 +54,8 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_select_db(self):
         con = self.connections[0]
-        current_db = self.databases[0]['db']
-        other_db = self.databases[1]['db']
-
+        current_db = self.db
+        other_db = self.other_db
         cur = con.cursor()
         yield from cur.execute('SELECT database()')
         r = yield from cur.fetchone()

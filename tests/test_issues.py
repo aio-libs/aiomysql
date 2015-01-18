@@ -58,13 +58,11 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_issue_6(self):
-        """test for exception: TypeError: ord() expected a character,
-        but string of length 0 found """
-        # ToDo: this test requires access to db 'mysql'.
-        kwargs = self.databases[0].copy()
-        kwargs['db'] = "mysql"
-        conn = yield from aiomysql.connect(loop=self.loop, **kwargs)
+        # test for exception: TypeError: ord() expected a character,
+        # but string of length 0 found
+        conn = yield from self.connect(db='mysql')
         c = conn.cursor()
+        self.assertEqual(conn.db, 'mysql')
         yield from c.execute("select * from user")
         yield from conn.wait_closed()
 
@@ -151,8 +149,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_17(self):
         """ could not connect mysql use passwod """
         conn = self.connections[0]
-        host = self.databases[0]["host"]
-        db = self.databases[0]["db"]
+        host = self.host
+        db = self.db
         c = conn.cursor()
         # grant access to a table to a user with a password
         try:
@@ -191,8 +189,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_issue_33(self):
-        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop,
-                                           **self.databases[0])
+        conn = yield from self.connect(charset='utf8')
         c = conn.cursor()
         try:
             yield from c.execute(
@@ -366,8 +363,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_114(self):
         """ autocommit is not set after reconnecting with ping() """
-        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop,
-                                           **self.databases[0])
+        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
         yield from conn.autocommit(False)
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
@@ -381,8 +377,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         yield from conn.wait_closed()
 
         # Ensure autocommit() is still working
-        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop,
-                                           **self.databases[0])
+        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
         c = conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()

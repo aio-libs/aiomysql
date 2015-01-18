@@ -44,7 +44,6 @@ class Pool(asyncio.AbstractServer):
     def echo(self):
         return self._echo
 
-
     @property
     def minsize(self):
         return self._minsize

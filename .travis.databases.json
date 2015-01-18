@@ -1,4 +1,0 @@
-[
-    {"host": "localhost", "user": "root", "password": "", "db": "test_pymysql",  "use_unicode": true},
-    {"host": "localhost", "user": "root", "password": "", "db": "test_pymysql2" }
-]

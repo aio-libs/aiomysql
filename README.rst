@@ -99,7 +99,7 @@ TODO
 * implement ssl transport support
 * increase coverage
 * documentation
-* implement echoe like in aiopg
+* implement echo like in aiopg
 * bring back loggers like in pymysql
 
 Requirements
