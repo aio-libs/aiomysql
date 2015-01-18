@@ -23,14 +23,7 @@ THE SOFTWARE.
 
 """
 
-from pymysql import (DBAPISet, NULL, Binary, DATE, NUMBER,
-                     BINARY, ROWID, STRING, TIME, TIMESTAMP)
-from pymysql.constants import FIELD_TYPE
 from pymysql.converters import escape_dict, escape_sequence, escape_string
-
-from pymysql.times import (Date, Time, Timestamp,
-                           DateFromTicks, TimeFromTicks, TimestampFromTicks)
-
 from pymysql.err import (Warning, Error, InterfaceError, DataError,
                          DatabaseError, OperationalError, IntegrityError,
                          InternalError,
@@ -43,22 +36,6 @@ from .pool import create_pool, Pool
 __version__ = '0.0.1'
 
 __all__ = [
-    'Date',
-    'Time',
-    'Timestamp',
-    'DateFromTicks',
-    'TimeFromTicks',
-    'TimestampFromTicks',
-    'Binary',
-    'FIELD_TYPE',
-    'NULL',
-    'NUMBER',
-    'BINARY',
-    'ROWID',
-    'STRING',
-    'TIME',
-    'TIMESTAMP',
-    'DATE',
 
     # Errors
     'Error',
@@ -73,15 +50,10 @@ __all__ = [
     'ProgrammingError',
     'Warning',
 
-    'DBAPISet',
-
-    'apilevel',
     'escape_dict',
     'escape_sequence',
     'escape_string',
-    'paramstyle',
-    'threadsafety',
-    "__version__",
+    '__version__',
 
     'Connection',
     'Pool'
