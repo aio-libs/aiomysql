@@ -121,3 +121,13 @@ class TestConnection(AIOPyMySQLTestCase):
         yield from cur.execute("SELECT 1;")
         (r, ) = yield from cur.fetchone()
         self.assertEqual(r, 1)
+
+    @run_until_complete
+    def test_connection_properties(self):
+        conn = yield from self.connect(no_delay=True)
+        self.assertEqual(conn.host, self.host)
+        self.assertEqual(conn.port, self.port)
+        self.assertEqual(conn.user, self.user)
+        self.assertEqual(conn.db, self.db)
+        self.assertEqual(conn.echo, False)
+        conn.close()

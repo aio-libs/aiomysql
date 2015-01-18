@@ -159,7 +159,7 @@ class Connection:
         self._echo = echo
 
 
-        self.unix_socket = unix_socket
+        self._unix_socket = unix_socket
         if charset:
             self.charset = charset
             self.use_unicode = True
@@ -377,12 +377,12 @@ class Connection:
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
         try:
-            if self.unix_socket and self._host in ('localhost', '127.0.0.1'):
+            if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
-                    asyncio.open_unix_connection(self.unix_socket,
+                    asyncio.open_unix_connection(self._unix_socket,
                                                  loop=self._loop)
                 self.host_info = "Localhost via UNIX socket: " + \
-                                 self.unix_socket
+                                 self._unix_socket
             else:
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(self._host, self._port,
@@ -523,8 +523,9 @@ class Connection:
             raise ValueError("Did not specify a username")
 
         charset_id = charset_by_name(self.charset).id
+        user = self._user
         if isinstance(self._user, str):
-            self._user = self._user.encode(self.encoding)
+            user = self._user.encode(self.encoding)
 
         data_init = (
             struct.pack('<i', self.client_flag) + struct.pack("<I", 1) +
@@ -532,13 +533,14 @@ class Connection:
 
         next_packet = 1
 
-        data = data_init + self._user + b'\0' + _scramble(
+        data = data_init + user + b'\0' + _scramble(
             self._password.encode('latin1'), self.salt)
 
         if self._db:
+            db = self._db
             if isinstance(self._db, str):
-                self._db = self._db.encode(self.encoding)
-            data += self._db + int2byte(0)
+                db = self._db.encode(self.encoding)
+            data += db + int2byte(0)
 
         data = pack_int24(len(data)) + int2byte(next_packet) + data
         next_packet += 2
