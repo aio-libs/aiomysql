@@ -323,11 +323,11 @@ class Cursor:
         return fut
 
     def fetchmany(self, size=None):
-        """ Fetch several rows """
+        """ Fetch several rows"""
         self._check_executed()
         fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
-            fut.set_result(None)
+            fut.set_result([])
             return fut
         end = self._rownumber + (size or self._arraysize)
         result = self._rows[self._rownumber:end]
@@ -476,7 +476,7 @@ class SSCursor(Cursor):
 
     @asyncio.coroutine
     def _read_next(self):
-        """ Read next row """
+        """Read next row """
         row = yield from self._result._read_rowdata_packet_unbuffered()
         row = self._conv_row(row)
         return row

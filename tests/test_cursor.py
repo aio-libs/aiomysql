@@ -181,7 +181,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         cur = conn.cursor()
         yield from cur.execute('DROP TABLE IF EXISTS foobar;')
         r = yield from cur.fetchmany()
-        self.assertEqual(None, r)
+        self.assertEqual([], r)
 
     @run_until_complete
     def test_fetchall_no_result(self):
