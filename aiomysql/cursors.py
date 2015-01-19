@@ -341,7 +341,7 @@ class Cursor:
         self._check_executed()
         fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
-            fut.set_result(None)
+            fut.set_result([])
             return fut
 
         if self._rownumber:
