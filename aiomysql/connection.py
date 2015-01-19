@@ -170,7 +170,7 @@ class Connection:
         if use_unicode is not None:
             self.use_unicode = use_unicode
 
-        self.encoding = charset_by_name(self._charset).encoding
+        self._encoding = charset_by_name(self._charset).encoding
 
         client_flag |= CAPABILITIES
         client_flag |= MULTI_STATEMENTS
@@ -232,6 +232,9 @@ class Connection:
     def closed(self):
         return self._writer is None
 
+    @property
+    def encoding(self):
+        return self._encoding
     def close(self):
         """Send the quit message and close the socket"""
         if self._writer:
@@ -375,7 +378,7 @@ class Connection:
                                          % self.escape(charset))
         yield from self._read_packet()
         self._charset = charset
-        self.encoding = encoding
+        self._encoding = encoding
 
     @asyncio.coroutine
     def connect(self):
@@ -454,7 +457,7 @@ class Connection:
         except (OSError, EOFError) as exc:
             msg = "MySQL server has gone away (%s)"
             raise OperationalError(2006, msg % (exc,)) from exc
-        packet = packet_type(buff, self.encoding)
+        packet = packet_type(buff, self._encoding)
         packet.check_error()
         return packet
 
@@ -496,7 +499,7 @@ class Connection:
             yield from self._result._finish_unbuffered_query()
 
         if isinstance(sql, str):
-            sql = sql.encode(self.encoding)
+            sql = sql.encode(self._encoding)
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 
@@ -531,7 +534,7 @@ class Connection:
         charset_id = charset_by_name(self._charset).id
         user = self._user
         if isinstance(self._user, str):
-            user = self._user.encode(self.encoding)
+            user = self._user.encode(self._encoding)
 
         data_init = (
             struct.pack('<i', self.client_flag) + struct.pack("<I", 1) +
@@ -545,7 +548,7 @@ class Connection:
         if self._db:
             db = self._db
             if isinstance(self._db, str):
-                db = self._db.encode(self.encoding)
+                db = self._db.encode(self._encoding)
             data += db + int2byte(0)
 
         data = pack_int24(len(data)) + int2byte(next_packet) + data
