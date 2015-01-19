@@ -199,18 +199,24 @@ class Connection:
 
     @property
     def host(self):
+        """MySQL server IP address or name"""
         return self._host
 
     @property
     def port(self):
+        """MySQL server TCP/IP port"""
         return self._port
 
+    def unix_socke(self):
+        """MySQL Unix socket file location"""
+        return self._unix_socket
     @property
     def db(self):
         return self._db
 
     @property
     def user(self):
+        """User used while connecting to MySQL"""
         return self._user
 
     @property
@@ -240,15 +246,15 @@ class Connection:
         yield from self._writer.drain()
         self.close()
 
-    @property
-    def open(self):
-        return not self.closed
-
     # def __del__(self):
     #     self.close()
 
     @asyncio.coroutine
     def autocommit(self, value):
+        """autocommit value for current MySQL session
+
+        :param value: ``bool``, toggle autocommit
+        """
         self.autocommit_mode = bool(value)
         current = self.get_autocommit()
         if value != current:
