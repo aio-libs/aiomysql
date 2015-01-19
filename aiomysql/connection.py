@@ -235,6 +235,11 @@ class Connection:
     @property
     def encoding(self):
         return self._encoding
+
+    @property
+    def charset(self):
+        return self._charset
+
     def close(self):
         """Send the quit message and close the socket"""
         if self._writer:
