@@ -161,16 +161,16 @@ class Connection:
 
         self._unix_socket = unix_socket
         if charset:
-            self.charset = charset
+            self._charset = charset
             self.use_unicode = True
         else:
-            self.charset = DEFAULT_CHARSET
+            self._charset = DEFAULT_CHARSET
             self.use_unicode = False
 
         if use_unicode is not None:
             self.use_unicode = use_unicode
 
-        self.encoding = charset_by_name(self.charset).encoding
+        self.encoding = charset_by_name(self._charset).encoding
 
         client_flag |= CAPABILITIES
         client_flag |= MULTI_STATEMENTS
@@ -309,7 +309,7 @@ class Connection:
         """ Escape whatever value you pass to it  """
         if isinstance(obj, str):
             return "'" + self.escape_string(obj) + "'"
-        return escape_item(obj, self.charset)
+        return escape_item(obj, self._charset)
 
     def literal(self, obj):
         """Alias for escape()"""
@@ -374,7 +374,7 @@ class Connection:
         yield from self._execute_command(COM_QUERY, "SET NAMES %s"
                                          % self.escape(charset))
         yield from self._read_packet()
-        self.charset = charset
+        self._charset = charset
         self.encoding = encoding
 
     @asyncio.coroutine
@@ -528,7 +528,7 @@ class Connection:
         if self._user is None:
             raise ValueError("Did not specify a username")
 
-        charset_id = charset_by_name(self.charset).id
+        charset_id = charset_by_name(self._charset).id
         user = self._user
         if isinstance(self._user, str):
             user = self._user.encode(self.encoding)
@@ -571,7 +571,7 @@ class Connection:
         return self.server_thread_id[0]
 
     def character_set_name(self):
-        return self.charset
+        return self._charset
 
     def get_host_info(self):
         return self.host_info
