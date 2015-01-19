@@ -493,8 +493,7 @@ class SSCursor(Cursor):
 
     @asyncio.coroutine
     def fetchall(self):
-        """
-        Fetch all, as per MySQLdb. Pretty useless for large queries, as
+        """Fetch all, as per MySQLdb. Pretty useless for large queries, as
         it is buffered.
         """
         rows = []

@@ -330,7 +330,19 @@ class Connection:
         return escape_string(s)
 
     def cursor(self, cursor=None):
-        """ Create a new cursor to execute queries with """
+        """Instantiates and returns a cursor
+
+        By default, :class:`Cursor` is returned. It is possible to also give a
+        custom cursor through the cursor_class parameter, but it needs to
+        be a subclass  of :class:`Cursor`
+
+        :param cursor: custom cursor class.
+        :returns: instance of cursor, by default :class:`Cursor`
+        :raises TypeError: cursor_class is not a subclass of Cursor.
+        """
+        if cursor is not None and not issubclass(cursor, Cursor):
+            raise TypeError('Custom cursor must be instance of Cursor')
+
         cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
         return cur
 

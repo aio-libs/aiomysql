@@ -2,7 +2,7 @@ import asyncio
 from tests import base
 from tests._testutils import run_until_complete
 
-from aiomysql import ProgrammingError
+from aiomysql import ProgrammingError, Cursor
 
 
 class TestCursor(base.AIOPyMySQLTestCase):
@@ -252,3 +252,22 @@ class TestCursor(base.AIOPyMySQLTestCase):
         # calling execute many without args
         row_count = yield from cur.executemany('SELECT 1;', ())
         self.assertIsNone(row_count)
+
+    @run_until_complete
+    def test_custom_cursor(self):
+        class MyCursor(Cursor):
+            pass
+        conn = self.connections[0]
+        cur = conn.cursor(MyCursor)
+        self.assertIsInstance(cur, MyCursor)
+        yield from cur.execute("SELECT 42;")
+        (r, ) = yield from cur.fetchone()
+        self.assertEqual(r, 42)
+
+    @run_until_complete
+    def test_custom_cursor_not_cursor_subclass(self):
+        class MyCursor2:
+            pass
+        conn = self.connections[0]
+        with self.assertRaises(TypeError):
+            conn.cursor(MyCursor2)
