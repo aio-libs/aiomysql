@@ -158,7 +158,6 @@ class Connection:
         self._no_delay = no_delay
         self._echo = echo
 
-
         self._unix_socket = unix_socket
         if charset:
             self._charset = charset
@@ -210,6 +209,7 @@ class Connection:
     def unix_socke(self):
         """MySQL Unix socket file location"""
         return self._unix_socket
+
     @property
     def db(self):
         return self._db
@@ -238,6 +238,12 @@ class Connection:
 
     @property
     def charset(self):
+        """Returns the character set for current connection
+
+        This property returns the character set name of the current connection.
+        The server is queried when the connection is active. If not connected,
+        the configured character set name is returned
+        """
         return self._charset
 
     def close(self):
@@ -341,7 +347,7 @@ class Connection:
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
         if cursor is not None and not issubclass(cursor, Cursor):
-            raise TypeError('Custom cursor must be instance of Cursor')
+            raise TypeError('Custom cursor must be subclass of Cursor')
 
         cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
         return cur
@@ -389,6 +395,7 @@ class Connection:
 
     @asyncio.coroutine
     def set_charset(self, charset):
+        """Sets the character set for the current connection"""
         # Make sure charset is supported.
         encoding = charset_by_name(charset).encoding
         yield from self._execute_command(COM_QUERY, "SET NAMES %s"
