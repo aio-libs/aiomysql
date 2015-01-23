@@ -4,6 +4,7 @@
 import asyncio
 import os
 import socket
+import ssl
 import hashlib
 import struct
 import sys
@@ -49,7 +50,7 @@ def connect(host="localhost", user=None, password="",
             charset='', sql_mode=None,
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
-            connect_timeout=None, read_default_group=None,
+            connect_timeout=None, read_default_group=None, ssl=None,
             no_delay=False, autocommit=False, echo=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
@@ -60,7 +61,7 @@ def connect(host="localhost", user=None, password="",
                       read_default_file=read_default_file, conv=conv,
                       use_unicode=use_unicode, client_flag=client_flag,
                       cursorclass=cursorclass, init_command=init_command,
-                      connect_timeout=connect_timeout,
+                      connect_timeout=connect_timeout, ssl=ssl,
                       read_default_group=read_default_group, no_delay=no_delay,
                       autocommit=autocommit, echo=echo, loop=loop)
 
@@ -80,7 +81,7 @@ class Connection:
                  charset='', sql_mode=None,
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
-                 connect_timeout=None, read_default_group=None,
+                 connect_timeout=None, read_default_group=None, ssl=None,
                  no_delay=False, autocommit=False, echo=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
@@ -137,6 +138,7 @@ class Connection:
 
         self._host = host
         self._port = port
+        self._ssl = ssl
         self._user = user or DEFAULT_USER
         self._password = password or ""
         self._db = db
@@ -407,6 +409,12 @@ class Connection:
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
             else:
+
+                if self._ssl:
+                    sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                    sslcontext.load_cert_chain(self.cert, self.key)
+                    sslcontext.load_verify_locations(self.ca)
+
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(self._host, self._port,
                                             loop=self._loop)
