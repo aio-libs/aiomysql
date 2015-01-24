@@ -188,7 +188,18 @@ class Cursor:
 
     @asyncio.coroutine
     def execute(self, query, args=None):
-        """Execute a query"""
+        """Executes the given operation
+
+        Executes the given operation substituting any markers with
+        the given parameters.
+
+        For example, getting all rows where id is 5:
+          cursor.execute("SELECT * FROM t1 WHERE id = %s", (5,))
+
+        :param query: ``str`` sql statement
+        :param args: ``tuple`` or ``list`` of arguments for sql query
+        :returns: ``int``, number of rows that has been produced of affected
+        """
         conn = self._get_db()
 
         while (yield from self.nextset()):
