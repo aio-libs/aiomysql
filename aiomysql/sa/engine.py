@@ -7,13 +7,13 @@ from .exc import InvalidRequestError
 
 
 try:
-    from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
+    from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql, MySQLDialect_mysqldb
 except ImportError:  # pragma: no cover
     raise ImportError('aiomysql.sa requires sqlalchemy')
 
 
-_dialect = MySQLDialect_pymysql()
-_dialect.implicit_returning = True
+_dialect = MySQLDialect_pymysql(paramstyle='pyformat')
+_dialect.default_paramstyle = 'pyformat'
 
 
 @asyncio.coroutine
