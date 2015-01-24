@@ -59,13 +59,13 @@ class SAConnection:
         execution.
 
         """
-        cursor = yield from self._connection.cursor()
+        cursor = self._connection.cursor()
 
         if isinstance(query, str):
             distilled_params = _distill_params(multiparams, params)
             result_map = None
             if len(distilled_params) > 1:
-                raise exc.ArgumentError("aiopg doesn't support executemany")
+                raise exc.ArgumentError("aiomysql doesn't support executemany")
             elif distilled_params:
                 distilled_params = distilled_params[0]
             yield from cursor.execute(query, distilled_params)
@@ -75,6 +75,7 @@ class SAConnection:
                                         "and execution with parameters")
             compiled = query.compile(dialect=self._dialect)
             # parameters = compiled.params
+
             if not isinstance(query, DDLElement):
                 compiled_parameters = [compiled.construct_params()]
                 processed_parameters = []
@@ -157,28 +158,28 @@ class SAConnection:
 
     @asyncio.coroutine
     def _begin_impl(self):
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('BEGIN')
         finally:
-            cur.close()
+            yield from cur.close()
 
     @asyncio.coroutine
     def _commit_impl(self):
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('COMMIT')
         finally:
-            cur.close()
+            yield from cur.close()
             self._transaction = None
 
     @asyncio.coroutine
     def _rollback_impl(self):
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('ROLLBACK')
         finally:
-            cur.close()
+            yield from cur.close()
 
     @asyncio.coroutine
     def begin_nested(self):
@@ -203,31 +204,31 @@ class SAConnection:
     @asyncio.coroutine
     def _savepoint_impl(self, name=None):
         self._savepoint_seq += 1
-        name = 'aiopg_sa_savepoint_%s' % self._savepoint_seq
+        name = 'aiomysql_sa_savepoint_%s' % self._savepoint_seq
 
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('SAVEPOINT ' + name)
             return name
         finally:
-            cur.close()
+            yield from cur.close()
 
     @asyncio.coroutine
     def _rollback_to_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
         finally:
-            cur.close()
+            yield from cur.close()
         self._transaction = parent
 
     @asyncio.coroutine
     def _release_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
+        cur = self._connection.cursor()
         try:
             yield from cur.execute('RELEASE SAVEPOINT ' + name)
         finally:
-            cur.close()
+            yield from cur.close()
         self._transaction = parent
 
     @asyncio.coroutine
