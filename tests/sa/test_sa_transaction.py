@@ -378,14 +378,12 @@ class TestTransaction(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    # TODO: add skip is twophase transactions disabled
-
-    @check_prepared_transactions
     def test_twophase_transaction_commit(self):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            tr = yield from conn.begin_twophase()
+            tr = yield from conn.begin_twophase('sa_twophase')
+            self.assertEqual(tr.xid, 'sa_twophase')
             yield from conn.execute(tbl.insert().values(name='aaaa'))
 
             yield from tr.prepare()
@@ -400,7 +398,6 @@ class TestTransaction(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    @check_prepared_transactions
     def test_twophase_transaction_twice(self):
         @asyncio.coroutine
         def go():

@@ -114,10 +114,6 @@ class SAConnection:
         return self._connection is None or self._connection.closed
 
     @property
-    def info(self):
-        return self._connection.info
-
-    @property
     def connection(self):
         return self._connection
 
@@ -252,34 +248,33 @@ class SAConnection:
         if xid is None:
             xid = self._dialect.create_xid()
         self._transaction = TwoPhaseTransaction(self, xid)
-        yield from self._begin_impl()
+        yield from self.execute("XA START %s", xid)
         return self._transaction
 
     @asyncio.coroutine
     def _prepare_twophase_impl(self, xid):
-        yield from self.execute("PREPARE TRANSACTION '%s'" % xid)
+        yield from self.execute("XA END '%s'" % xid)
+        yield from self.execute("XA PREPARE '%s'" % xid)
 
     @asyncio.coroutine
     def recover_twophase(self):
         """Return a list of prepared twophase transaction ids."""
-        result = yield from self.execute("SELECT gid FROM pg_prepared_xacts")
+        result = yield from self.execute("XA RECOVER;")
         return [row[0] for row in result]
 
     @asyncio.coroutine
     def rollback_prepared(self, xid, *, is_prepared=True):
         """Rollback prepared twophase transaction."""
-        if is_prepared:
-            yield from self.execute("ROLLBACK PREPARED '%s'" % xid)
-        else:
-            yield from self._rollback_impl()
+        if not is_prepared:
+            yield from self.execute("XA END '%s'" % xid)
+        yield from self.execute("XA ROLLBACK '%s'" % xid)
 
     @asyncio.coroutine
     def commit_prepared(self, xid, *, is_prepared=True):
         """Commit prepared twophase transaction."""
-        if is_prepared:
-            self.execute("COMMIT PREPARED '%s'" % xid)
-        else:
-            yield from self._commit_impl()
+        if not is_prepared:
+            yield from self.execute("XA END '%s'" % xid)
+        yield from self.execute("XA COMMIT '%s'" % xid)
 
     @property
     def in_transaction(self):

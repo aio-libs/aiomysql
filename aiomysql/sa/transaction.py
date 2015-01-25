@@ -162,10 +162,10 @@ class TwoPhaseTransaction(Transaction):
 
     @asyncio.coroutine
     def _do_rollback(self):
-        yield from self._connection._rollback_twophase_impl(
+        yield from self._connection.rollback_prepared(
             self._xid, is_prepared=self._is_prepared)
 
     @asyncio.coroutine
     def _do_commit(self):
-        yield from self._connection._commit_twophase_impl(
+        yield from self._connection.commit_prepared(
             self._xid, is_prepared=self._is_prepared)
