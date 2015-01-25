@@ -1,3 +1,5 @@
+# ported from:
+# https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/engine.py
 import asyncio
 
 import aiomysql

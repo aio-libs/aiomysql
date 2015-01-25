@@ -1,3 +1,6 @@
+# ported from: https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/exc.py
+
+
 class Error(Exception):
     """Generic error class."""
 
@@ -6,15 +9,13 @@ class ArgumentError(Error):
     """Raised when an invalid or conflicting function argument is supplied.
 
     This error generally corresponds to construction time state errors.
-
     """
 
 
 class InvalidRequestError(ArgumentError):
-    """aiopg.sa was asked to do something it can't do.
+    """aiomysql.sa was asked to do something it can't do.
 
     This error generally corresponds to runtime state errors.
-
     """
 
 

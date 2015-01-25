@@ -1,3 +1,6 @@
+# ported from:
+# https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/result.py
+
 import asyncio
 import weakref
 from collections.abc import Mapping, Sequence
