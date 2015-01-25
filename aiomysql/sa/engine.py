@@ -66,10 +66,6 @@ class Engine:
         return self._dialect.driver
 
     @property
-    def timeout(self):
-        return self._pool.timeout
-
-    @property
     def minsize(self):
         return self._pool.minsize
 
