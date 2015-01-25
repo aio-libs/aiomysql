@@ -34,7 +34,7 @@ def read_version():
         else:
             raise RuntimeError('Cannot find version in aiomysql/__init__.py')
 
-classifiers=[
+classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',

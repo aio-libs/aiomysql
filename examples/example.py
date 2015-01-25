@@ -14,7 +14,7 @@ def test_example():
     cur = conn.cursor()
     yield from cur.execute("SELECT Host,User FROM user")
     print(cur.description)
-    r = yield from  cur.fetchall()
+    r = yield from cur.fetchall()
     print(r)
     yield from cur.close()
     conn.close()
