@@ -69,6 +69,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertIs(cur.connection, conn)
         cur.setinputsizes()
         cur.setoutputsizes()
+        self.assertEqual(cur.echo, False)
 
     @run_until_complete
     def test_scroll_relative(self):
