@@ -10,6 +10,7 @@ before_script:
 
 install:
     - pip install flake8
+    - pip install sqlalchemy
     - pip install nose
     - pip install coverage
     - pip install .
