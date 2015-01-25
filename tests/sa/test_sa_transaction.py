@@ -130,7 +130,6 @@ class TestTransaction(unittest.TestCase):
             yield from conn1.close()
             yield from conn2.close()
 
-
         self.loop.run_until_complete(go())
 
     def test_root_transaction_close(self):

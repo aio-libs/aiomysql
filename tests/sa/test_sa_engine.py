@@ -86,7 +86,6 @@ class TestEngine(unittest.TestCase):
         finally:
             asyncio.set_event_loop(None)
 
-
     def test_not_context_manager(self):
         @asyncio.coroutine
         def go():

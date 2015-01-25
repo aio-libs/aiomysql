@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 import aiomysql
 from .connection import SAConnection
@@ -7,7 +6,7 @@ from .exc import InvalidRequestError
 
 
 try:
-    from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql, MySQLDialect_mysqldb
+    from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
 except ImportError:  # pragma: no cover
     raise ImportError('aiomysql.sa requires sqlalchemy')
 
