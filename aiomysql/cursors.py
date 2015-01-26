@@ -334,7 +334,16 @@ class Cursor:
         return fut
 
     def fetchmany(self, size=None):
-        """ Fetch several rows"""
+        """Returns the next set of rows of a query result, returning a
+        list of tuples. When no more rows are available, it returns an
+        empty list.
+
+        The number of rows returned can be specified using the size argument,
+        which defaults to one
+
+        :param size: ``int`` number of rows to return
+        :returns: ``list`` of fetched rows
+        """
         self._check_executed()
         fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
@@ -348,7 +357,10 @@ class Cursor:
         return fut
 
     def fetchall(self):
-        """Fetch all the rows """
+        """Returns all rows of a query result set
+
+        :returns: ``list`` of fetched rows
+        """
         self._check_executed()
         fut = asyncio.Future(loop=self._loop)
         if self._rows is None:
@@ -517,7 +529,16 @@ class SSCursor(Cursor):
 
     @asyncio.coroutine
     def fetchmany(self, size=None):
-        """Fetch many"""
+        """Returns the next set of rows of a query result, returning a
+        list of tuples. When no more rows are available, it returns an
+        empty list.
+
+        The number of rows returned can be specified using the size argument,
+        which defaults to one
+
+        :param size: ``int`` number of rows to return
+        :returns: ``list`` of fetched rows
+        """
         self._check_executed()
         if size is None:
             size = self._arraysize
