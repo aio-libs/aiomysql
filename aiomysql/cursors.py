@@ -217,10 +217,26 @@ class Cursor:
 
     @asyncio.coroutine
     def executemany(self, query, args):
-        """Run several data against one query
+        """Execute the given operation multiple times
 
-        PyMySQL can execute bulkinsert for query like 'INSERT ... VALUES (%s)'.
-        In other form of queries, just run :meth:`execute` many times.
+        The executemany() method will execute the operation iterating
+        over the list of parameters in seq_params.
+
+        Example: Inserting 3 new employees and their phone number
+
+            data = [
+                ('Jane','555-001'),
+                ('Joe', '555-001'),
+                ('John', '555-003')
+                ]
+            stmt = "INSERT INTO employees (name, phone) VALUES ('%s','%s')"
+            yield from cursor.executemany(stmt, data)
+
+        INSERT statements are optimized by batching the data, that is
+        using the MySQL multiple rows syntax.
+
+        :param query: `str`, sql statement
+        :param args: ``tuple`` or ``list`` of arguments for sql query
         """
         if not args:
             return
