@@ -61,7 +61,7 @@ class SAConnection:
         execution.
 
         """
-        cursor = self._connection.cursor()
+        cursor = yield from self._connection.cursor()
 
         if isinstance(query, str):
             distilled_params = _distill_params(multiparams, params)
@@ -156,7 +156,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def _begin_impl(self):
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('BEGIN')
         finally:
@@ -164,7 +164,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def _commit_impl(self):
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('COMMIT')
         finally:
@@ -173,7 +173,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def _rollback_impl(self):
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('ROLLBACK')
         finally:
@@ -204,7 +204,7 @@ class SAConnection:
         self._savepoint_seq += 1
         name = 'aiomysql_sa_savepoint_%s' % self._savepoint_seq
 
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('SAVEPOINT ' + name)
             return name
@@ -213,7 +213,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def _rollback_to_savepoint_impl(self, name, parent):
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
         finally:
@@ -222,7 +222,7 @@ class SAConnection:
 
     @asyncio.coroutine
     def _release_savepoint_impl(self, name, parent):
-        cur = self._connection.cursor()
+        cur = yield from self._connection.cursor()
         try:
             yield from cur.execute('RELEASE SAVEPOINT ' + name)
         finally:

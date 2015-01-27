@@ -350,7 +350,9 @@ class Connection:
             raise TypeError('Custom cursor must be subclass of Cursor')
 
         cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
-        return cur
+        fut = asyncio.Future(loop=self._loop)
+        fut.set_result(cur)
+        return fut
 
     # The following methods are INTERNAL USE ONLY (called from Cursor)
     @asyncio.coroutine
