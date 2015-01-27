@@ -9,7 +9,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
     @asyncio.coroutine
     def _prepare(self, conn):
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS tbl;")
 
         yield from cur.execute("""CREATE TABLE tbl (
@@ -26,7 +26,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
     @asyncio.coroutine
     def _prepare_procedure(self, conn):
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("DROP PROCEDURE IF EXISTS myinc;")
         yield from cur.execute("""CREATE PROCEDURE myinc(p1 INT)
                                BEGIN
@@ -39,7 +39,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_description(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         self.assertEqual(None, cur.description)
         yield from cur.execute('SELECT * from tbl;')
 
@@ -65,7 +65,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
     def test_cursor_properties(self):
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         self.assertIs(cur.connection, conn)
         cur.setinputsizes()
         cur.setoutputsizes()
@@ -75,7 +75,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_scroll_relative(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
         cur.scroll(1)
         ret = yield from cur.fetchone()
@@ -85,7 +85,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_scroll_absolute(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
         cur.scroll(2, mode='absolute')
         ret = yield from cur.fetchone()
@@ -94,12 +94,12 @@ class TestCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_scroll_errors(self):
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
 
         with self.assertRaises(ProgrammingError):
             cur.scroll(2, mode='absolute')
 
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
 
         with self.assertRaises(ProgrammingError):
@@ -109,7 +109,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_scroll_index_error(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
         with self.assertRaises(IndexError):
             cur.scroll(1000)
@@ -117,7 +117,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_close(self):
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.close()
         self.assertTrue(cur.closed)
         with self.assertRaises(ProgrammingError):
@@ -127,7 +127,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
     def test_arraysize(self):
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         self.assertEqual(1, cur.arraysize)
         cur.arraysize = 10
         self.assertEqual(10, cur.arraysize)
@@ -137,7 +137,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         yield from self._prepare(conn)
 
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * from tbl')
         self.assertEqual(3, cur.rowcount)
         self.assertEqual(0, cur.rownumber)
@@ -152,7 +152,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_callproc(self):
         conn = yield from self.connect()
         yield from self._prepare_procedure(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.callproc('myinc', [1])
         ret = yield from cur.fetchone()
         self.assertEqual((2,), ret)
@@ -165,7 +165,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_fetchone_no_result(self):
         # test a fetchone() with no rows
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("create table test_nr (b varchar(32))")
         try:
             data = "pymysql"
@@ -179,7 +179,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_fetchmany_no_result(self):
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('DROP TABLE IF EXISTS foobar;')
         r = yield from cur.fetchmany()
         self.assertEqual([], r)
@@ -188,7 +188,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_fetchall_no_result(self):
         # test a fetchone() with no rows
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('DROP TABLE IF EXISTS foobar;')
         r = yield from cur.fetchall()
         self.assertEqual([], r)
@@ -197,7 +197,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_fetchall_with_scroll(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
         cur.scroll(1)
         ret = yield from cur.fetchall()
@@ -207,7 +207,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_aggregates(self):
         """ test aggregate functions """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         try:
             yield from c.execute('create table test_aggregates (i integer)')
             for i in range(0, 10):
@@ -223,7 +223,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_single_tuple(self):
         """ test a single tuple """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         try:
             yield from c.execute(
                 "create table mystuff (id integer primary key)")
@@ -240,7 +240,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
     def test_executemany(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         self.assertEqual(None, cur.description)
         args = [1, 2, 3]
         row_count = yield from cur.executemany(
@@ -259,7 +259,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         class MyCursor(Cursor):
             pass
         conn = self.connections[0]
-        cur = conn.cursor(MyCursor)
+        cur = yield from conn.cursor(MyCursor)
         self.assertIsInstance(cur, MyCursor)
         yield from cur.execute("SELECT 42;")
         (r, ) = yield from cur.fetchone()
@@ -271,4 +271,4 @@ class TestCursor(base.AIOPyMySQLTestCase):
             pass
         conn = self.connections[0]
         with self.assertRaises(TypeError):
-            conn.cursor(MyCursor2)
+            yield from conn.cursor(MyCursor2)

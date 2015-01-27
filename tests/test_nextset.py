@@ -11,7 +11,7 @@ class TestNextset(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_nextset(self):
-        cur = self.con.cursor()
+        cur = yield from self.con.cursor()
         yield from cur.execute("SELECT 1; SELECT 2;")
         r = yield from cur.fetchall()
         self.assertEqual([(1,)], list(r))
@@ -26,7 +26,7 @@ class TestNextset(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_skip_nextset(self):
-        cur = self.con.cursor()
+        cur = yield from self.con.cursor()
         yield from cur.execute("SELECT 1; SELECT 2;")
         r = yield from cur.fetchall()
         self.assertEqual([(1,)], list(r))
@@ -37,7 +37,7 @@ class TestNextset(base.AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_ok_and_next(self):
-        cur = self.con.cursor()
+        cur = yield from self.con.cursor()
         yield from cur.execute("SELECT 1; commit; SELECT 2;")
         r = yield from cur.fetchall()
         self.assertEqual([(1,)], list(r))
@@ -53,8 +53,8 @@ class TestNextset(base.AIOPyMySQLTestCase):
     @unittest.expectedFailure
     @run_until_complete
     def test_multi_cursor(self):
-        cur1 = self.con.cursor()
-        cur2 = self.con.cursor()
+        cur1 = yield from self.con.cursor()
+        cur2 = yield from self.con.cursor()
 
         yield from cur1.execute("SELECT 1; SELECT 2;")
         yield from cur2.execute("SELECT 42")

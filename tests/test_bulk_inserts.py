@@ -9,12 +9,12 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
 
     def setUp(self):
         super(TestBulkInserts, self).setUp()
-        self.conn = conn = self.connections[0]
-        c = conn.cursor(self.cursor_type)
 
         @asyncio.coroutine
-        def prepare():
+        def prepare(self):
             # create a table ane some data to query
+            self.conn = conn = self.connections[0]
+            c = yield from conn.cursor(self.cursor_type)
             yield from c.execute("drop table if exists bulkinsert;")
             yield from c.execute(
                 """CREATE TABLE bulkinsert
@@ -27,12 +27,12 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
                 )
                 """)
 
-        self.loop.run_until_complete(prepare())
+        self.loop.run_until_complete(prepare(self))
 
     @asyncio.coroutine
     def _verify_records(self, data):
         conn = self.connections[0]
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
         yield from cursor.execute(
             "SELECT id, name, age, height from bulkinsert")
         result = yield from cursor.fetchall()
@@ -42,7 +42,7 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_bulk_insert(self):
         conn = self.connections[0]
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
 
         data = [(0, "bob", 21, 123), (1, "jim", 56, 45), (2, "fred", 100, 180)]
         yield from cursor.executemany(
@@ -58,7 +58,7 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_bulk_insert_multiline_statement(self):
         conn = self.connections[0]
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
         data = [(0, "bob", 21, 123), (1, "jim", 56, 45), (2, "fred", 100, 180)]
         yield from cursor.executemany("""insert
             into bulkinsert (id, name,
@@ -83,7 +83,7 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_bulk_insert_single_record(self):
         conn = self.connections[0]
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
         data = [(0, "bob", 21, 123)]
         yield from cursor.executemany(
             "insert into bulkinsert (id, name, age, height) "

@@ -79,7 +79,7 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertIsInstance(conn, Connection)
             self.assertFalse(conn.closed)
-            cur = conn.cursor()
+            cur = yield from conn.cursor()
             yield from cur.execute('SELECT 1')
             val = yield from cur.fetchone()
             self.assertEqual((1,), val)
@@ -277,7 +277,7 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertEqual(9, pool.freesize)
             self.assertEqual({conn}, pool._used)
-            cur = conn.cursor()
+            cur = yield from conn.cursor()
             yield from cur.execute('BEGIN')
             cur.close()
 
@@ -470,6 +470,7 @@ class TestPool(unittest.TestCase):
             conn.close()
 
             pool.release(conn)
+            pool.close()
 
         self.loop.run_until_complete(go())
 
@@ -480,7 +481,7 @@ class TestPool(unittest.TestCase):
 
             with self.assertRaises(RuntimeError):
                 yield from pool.wait_closed()
-
+            pool.close()
         self.loop.run_until_complete(go())
 
     def test_release_terminated_pool(self):
@@ -493,6 +494,7 @@ class TestPool(unittest.TestCase):
             yield from pool.wait_closed()
 
             pool.release(conn)
+            pool.close()
 
         self.loop.run_until_complete(go())
 

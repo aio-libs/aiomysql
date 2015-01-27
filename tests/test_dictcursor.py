@@ -22,7 +22,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
 
         @asyncio.coroutine
         def prepare():
-            c = conn.cursor(self.cursor_type)
+            c = yield from conn.cursor(self.cursor_type)
 
             # create a table ane some data to query
             yield from c.execute("drop table if exists dictcursor")
@@ -41,7 +41,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
     def tearDown(self):
         @asyncio.coroutine
         def shutdown():
-            c = self.conn.cursor()
+            c = yield from self.conn.cursor()
             c.execute("drop table dictcursor")
 
         self.loop.run_until_complete(shutdown())
@@ -53,7 +53,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         # all assert test compare to the structure as would come
         # out from MySQLdb
         conn = self.conn
-        c = conn.cursor(self.cursor_type)
+        c = yield from conn.cursor(self.cursor_type)
 
         # try an update which should return no rows
         yield from c.execute("update dictcursor set age=20 where name='bob'")
@@ -93,7 +93,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         jim = MyDict([(k, self.jim[k]) for k in keys])
         fred = MyDict([(k, self.fred[k]) for k in keys])
 
-        cur = self.conn.cursor(MyDictCursor)
+        cur = yield from self.conn.cursor(MyDictCursor)
         yield from cur.execute("SELECT * FROM dictcursor WHERE name='bob'")
         r = yield from cur.fetchone()
         self.assertEqual(bob, r, "fetchone() returns MyDictCursor")
@@ -111,7 +111,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_ssdictcursor(self):
         conn = self.conn
-        c = conn.cursor(aiomysql.cursors.SSDictCursor)
+        c = yield from conn.cursor(aiomysql.cursors.SSDictCursor)
         yield from c.execute("SELECT * from dictcursor where name='bob'")
         r = yield from c.fetchall()
         self.assertEqual([self.bob], r,

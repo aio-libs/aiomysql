@@ -22,7 +22,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
 
     @asyncio.coroutine
     def _prepare(self, conn):
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
         # Create table
         yield from cursor.execute('DROP TABLE IF EXISTS tz_data;')
         yield from cursor.execute('CREATE TABLE tz_data ('
@@ -39,7 +39,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     def test_ssursor(self):
         # affected_rows = 18446744073709551615
         conn = self.connections[0]
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
         # Create table
         yield from cursor.execute('DROP TABLE IF EXISTS tz_data;')
         yield from cursor.execute(('CREATE TABLE tz_data ('
@@ -69,7 +69,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_sscursor_fetchall(self):
         conn = self.connections[0]
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
 
         yield from self._prepare(conn)
         yield from cursor.execute('SELECT * FROM tz_data')
@@ -80,7 +80,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_sscursor_fetchmany(self):
         conn = self.connections[0]
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
         yield from self._prepare(conn)
         yield from cursor.execute('SELECT * FROM tz_data')
         fetched_data = yield from cursor.fetchmany(2)
@@ -96,7 +96,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     def test_sscursor_executemany(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
         # Test executemany
         yield from cursor.executemany(
             'INSERT INTO tz_data VALUES (%s, %s, %s)', self.data)
@@ -108,7 +108,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     def test_sscursor_scroll_relative(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
         yield from cursor.execute('SELECT * FROM tz_data;')
         yield from cursor.scroll(1)
         ret = yield from cursor.fetchone()
@@ -118,7 +118,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     def test_sscursor_scroll_absolute(self):
         conn = self.connections[0]
         yield from self._prepare(conn)
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
         yield from cursor.execute('SELECT * FROM tz_data;')
         yield from cursor.scroll(2, mode='absolute')
         ret = yield from cursor.fetchone()
@@ -127,7 +127,7 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_sscursor_scroll_errors(self):
         conn = self.connections[0]
-        cursor = conn.cursor(SSCursor)
+        cursor = yield from conn.cursor(SSCursor)
 
         yield from cursor.execute('SELECT * FROM tz_data;')
 

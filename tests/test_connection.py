@@ -14,7 +14,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_largedata(self):
         """Large query and response (>=16MB)"""
-        cur = self.connections[0].cursor()
+        cur = yield from self.connections[0].cursor()
         yield from cur.execute("SELECT @@max_allowed_packet")
         r = yield from cur.fetchone()
         if r[0] < 16 * 1024 * 1024 + 10:
@@ -28,7 +28,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_escape_string(self):
         con = self.connections[0]
-        cur = con.cursor()
+        cur = yield from con.cursor()
 
         self.assertEqual(con.escape("foo'bar"), "'foo\\'bar'")
         # literal is alias for escape
@@ -41,7 +41,7 @@ class TestConnection(AIOPyMySQLTestCase):
         con = self.connections[0]
         self.assertFalse(con.get_autocommit())
 
-        cur = con.cursor()
+        cur = yield from con.cursor()
         yield from cur.execute("SET AUTOCOMMIT=1")
         self.assertTrue(con.get_autocommit())
 
@@ -56,7 +56,7 @@ class TestConnection(AIOPyMySQLTestCase):
         con = self.connections[0]
         current_db = self.db
         other_db = self.other_db
-        cur = con.cursor()
+        cur = yield from con.cursor()
         yield from cur.execute('SELECT database()')
         r = yield from cur.fetchone()
         self.assertEqual(r[0], current_db)
@@ -73,7 +73,7 @@ class TestConnection(AIOPyMySQLTestCase):
         # http://dev.mysql.com/doc/refman/5.0/en/error-messages-client.html
         # error_cr_server_gone_error
         conn = yield from self.connect()
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("SET wait_timeout=1")
         yield from asyncio.sleep(2, loop=self.loop)
         with self.assertRaises(aiomysql.OperationalError) as cm:
@@ -114,7 +114,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_connection_set_nodelay_option(self):
         conn = yield from self.connect(no_delay=True)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("SELECT 1;")
         (r, ) = yield from cur.fetchone()
         self.assertEqual(r, 1)

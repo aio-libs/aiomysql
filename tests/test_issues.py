@@ -11,7 +11,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_3(self):
         """ undefined methods datetime_or_None, date_or_None """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists issue3")
         yield from c.execute(
             "create table issue3 (d date, t time, dt datetime, ts timestamp)")
@@ -38,7 +38,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_4(self):
         """ can't retrieve TIMESTAMP fields """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists issue4")
         yield from c.execute("create table issue4 (ts timestamp)")
         try:
@@ -53,7 +53,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_5(self):
         """ query on information_schema.tables fails """
         con = self.connections[0]
-        cur = con.cursor()
+        cur = yield from con.cursor()
         yield from cur.execute("select * from information_schema.tables")
 
     @run_until_complete
@@ -61,7 +61,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         # test for exception: TypeError: ord() expected a character,
         # but string of length 0 found
         conn = yield from self.connect(db='mysql')
-        c = conn.cursor()
+        c = yield from conn.cursor()
         self.assertEqual(conn.db, 'mysql')
         yield from c.execute("select * from user")
         yield from conn.wait_closed()
@@ -70,7 +70,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_8(self):
         """ Primary Key and Index error when selecting data """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists test")
         yield from c.execute("""CREATE TABLE `test` (`station` int(10) NOT
             NULL DEFAULT '0', `dh`
@@ -93,7 +93,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_13(self):
         """ can't handle large result fields """
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("drop table if exists issue13")
         try:
             yield from cur.execute("create table issue13 (t text)")
@@ -112,7 +112,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_15(self):
         """ query should be expanded before perform character encoding """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists issue15")
         yield from c.execute("create table issue15 (t varchar(32))")
         try:
@@ -128,7 +128,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
     def test_issue_16(self):
         """ Patch for string and tuple escaping """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists issue16")
         yield from c.execute("create table issue16 (name varchar(32) "
                              "primary key, email varchar(32))")
@@ -151,7 +151,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         host = self.host
         db = self.db
-        c = conn.cursor()
+        c = yield from conn.cursor()
         # grant access to a table to a user with a password
         try:
             yield from c.execute("drop table if exists issue17")
@@ -167,7 +167,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
             conn2 = yield from aiomysql.connect(host=host, user="issue17user",
                                                 passwd="1234", db=db,
                                                 loop=self.loop)
-            c2 = conn2.cursor()
+            c2 = yield from conn2.cursor()
             yield from c2.execute("select x from issue17")
             r = yield from c2.fetchone()
             self.assertEqual("hello, world!", r[0])
@@ -190,7 +190,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_33(self):
         conn = yield from self.connect(charset='utf8')
-        c = conn.cursor()
+        c = yield from conn.cursor()
         try:
             yield from c.execute(
                 b"drop table if exists hei\xc3\x9fe".decode("utf8"))
@@ -210,7 +210,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_35(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         print("sudo killall -9 mysqld within the next 10 seconds")
         try:
             yield from c.execute("select sleep(10)")
@@ -221,7 +221,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_36(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         # kill connections[0]
         yield from c.execute("show processlist")
         kill_id = None
@@ -242,7 +242,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
             pass
         # check the process list from the other connection
         try:
-            c = self.connections[1].cursor()
+            c = yield from self.connections[1].cursor()
             yield from c.execute("show processlist")
             rows = yield from c.fetchall()
             ids = [row[0] for row in rows]
@@ -254,7 +254,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_37(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         self.assertEqual(1, (yield from c.execute("SELECT @foo")))
 
         r = yield from c.fetchone()
@@ -265,7 +265,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_38(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         # reduced size for most default mysql installs
         datum = "a" * 1024 * 1023
 
@@ -281,7 +281,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def disabled_test_issue_54(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("drop table if exists issue54")
         big_sql = "select * from issue54 where "
         big_sql += " and ".join("%d=%d" % (i, i) for i in range(0, 100000))
@@ -303,7 +303,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
     def test_issue_66(self):
         """ 'Connection' object has no attribute 'insert_id' """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         self.assertEqual(0, conn.insert_id())
         try:
             yield from c.execute("drop table if exists issue66")
@@ -320,7 +320,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         """ Duplicate field overwrites the previous one in the result
         of DictCursor """
         conn = self.connections[0]
-        c = conn.cursor(aiomysql.cursors.DictCursor)
+        c = yield from conn.cursor(aiomysql.cursors.DictCursor)
 
         yield from c.execute("drop table if exists a")
         yield from c.execute("drop table if exists b")
@@ -346,7 +346,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
     def test_issue_95(self):
         """ Leftover trailing OK packet for "CALL my_sp" queries """
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("DROP PROCEDURE IF EXISTS `foo`")
         yield from cur.execute("""CREATE PROCEDURE `foo` ()
         BEGIN
@@ -365,7 +365,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         """ autocommit is not set after reconnecting with ping() """
         conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
         yield from conn.autocommit(False)
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertFalse(r[0])
@@ -378,7 +378,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
 
         # Ensure autocommit() is still working
         conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertFalse(r[0])
@@ -394,7 +394,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
     def test_issue_175(self):
         """ The number of fields returned by server is read in wrong way """
         conn = self.connections[0]
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         for length in (200, 300):
             cols = ', '.join('c{0} integer'.format(i) for i in range(length))
             sql = 'create table test_field_count ({0})'.format(cols)

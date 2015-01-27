@@ -14,7 +14,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_datatypes(self):
         """ test every data type """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute(
             "create table test_datatypes (b bit, i int, l bigint, f real, s "
             "varchar(32), u varchar(32), bb blob, d date, dt datetime, "
@@ -78,7 +78,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_dict(self):
         """ test dict escaping """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute(
             "create table test_dict (a integer, b integer, c integer)")
         try:
@@ -94,7 +94,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_string(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("DROP TABLE IF EXISTS test_dict;")
         yield from c.execute("create table test_dict (a text)")
         test_value = "I am a test string"
@@ -110,7 +110,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_integer(self):
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("create table test_dict (a integer)")
         test_value = 12345
         try:
@@ -126,7 +126,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_big_blob(self):
         """ test tons of data """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("create table test_big_blob (b blob)")
         try:
             data = "pymysql" * 1024
@@ -142,7 +142,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_untyped(self):
         """ test conversion of null, empty string """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute("select null,''")
         r = yield from c.fetchone()
         self.assertEqual((None, u''), r)
@@ -154,7 +154,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_timedelta(self):
         """ test timedelta conversion """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         yield from c.execute(
             "select time('12:30'), time('23:12:59'), time('23:12:59.05100'), "
             "time('-12:30'), time('-23:12:59'), time('-23:12:59.05100'), "
@@ -173,7 +173,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     def test_datetime(self):
         """ test datetime conversion """
         conn = self.connections[0]
-        c = conn.cursor()
+        c = yield from conn.cursor()
         dt = datetime.datetime(2013, 11, 12, 9, 9, 9, 123450)
         try:
             yield from c.execute(
@@ -202,7 +202,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
         # make sure transaction flag is up
         transaction_flag = conn.get_transaction_status()
         self.assertTrue(transaction_flag)
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
         yield from cursor.execute('SELECT 1;')
         (r, ) = yield from cursor.fetchone()
         self.assertEqual(r, 1)
@@ -214,7 +214,7 @@ class TestConversion(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_rollback(self):
         conn = self.connections[0]
-        cursor = conn.cursor()
+        cursor = yield from conn.cursor()
 
         yield from cursor.execute('DROP TABLE IF EXISTS tz_data;')
         yield from cursor.execute('CREATE TABLE tz_data ('

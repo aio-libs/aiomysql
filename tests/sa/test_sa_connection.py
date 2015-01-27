@@ -32,7 +32,7 @@ class TestSAConnection(unittest.TestCase):
                                   loop=self.loop,
                                   **kwargs)
         yield from conn.autocommit(True)
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS sa_tbl")
         yield from cur.execute("CREATE TABLE sa_tbl "
                                "(id serial, name varchar(255))")
