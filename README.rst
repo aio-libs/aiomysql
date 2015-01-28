@@ -26,7 +26,7 @@ Basic Example
                                            user='root', passwd='', db='mysql',
                                            loop=loop)
 
-        cur = conn.cursor()
+        cur = yield from conn.cursor()
         yield from cur.execute("SELECT Host,User FROM user")
         print(cur.description)
         r = yield from cur.fetchall()
@@ -56,7 +56,7 @@ Connection pooling ported from aiopg_ :
                                                    user='root', passwd='',
                                                    db='mysql', loop=loop)
             with (yield from pool) as conn:
-                cur = conn.cursor()
+                cur = yield from conn.cursor()
                 yield from cur.execute("SELECT 10")
                 # print(cur.description)
                 (r,) = yield from cur.fetchone()
