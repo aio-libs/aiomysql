@@ -5,13 +5,27 @@ aiomysql
 .. image:: https://coveralls.io/repos/jettify/aiomysql/badge.png?branch=master
     :target: https://coveralls.io/r/jettify/aiomysql?branch=master
 
-aiomysql is a library for accessing a MySQL database from the asyncio_
-(PEP-3156/tulip) framework. This library is fork of Tornado-MySQL_ and
-based on PyMySQL_ .
+
+**aiomysql** is a "driver" for accessing a `MySQL` database
+from the asyncio_ (PEP-3156/tulip) framework. It depends and reuses most parts
+of PyMySQL_ . *aiomysql* try to be like awesome aiopg_ library and preserve
+same api, look and feel.
+
+Internally **aiomysql** is copy of PyMySQL, underlying io calls switched
+to async, basically ``yield from`` and ``asyncio.coroutine`` added in
+proper places)). `sqlalchemy` support ported from aiopg_.
 
 
 Basic Example
 -------------
+
+**aiomysql** based on PyMySQL_ , and provides same api, you just need
+to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
+every method.
+
+Properties are unchanged, so ``conn.prop`` is correct as well as
+``conn.prop = val``.
+
 
 .. code:: python
 
@@ -68,7 +82,7 @@ Connection pooling ported from aiopg_ :
 
 
 Example of SQLAlchemy optional integration
--------------------------------------------
+------------------------------------------
 Sqlalchemy support has been ported from aiopg_:
 
 .. code:: python
@@ -109,7 +123,6 @@ TODO
 * implement ssl transport support
 * rethink autocommit in tests
 * documentation
-* implement echo like in aiopg
 * bring back loggers like in pymysql
 
 Requirements
