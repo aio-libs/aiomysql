@@ -1,9 +1,9 @@
 aiomysql
 ========
-.. image:: https://travis-ci.org/jettify/aiomysql.svg
-    :target: https://travis-ci.org/jettify/aiomysql
-.. image:: https://coveralls.io/repos/jettify/aiomysql/badge.png?branch=master
-    :target: https://coveralls.io/r/jettify/aiomysql?branch=master
+.. image:: https://travis-ci.org/aio-libs/aiomysql.svg?branch=master
+    :target: https://travis-ci.org/aio-libs/aiomysql
+.. image:: https://coveralls.io/repos/aio-libs/aiomysql/badge.svg
+    :target: https://coveralls.io/r/aio-libs/aiomysql
 
 
 **aiomysql** is a "driver" for accessing a `MySQL` database

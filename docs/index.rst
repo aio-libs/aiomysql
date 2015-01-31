@@ -9,18 +9,17 @@ Welcome to aiomysql's documentation!
 .. _GitHub: https://github.com/aio-libs/aiomysql
 .. _asyncio: http://docs.python.org/3.4/library/asyncio.html
 .. _aiopg: https://github.com/aio-libs/aiopg
-.. _PyMySQL: https://github.com/PyMySQL/PyMySQL
 .. _Tornado-MySQL: https://github.com/PyMySQL/Tornado-MySQL
 .. _aio-libs: https://github.com/aio-libs
 
 
 **aiomysql** is a library for accessing a :term:`MySQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It depends and reuses most parts
-of PyMySQL_ . **aiomysql** try to be like awesome aiopg_ library and preserve
+of :term:`PyMySQL` . **aiomysql** try to be like awesome aiopg_ library and preserve
 same api, look and feel.
 
 Internally **aiomysql** is copy of PyMySQL, underlying io calls switched
-to async, basicly ``yield from`` and ``asyncio.coroutine`` added in
+to async, basically ``yield from`` and ``asyncio.coroutine`` added in
 proper places. :term:`sqlalchemy` support ported from aiopg_.
 
 
@@ -36,7 +35,7 @@ Features
 Basics
 ------
 
-**aiomysql** based on PyMySQL_ , and provides same api, you just need
+**aiomysql** based on :term:`PyMySQL` , and provides same api, you just need
 to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
@@ -107,15 +106,15 @@ Dependencies
 ------------
 
 - Python 3.3 and :mod:`asyncio` or Python 3.4+
-- PyMySQL_
+- :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 
 
 Authors and License
 -------------------
 
-The ``aiomysql`` package is written by Nikolay Novik, PyMySQL_ and aio-libs_
-contributors. It's MIT licensed (same as PyMySQL).
+The ``aiomysql`` package is written by Nikolay Novik, :term:`PyMySQL` and
+aio-libs_ contributors. It's MIT licensed (same as PyMySQL).
 
 Feel free to improve this package and send a pull request to GitHub_.
 
@@ -123,7 +122,7 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-
+   glossary
 
 
 Indices and tables
