@@ -192,7 +192,8 @@ class Connection:
         """MySQL server TCP/IP port"""
         return self._port
 
-    def unix_socke(self):
+    @property
+    def unix_socket(self):
         """MySQL Unix socket file location"""
         return self._unix_socket
 

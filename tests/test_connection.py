@@ -1,4 +1,5 @@
 import asyncio
+import os
 import aiomysql
 from tests._testutils import run_until_complete
 from tests.base import AIOPyMySQLTestCase
@@ -19,10 +20,24 @@ class TestConnection(AIOPyMySQLTestCase):
         conn.close()
 
     @run_until_complete
+    def test_connect_using_unix_socket(self):
+        sock = '/var/run/mysqld/mysqld.sock'
+        conn = yield from aiomysql.connect(loop=self.loop, unix_socket=sock)
+        self.assertEqual(conn.unix_socket, sock)
+
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 42;')
+        (r, ) = yield from cur.fetchone()
+        self.assertEqual(r, 42)
+        conn.close()
+
+    @run_until_complete
     def test_utf8mb4(self):
         """This test requires MySQL >= 5.5"""
-        conn = yield from aiomysql.connect(loop=self.loop, charset='utf8mb4')
-        assert conn  # pyflakes
+        charset = 'utf8mb4'
+        conn = yield from aiomysql.connect(loop=self.loop, charset=charset)
+        self.assertEqual(conn.charset, charset)
+        conn.close()
 
     @run_until_complete
     def test_largedata(self):
