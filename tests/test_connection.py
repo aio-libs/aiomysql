@@ -5,6 +5,19 @@ from tests.base import AIOPyMySQLTestCase
 
 
 class TestConnection(AIOPyMySQLTestCase):
+
+    @run_until_complete
+    def test_config_file(self):
+        tests_root = os.path.abspath(os.path.dirname(__file__))
+        path = os.path.join(tests_root, 'fixtures/my.cnf')
+        conn = yield from aiomysql.connect(loop=self.loop,
+                                           read_default_file=path)
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 42;')
+        (r, ) = yield from cur.fetchone()
+        self.assertEqual(r, 42)
+        conn.close()
+
     @run_until_complete
     def test_utf8mb4(self):
         """This test requires MySQL >= 5.5"""

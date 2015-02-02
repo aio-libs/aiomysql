@@ -2,12 +2,12 @@
 # http://dev.mysql.com/doc/internals/en/client-server-protocol.html
 
 import asyncio
-# import os
+import os
 import socket
 import hashlib
 import struct
 import sys
-# import configparser
+import configparser
 import getpass
 from functools import partial
 
@@ -121,34 +121,20 @@ class Connection:
         if use_unicode is None and sys.version_info[0] > 2:
             use_unicode = True
 
-        if read_default_group and not read_default_file:
-            raise NotImplementedError
-            # if sys.platform.startswith("win"):
-            #     read_default_file = "c:\\my.ini"
-            # else:
-            #     read_default_file = "/etc/my.cnf"
-
         if read_default_file:
-            raise NotImplementedError
-            # if not read_default_group:
-            #     read_default_group = "client"
-            #
-            # cfg = configparser.RawConfigParser()
-            # cfg.read(os.path.expanduser(read_default_file))
-            #
-            # def _config(key, default):
-            #     try:
-            #         return cfg.get(read_default_group, key)
-            #     except Exception:
-            #         return default
-            #
-            # user = _config("user", user)
-            # password = _config("password", password)
-            # host = _config("host", host)
-            # db = _config("database", db)
-            # unix_socket = _config("socket", unix_socket)
-            # port = int(_config("port", port))
-            # charset = _config("default-character-set", charset)
+            if not read_default_group:
+                read_default_group = "client"
+            cfg = configparser.RawConfigParser()
+            cfg.read(os.path.expanduser(read_default_file))
+            _config = partial(cfg.get, read_default_group)
+
+            user = _config("user", fallback=user)
+            password = _config("password", fallback=password)
+            host = _config("host", fallback=host)
+            db = _config("database", fallback=db)
+            unix_socket = _config("socket", fallback=unix_socket)
+            port = int(_config("port", fallback=port))
+            charset = _config("default-character-set", fallback=charset)
 
         self._host = host
         self._port = port
