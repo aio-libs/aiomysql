@@ -13,6 +13,33 @@ class TestConnection(AIOPyMySQLTestCase):
         path = os.path.join(tests_root, 'fixtures/my.cnf')
         conn = yield from aiomysql.connect(loop=self.loop,
                                            read_default_file=path)
+
+        self.assertEqual(conn.host, '127.0.0.1')
+        self.assertEqual(conn.port, 3306)
+        self.assertEqual(conn.user, 'root')
+
+        # make sure connection is working
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 42;')
+        (r, ) = yield from cur.fetchone()
+        self.assertEqual(r, 42)
+        conn.close()
+
+    @run_until_complete
+    def test_config_file_with_different_group(self):
+        # same test with config file but actual settings
+        # located in not default group.
+        tests_root = os.path.abspath(os.path.dirname(__file__))
+        path = os.path.join(tests_root, 'fixtures/my.cnf')
+        group = 'client_with_unix_socket'
+        conn = yield from aiomysql.connect(
+            loop=self.loop, read_default_file=path, read_default_group=group)
+
+        self.assertEqual(conn.charset, 'utf8')
+        self.assertEqual(conn.user, 'root')
+        self.assertEqual(conn.unix_socket, '/var/run/mysqld/mysqld.sock')
+
+        # make sure connection is working
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT 42;')
         (r, ) = yield from cur.fetchone()
