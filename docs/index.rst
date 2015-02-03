@@ -119,11 +119,14 @@ aio-libs_ contributors. It's MIT licensed (same as PyMySQL).
 Feel free to improve this package and send a pull request to GitHub_.
 
 Contents:
+---------
 
 .. toctree::
    :maxdepth: 2
-   glossary
 
+   api
+   examples
+   glossary
 
 Indices and tables
 ==================
