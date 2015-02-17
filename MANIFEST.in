@@ -1,0 +1,5 @@
+include LICENSE
+include CHANGES.txt
+include README.rst
+graft aiomysql
+global-exclude *.pyc *.swp
