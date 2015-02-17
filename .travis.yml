@@ -14,6 +14,7 @@ before_script:
     - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql2; create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
 
 install:
+    - pip install git+https://github.com/PyMySQL/PyMySQL.git@master
     - pip install flake8
     - pip install sqlalchemy
     - pip install nose
