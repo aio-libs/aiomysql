@@ -90,6 +90,71 @@ class TestSAConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_execute_sa_insert_with_dict(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert(), {"id": 2, "name": "second"})
+
+            res = yield from conn.execute(tbl.select())
+            rows = list(res)
+            self.assertEqual(2, len(rows))
+            self.assertEqual((1, 'first'), rows[0])
+            self.assertEqual((2, 'second'), rows[1])
+
+        self.loop.run_until_complete(go())
+
+    def test_execute_sa_insert_with_tuple(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert(), (2, "second"))
+
+            res = yield from conn.execute(tbl.select())
+            rows = list(res)
+            self.assertEqual(2, len(rows))
+            self.assertEqual((1, 'first'), rows[0])
+            self.assertEqual((2, 'second'), rows[1])
+
+        self.loop.run_until_complete(go())
+
+    def test_execute_sa_insert_named_params(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert(), id=2, name="second")
+
+            res = yield from conn.execute(tbl.select())
+            rows = list(res)
+            self.assertEqual(2, len(rows))
+            self.assertEqual((1, 'first'), rows[0])
+            self.assertEqual((2, 'second'), rows[1])
+
+        self.loop.run_until_complete(go())
+
+    def test_execute_sa_insert_positional_params(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute(tbl.insert(), 2, "second")
+
+            res = yield from conn.execute(tbl.select())
+            rows = list(res)
+            self.assertEqual(2, len(rows))
+            self.assertEqual((1, 'first'), rows[0])
+            self.assertEqual((2, 'second'), rows[1])
+
+        self.loop.run_until_complete(go())
+
+    def test_scalar(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            res = yield from conn.scalar(tbl.count())
+            self.assertEqual(1, res)
+
+        self.loop.run_until_complete(go())
+
     def test_scalar(self):
         @asyncio.coroutine
         def go():
