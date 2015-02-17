@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['PyMySQL>=0.6.3']
+install_requires = ['PyMySQL<=0.6.3']
 
 PY_VER = sys.version_info
 
@@ -53,9 +53,9 @@ setup(name='aiomysql',
       long_description='\n\n'.join((read('README.rst'), read('CHANGES.rst'))),
       classifiers=classifiers,
       platforms=['POSIX'],
-      author='',
-      author_email='',
-      url='http://aiomysql.readthedocs.org',
+      author="Nikolay Novik",
+      author_email="nickolainovik@gmail.com",
+      url='https://github.com/aio-libs/aiomysql',
       download_url='https://pypi.python.org/pypi/aiomysql',
       license='MIT',
       packages=find_packages(),
