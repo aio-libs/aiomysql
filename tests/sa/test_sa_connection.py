@@ -155,15 +155,6 @@ class TestSAConnection(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
-    def test_scalar(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
-            res = yield from conn.scalar(tbl.count())
-            self.assertEqual(1, res)
-
-        self.loop.run_until_complete(go())
-
     def test_scalar_None(self):
         @asyncio.coroutine
         def go():
