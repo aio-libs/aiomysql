@@ -35,16 +35,17 @@ def read_version():
             raise RuntimeError('Cannot find version in aiomysql/__init__.py')
 
 classifiers = [
+    'License :: OSI Approved :: MIT License',
+    'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: Implementation :: CPython',
+    'Operating System :: POSIX',
+    'Environment :: Web Environment',
     'Development Status :: 3 - Alpha',
-    'Intended Audience :: Developers',
-    'License :: OSI Approved :: MIT License',
     'Topic :: Database',
     'Topic :: Database :: Front-Ends',
-],
+]
 
 
 setup(name='aiomysql',
