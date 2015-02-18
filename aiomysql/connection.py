@@ -69,8 +69,7 @@ def connect(host="localhost", user=None, password="",
 
 
 class Connection:
-    """
-    Representation of a socket with a mysql server.
+    """Representation of a socket with a mysql server.
 
     The proper way to get an instance of this class is to call
     connect().
@@ -199,6 +198,7 @@ class Connection:
 
     @property
     def db(self):
+        """Current database name."""
         return self._db
 
     @property
@@ -217,24 +217,23 @@ class Connection:
 
     @property
     def closed(self):
+        """The readonly property that returns ``True`` if connections is
+        closed.
+        """
         return self._writer is None
 
     @property
     def encoding(self):
+        """Encoding employed for this connection."""
         return self._encoding
 
     @property
     def charset(self):
-        """Returns the character set for current connection
-
-        This property returns the character set name of the current connection.
-        The server is queried when the connection is active. If not connected,
-        the configured character set name is returned
-        """
+        """Returns the character set for current connection."""
         return self._charset
 
     def close(self):
-        """Send the quit message and close the socket"""
+        """Close socket connection"""
         if self._writer:
             self._writer.transport.close()
         self._writer = None
@@ -242,17 +241,15 @@ class Connection:
 
     @asyncio.coroutine
     def wait_closed(self):
+        """Send quit command and then close socket connection"""
         send_data = struct.pack('<i', 1) + int2byte(COM_QUIT)
         self._writer.write(send_data)
         yield from self._writer.drain()
         self.close()
 
-    # def __del__(self):
-    #     self.close()
-
     @asyncio.coroutine
     def autocommit(self, value):
-        """autocommit value for current MySQL session
+        """Enable/disable autocommit mode for current MySQL session.
 
         :param value: ``bool``, toggle autocommit
         """
@@ -262,6 +259,10 @@ class Connection:
             yield from self._send_autocommit_mode()
 
     def get_autocommit(self):
+        """Returns autocommit status for current MySQL session.
+
+        :returns bool: current autocommit status."""
+
         status = self.server_status & SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT
         return bool(status)
 
@@ -290,13 +291,13 @@ class Connection:
 
     @asyncio.coroutine
     def commit(self):
-        """ Commit changes to stable storage """
+        """Commit changes to stable storage."""
         yield from self._execute_command(COM_QUERY, "COMMIT")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def rollback(self):
-        """ Roll back the current transaction """
+        """Roll back the current transaction."""
         yield from self._execute_command(COM_QUERY, "ROLLBACK")
         yield from self._read_ok_packet()
 
@@ -307,7 +308,7 @@ class Connection:
         yield from self._read_ok_packet()
 
     def escape(self, obj):
-        """ Escape whatever value you pass to it  """
+        """ Escape whatever value you pass to it"""
         if isinstance(obj, str):
             return "'" + self.escape_string(obj) + "'"
         return escape_item(obj, self._charset)
