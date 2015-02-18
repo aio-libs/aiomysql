@@ -37,7 +37,7 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
     @asyncio.coroutine
     def test_example():
         conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
-                                           user='root', passwd='', db='mysql',
+                                           user='root', password='', db='mysql',
                                            loop=loop)
 
         cur = yield from conn.cursor()
@@ -67,7 +67,7 @@ Connection pooling ported from aiopg_ :
     @asyncio.coroutine
     def test_example():
         pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                               user='root', passwd='',
+                                               user='root', password='',
                                                db='mysql', loop=loop)
         with (yield from pool) as conn:
             cur = yield from conn.cursor()

@@ -8,6 +8,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
+pyvenv/
 build/
 develop-eggs/
 dist/
@@ -56,5 +57,6 @@ target/
 
 # PyCharm
 .idea
+*.iml
 # rope
 .ropeproject
