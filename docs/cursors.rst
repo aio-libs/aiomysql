@@ -1,0 +1,2 @@
+.. automodule:: aiomysql.cursors
+   :members:

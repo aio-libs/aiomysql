@@ -77,4 +77,101 @@ Example::
     :returns: :class:`Connection` instance.
 
 
+    Representation of a socket with a mysql server. The proper way to get an
+    instance of this class is to call :func:`aiomysql.connnect'.
+
+   Its insterface is almost the same as `pymysql.connection` except all methods
+   are :ref:`coroutines <coroutine>`.
+
+
+   The most important methods are:
+
+   .. method:: cursor(cursor=None)
+
+        A :ref:`coroutine <coroutine>` that creates a new cursor object
+        using the connection.
+
+        By default, :class:`Cursor` is returned. It is possible to also give a
+        custom cursor through the `cursor` parameter, but it needs to
+        be a subclass of :class:`Cursor
+
+        :param cursor: subclass of :class:`Cursor` or ``None`` for default
+            cursor.
+        :returns: :class:`Cursor` instance.
+
+   .. method:: close()
+
+        Immediately close the connection.
+
+        Close the connection now (rather than whenever `del` is executed).
+        The connection will be unusable from this point forward.
+
+   .. method:: wait_closed
+
+        A :ref:`coroutine <coroutine>` ends quit command and then closes
+        socket connection.
+
+   .. method:: autocommit
+
+        Enable/disable autocommit mode for current MySQL session.
+        :param bool value: toggle atutocommit mode.
+
+   .. method:: get_autocommit
+        Returns autocommit status for current MySQL sesstion.
+
+        :returns bool: current autocommit status.
+
+   .. method:: begin
+        Begin transaction.
+
+   .. method:: commit
+        Commit changes to stable storage.
+
+   .. method:: rollback
+        Roll back the current transaction.
+
+   .. method:: select_db
+        Set current db.
+
+   .. attribute:: closed
+
+        The readonly property that returns ``True`` if connections is closed.
+
+   .. attribute:: host
+
+        MySQL server IP address or name.
+
+   .. attribute:: port
+
+        MySQL server TCP/IP port.
+
+
+   .. attribute:: unix_socket
+
+        ySQL Unix socket file location.
+
+   .. attribute:: db
+
+        Current database name.
+
+   .. attribute:: user
+
+        User used while connecting to MySQL
+
+   .. attribute:: echo
+
+        Return echo mode status.
+
+   .. attribute:: encoding
+
+        Encoding employed for this connection.
+
+
+   .. attribute:: charset
+
+        Returns the character set for current connection.
+
+
+
+
 .. _sql-mode: http://dev.mysql.com/doc/refman/5.0/en/sql-mode.html

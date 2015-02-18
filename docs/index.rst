@@ -54,7 +54,7 @@ See example:
     @asyncio.coroutine
     def test_example():
         conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
-                                           user='root', passwd='', db='mysql',
+                                           user='root', password='', db='mysql',
                                            loop=loop)
 
         cur = yield from conn.cursor()
@@ -125,6 +125,7 @@ Contents:
    :maxdepth: 2
 
    api
+   cursors
    examples
    glossary
 
