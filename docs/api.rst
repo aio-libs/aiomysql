@@ -117,20 +117,24 @@ Example::
         :param bool value: toggle atutocommit mode.
 
    .. method:: get_autocommit
-        Returns autocommit status for current MySQL sesstion.
 
+        Returns autocommit status for current MySQL sesstion.
         :returns bool: current autocommit status.
 
    .. method:: begin
+
         Begin transaction.
 
    .. method:: commit
+
         Commit changes to stable storage.
 
    .. method:: rollback
+
         Roll back the current transaction.
 
    .. method:: select_db
+
         Set current db.
 
    .. attribute:: closed
