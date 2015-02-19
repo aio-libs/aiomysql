@@ -62,7 +62,6 @@ class Cursor:
         This attribute will be None for operations that do not
         return rows or if the cursor has not had an operation invoked
         via the execute() method yet.
-
         """
         return self._description
 
@@ -78,7 +77,6 @@ class Cursor:
         The attribute is -1 in case no .execute() has been performed
         on the cursor or the row count of the last operation if it
         can't be determined by the interface.
-
         """
         return self._rowcount
 
@@ -88,7 +86,8 @@ class Cursor:
 
         This read-only attribute provides the current 0-based index of the
         cursor in the result set or ``None`` if the index cannot be
-        determined."""
+        determined.
+        """
 
         return self._rownumber
 
