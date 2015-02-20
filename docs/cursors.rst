@@ -87,3 +87,45 @@ Cursor
 
         The readonly property that returns ``True`` if connections was detached
         from current cursor
+
+   .. method:: close
+
+        Coroutine to close the cursor now (rather than whenever ``del`` is
+        executed). The cursor will be unusable from this point forward;
+        closing a cursor just exhausts all remaining data.
+
+   .. method:: execute
+
+        Coroutine, executes the given operation substituting any markers with
+        the given parameters.
+
+        For example, getting all rows where id is 5:
+
+            >>> yield from cursor.execute("SELECT * FROM t1 WHERE id=%s", (5,))
+
+        :param str query: sql statement
+        :param list args: tuple or list of arguments for sql query
+        :returns int: number of rows that has been produced of affected
+
+   .. method:: execute
+
+        Execute the given operation multiple times
+
+        The executemany() method will execute the operation iterating
+        over the list of parameters in seq_params.
+
+        Example: Inserting 3 new employees and their phone number
+            >>> data = [
+                ... ('Jane','555-001'),
+                ... ('Joe', '555-001'),
+                ... ('John', '555-003')
+                ...]
+            >>> stmt = "INSERT INTO employees (name, phone)
+                ... VALUES ('%s','%s')"
+            >>> yield from cursor.executemany(stmt, data)
+
+        `INSERT` statements are optimized by batching the data, that is
+        using the MySQL multiple rows syntax.
+
+        :param str  query: sql statement
+        :param list args: tuple or list of arguments for sql query

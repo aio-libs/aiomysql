@@ -130,6 +130,9 @@ class Cursor:
 
     @property
     def closed(self):
+        """The readonly property that returns ``True`` if connections was
+        detached from current cursor
+        """
         return True if not self._connection else False
 
     @asyncio.coroutine
