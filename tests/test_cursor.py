@@ -125,6 +125,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         # try to close for second time
         yield from cur.close()
 
+    @run_until_complete
     def test_arraysize(self):
         conn = self.connections[0]
         cur = yield from conn.cursor()
