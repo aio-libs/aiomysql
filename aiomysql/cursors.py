@@ -404,6 +404,9 @@ class Cursor:
         case a scroll operation would leave the result set. In this case,
         the cursor position is left undefined (ideal would be to
         not move the cursor at all).
+
+        :param int value: move cursor to next position according to mode.
+        :param str mode: scroll mode, possible modes: `relative` and `absolute`
         """
         self._check_executed()
         if mode == 'relative':
