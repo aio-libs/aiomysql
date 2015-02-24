@@ -1,3 +1,5 @@
+.. _aiomysql-cursors:
+
 Cursor
 ======
 
@@ -50,6 +52,10 @@ Cursor
 
     Use :meth:`Connection.cursor()` for getting cursor for connection.
 
+    .. attribute:: connection
+
+        This read-only attribute return a reference to the :class:`Connection`
+        object on which the cursor was created
 
     .. attribute:: echo
 
@@ -68,10 +74,10 @@ Cursor
         3.  internal_size: the size in bytes of the column associated to
             this column on the server.
         4.  precision: total number of significant digits in columns of
-            type NUMERIC. None for other types.
+            type ``NUMERIC``. None for other types.
         5.  scale: count of decimal digits in the fractional part in
-            columns of type NUMERIC. None for other types.
-        6.  null_ok: always None as not easy to retrieve from the libpq.
+            columns of type ``NUMERIC``. None for other types.
+        6.  null_ok: always None.
 
         This attribute will be None for operations that do not
         return rows or if the cursor has not had an operation invoked
@@ -84,7 +90,7 @@ Cursor
         This read-only attribute specifies the number of rows that the
         last :meth:`execute` produced (for Data Query Language
         statements like SELECT) or affected (for Data Manipulation
-        Language statements like UPDATE or INSERT).
+        Language statements like ``UPDATE`` or ``INSERT``).
 
         The attribute is -1 in case no .execute() has been performed
         on the cursor or the row count of the last operation if it
@@ -100,10 +106,10 @@ Cursor
 
    .. attribute:: arraysize
 
-        How many rows will be returned by fetchmany() call.
+        How many rows will be returned by :meth:`Cursor.fetchmany()` call.
 
         This read/write attribute specifies the number of rows to
-        fetch at a time with fetchmany(). It defaults to
+        fetch at a time with :meth:`Cursor.fetchmany()`. It defaults to
         1 meaning to fetch a single row at a time.
 
    .. attribute:: lastrowid
@@ -119,39 +125,40 @@ Cursor
         The readonly property that returns ``True`` if connections was detached
         from current cursor
 
-   .. method:: close
+   .. method:: close()
 
         :ref:`Coroutine <coroutine>` to close the cursor now (rather than
         whenever ``del`` is executed). The cursor will be unusable from this
         point forward; closing a cursor just exhausts all remaining data.
 
-   .. method:: execute
+   .. method:: execute(query, args=None)
 
         :ref:`Coroutine <coroutine>`, executes the given operation substituting
         any markers with the given parameters.
 
-        For example, getting all rows where id is 5:
+        For example, getting all rows where id is 5::
 
-            >>> yield from cursor.execute("SELECT * FROM t1 WHERE id=%s", (5,))
+            yield from cursor.execute("SELECT * FROM t1 WHERE id=%s", (5,))
 
         :param str query: sql statement
         :param list args: tuple or list of arguments for sql query
         :returns int: number of rows that has been produced of affected
 
-   .. method:: executemany
+   .. method:: executemany(query, args)
 
         The `executemany()` :ref:`coroutine <coroutine>` will execute the
         operation iterating over the list of parameters in seq_params.
 
-        Example: Inserting 3 new employees and their phone number
-            >>> data = [
-                ... ('Jane','555-001'),
-                ... ('Joe', '555-001'),
-                ... ('John', '555-003')
-                ...]
-            >>> stmt = "INSERT INTO employees (name, phone)
-                ... VALUES ('%s','%s')"
-            >>> yield from cursor.executemany(stmt, data)
+        Example: Inserting 3 new employees and their phone number::
+
+            data = [
+                ('Jane','555-001'),
+                ('Joe', '555-001'),
+                ('John', '555-003')
+               ]
+            stmt = "INSERT INTO employees (name, phone)
+                VALUES ('%s','%s')"
+            yield from cursor.executemany(stmt, data)
 
         `INSERT` statements are optimized by batching the data, that is
         using the MySQL multiple rows syntax.
@@ -187,38 +194,124 @@ Cursor
         :param args: sequence of parameters to use with procedure
         :returns: the original args.
 
-   .. method:: fetchone
+   .. method:: fetchone()
 
         Fetch the next row :ref:`coroutine <coroutine>`.
 
    .. method:: fetchmany(size=None)
 
-        :ref:`Coroutine <coroutine>` the next set of rows of a query result, returning a
-        list of tuples. When no more rows are available, it returns an
-        empty list.
+        :ref:`Coroutine <coroutine>` the next set of rows of a query result,
+        returning a list of tuples. When no more rows are available, it
+        returns an empty list.
 
-        The number of rows returned can be specified using the size argument,
-        which defaults to one
+        The number of rows to fetch per call is specified by the parameter.
+        If it is not given, the cursor's :attr:`Cursor.arraysize` determines
+        the number of rows to be fetched. The method should try to fetch as
+        many rows as indicated by the size parameter. If this is not possible
+        due to the specified number of rows not being available, fewer rows
+        may be returned ::
 
-        :param int size: number of rows to return
-        :returns list: of fetched rows
+            @asyncio.coroutine
+            def go()
+                yield from connection.cursor()
+                yield from cursor.execute("SELECT * FROM test;")
+                r = cursor.fetchmany(2)
+                print(r)
+                # [(1, 100, "abc'def"), (2, None, 'dada')]
+                r = yield from cursor.fetchmany(2)
+                print(r)
+                # [(3, 42, 'bar')]
+                r = yield from cursor.fetchmany(2)
+                print(r)
+                # []
 
-   .. method:: fetchall
+            :param int size: number of rows to return
+            :returns list: of fetched rows
 
-        Returns all rows of a query result set
+   .. method:: fetchall()
+
+        Returns all rows of a query result set::
+
+         yield from cursor.execute("SELECT * FROM test;")
+         r = yield from cursor.fetchall()
+         print(r)
+         # [(1, 100, "abc'def"), (2, None, 'dada'), (3, 42, 'bar')]
 
         :returns list: list of fetched rows
 
-   .. method:: scrolll(value, mode='relative')
+   .. method:: scroll(value, mode='relative')
         Scroll the cursor in the result set to a new position according
         to mode.
 
-        If mode is relative (default), value is taken as offset to the
-        current position in the result set, if set to absolute, value
+        If mode is ``relative`` (default), value is taken as offset to the
+        current position in the result set, if set to ``absolute``, value
         states an absolute target position. An IndexError should be raised in
         case a scroll operation would leave the result set. In this case,
         the cursor position is left undefined (ideal would be to
         not move the cursor at all).
 
+        .. note::
+
+            According to the :term:`DBAPI`, the exception raised for a cursor out
+            of bound should have been :exc:`IndexError`.  The best option is
+            probably to catch both exceptions in your code::
+
+                try:
+                    yield from cur.scroll(1000 * 1000)
+                except (ProgrammingError, IndexError), exc:
+                    deal_with_it(exc)
+
         :param int value: move cursor to next position according to mode.
         :param str mode: scroll mode, possible modes: `relative` and `absolute`
+
+
+.. class:: DictCursor
+
+    A cursor which returns results as a dictionary. All methods and arguments
+    same as :class:`Cursor`, see example::
+
+        import asyncio
+        import aiomysql
+
+        loop = asyncio.get_event_loop()
+
+        @asyncio.coroutine
+        def test_example():
+            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                               user='root', password='',
+                                               db='mysql', loop=loop)
+
+            # create default cursor
+            cursor = yield from conn.cursor(aiomysql.DictCursor)
+
+            # execute sql query
+            yield from cursor.execute(
+                "SELECT * from people where name='bob'")
+
+            # fetch all results
+            r = yield from cursor.fetchone()
+            print(r)
+            # {'age': 20, 'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56),
+            # 'name': 'bob'}
+
+        loop.run_until_complete(test_example())
+
+
+.. class:: SSCursor
+
+    Unbuffered Cursor, mainly useful for queries that return a lot of
+    data, or for connections to remote servers over a slow network.
+
+    Instead of copying every row of data into a buffer, this will fetch
+    rows as needed. The upside of this, is the client uses much less memory,
+    and rows are returned much faster when traveling over a slow network,
+    or if the result set is very big.
+
+    There are limitations, though. The MySQL protocol doesn't support
+    returning the total number of rows, so the only way to tell how many rows
+    there are is to iterate over every row returned. Also, it currently isn't
+    possible to scroll backwards, as only the current row is held in memory.
+
+.. class:: SSDictCursor
+
+    An unbuffered cursor, which returns results as a dictionary.

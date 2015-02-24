@@ -26,10 +26,10 @@ proper places. :term:`sqlalchemy` support ported from aiopg_.
 Features
 --------
 
-- Implements *asyncio* :term:`DBAPI` *like* interface for
-  :term:`MySQL`.  It includes :ref:`aiomysql-core-connection`,
-  :ref:`aiomysql-core-cursor` and :ref:`aiomysql-core-pool` objects.
-- Implements *optional* support for charming :term:`sqlalchemy`
+* Implements *asyncio* :term:`DBAPI` *like* interface for
+  :term:`MySQL`.  It includes :ref:`aiomysql-connection`,
+  :ref:`aiomysql-cursors` and :ref:`aiomysql-pool` objects.
+* Implements *optional* support for charming :term:`sqlalchemy`
   functional sql layer.
 
 Basics

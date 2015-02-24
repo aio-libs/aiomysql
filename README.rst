@@ -117,6 +117,12 @@ Sqlalchemy support has been ported from aiopg_:
    asyncio.get_event_loop().run_until_complete(go())
 
 
+Documentation (work in progress)
+--------------------------------
+
+http://aiomysql.readthedocs.org/
+
+
 TODO
 ----
 * implement ssl transport support

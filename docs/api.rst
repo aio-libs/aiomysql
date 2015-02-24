@@ -7,6 +7,7 @@
    :synopsis: A library for accessing a MySQL database from the asyncio
 .. currentmodule:: aiomysql
 
+.. _aiomysql-connection:
 
 Connection
 ==========
