@@ -6,13 +6,13 @@ FLAGS=
 flake:
 	flake8 aiomysql tests
 
-test:
+test: flake
 	nosetests -s $(FLAGS) ./tests/
 
-vtest: flake
+vtest:
 	nosetests -s -v $(FLAGS) ./tests/
 
-cov cover coverage:
+cov cover coverage: flake
 	nosetests -s --with-cover --cover-html --cover-branches $(FLAGS) --cover-package aiomysql ./tests/
 	@echo "open file://`pwd`/cover/index.html"
 
