@@ -1,12 +1,22 @@
 import asyncio
+import re
 
-from pymysql.cursors import RE_INSERT_VALUES
 from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
 
-from aiomysql.log import logger
+from .log import logger
+
+# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L15
+
+#: Regular expression for :meth:`Cursor.executemany`.
+#: executemany only suports simple bulk insert.
+#: You can use it to load large dataset.
+RE_INSERT_VALUES = re.compile(
+    r"""(INSERT\s.+\sVALUES\s+)(\(\s*%s\s*(?:,\s*%s\s*)*\))""" +
+    """(\s*(?:ON DUPLICATE.*)?)\Z""",
+    re.IGNORECASE | re.DOTALL)
 
 
 class Cursor:
@@ -249,12 +259,13 @@ class Cursor:
 
         m = RE_INSERT_VALUES.match(query)
         if m:
-            q_values = m.group(1).rstrip()
+            q_prefix = m.group(1)
+            q_values = m.group(2).rstrip()
+            q_postfix = m.group(3) or ''
             assert q_values[0] == '(' and q_values[-1] == ')'
-            q_prefix = query[:m.start(1)]
-            yield from self._do_execute_many(q_prefix, q_values, args,
-                                             self.max_stmt_length,
-                                             self._get_db().encoding)
+            return (yield from self._do_execute_many(
+                q_prefix, q_values, q_postfix, args, self.max_stmt_length,
+                self._get_db().encoding))
         else:
             rows = 0
             for arg in args:
@@ -264,34 +275,36 @@ class Cursor:
         return self._rowcount
 
     @asyncio.coroutine
-    def _do_execute_many(self, prefix, values, args, max_stmt_length,
+    def _do_execute_many(self, prefix, values, postfix, args, max_stmt_length,
                          encoding):
         conn = self._get_db()
         escape = self._escape_args
         if isinstance(prefix, str):
             prefix = prefix.encode(encoding)
+        if isinstance(postfix, str):
+            postfix = postfix.encode(encoding)
         sql = bytearray(prefix)
         args = iter(args)
         v = values % escape(next(args), conn)
         if isinstance(v, str):
-            v = v.encode(encoding)
+            v = v.encode(encoding, 'surrogateescape')
         sql += v
         rows = 0
         for arg in args:
             v = values % escape(arg, conn)
             if isinstance(v, str):
-                v = v.encode(encoding)
-            if len(sql) + len(v) + 1 > max_stmt_length:
-                print(sql)
-                yield from self.execute(bytes(sql))
-                rows += self._rowcount
+                v = v.encode(encoding, 'surrogateescape')
+            if len(sql) + len(v) + len(postfix) + 1 > max_stmt_length:
+                r = yield from self.execute(sql + postfix)
+                rows += r
                 sql = bytearray(prefix)
             else:
                 sql += b','
             sql += v
-        yield from self.execute(bytes(sql))
-        rows += self._rowcount
+        r = yield from self.execute(sql + postfix)
+        rows += r
         self._rowcount = rows
+        return rows
 
     @asyncio.coroutine
     def callproc(self, procname, args=()):

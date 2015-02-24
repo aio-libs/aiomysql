@@ -67,7 +67,7 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
             %s , %s,
             %s )
              """, data)
-        self.assertEqual(cursor._last_executed, bytearray(b"""insert
+        self.assertEqual(cursor._last_executed.strip(), bytearray(b"""insert
             into bulkinsert (id, name,
             age, height)
             values (0,
@@ -90,3 +90,31 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
             "values (%s,%s,%s,%s)", data)
         yield from cursor.execute('commit')
         yield from self._verify_records(data)
+
+    @run_until_complete
+    def test_insert_on_duplicate_key_update(self):
+        # executemany should work with "insert ... on update" "
+        conn = self.connections[0]
+        cursor = yield from conn.cursor()
+        data = [(0, "bob", 21, 123), (1, "jim", 56, 45), (2, "fred", 100, 180)]
+        yield from cursor.executemany("""insert
+            into bulkinsert (id, name,
+            age, height)
+            values (%s,
+            %s , %s,
+            %s ) on duplicate key update
+            age = values(age)
+             """, data)
+        self.assertEqual(cursor._last_executed.strip(), bytearray(b"""insert
+            into bulkinsert (id, name,
+            age, height)
+            values (0,
+            'bob' , 21,
+            123 ),(1,
+            'jim' , 56,
+            45 ),(2,
+            'fred' , 100,
+            180 ) on duplicate key update
+            age = values(age)"""))
+        yield from cursor.execute('commit')
+        self._verify_records(data)
