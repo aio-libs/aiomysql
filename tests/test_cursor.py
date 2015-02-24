@@ -63,6 +63,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from cur.execute('DROP TABLE IF EXISTS foobar;')
         self.assertEqual(None, cur.description)
 
+    @run_until_complete
     def test_cursor_properties(self):
         conn = self.connections[0]
         cur = yield from conn.cursor()
@@ -77,7 +78,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from self._prepare(conn)
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
-        cur.scroll(1)
+        yield from cur.scroll(1)
         ret = yield from cur.fetchone()
         self.assertEqual((2, 'b'), ret)
 
@@ -87,7 +88,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from self._prepare(conn)
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
-        cur.scroll(2, mode='absolute')
+        yield from cur.scroll(2, mode='absolute')
         ret = yield from cur.fetchone()
         self.assertEqual((3, 'c'), ret)
 
@@ -97,13 +98,13 @@ class TestCursor(base.AIOPyMySQLTestCase):
         cur = yield from conn.cursor()
 
         with self.assertRaises(ProgrammingError):
-            cur.scroll(2, mode='absolute')
+            yield from cur.scroll(2, mode='absolute')
 
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
 
         with self.assertRaises(ProgrammingError):
-            cur.scroll(2, mode='not_valid_mode')
+            yield from cur.scroll(2, mode='not_valid_mode')
 
     @run_until_complete
     def test_scroll_index_error(self):
@@ -112,7 +113,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
         with self.assertRaises(IndexError):
-            cur.scroll(1000)
+            yield from cur.scroll(1000)
 
     @run_until_complete
     def test_close(self):
@@ -200,7 +201,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from self._prepare(conn)
         cur = yield from conn.cursor()
         yield from cur.execute('SELECT * FROM tbl;')
-        cur.scroll(1)
+        yield from cur.scroll(1)
         ret = yield from cur.fetchall()
         self.assertEquals(((2, 'b'), (3, 'c')), ret)
 
