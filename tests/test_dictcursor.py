@@ -42,7 +42,7 @@ class TestDictCursor(base.AIOPyMySQLTestCase):
         @asyncio.coroutine
         def shutdown():
             c = yield from self.conn.cursor()
-            c.execute("drop table dictcursor")
+            yield from c.execute("drop table dictcursor;")
 
         self.loop.run_until_complete(shutdown())
         super(TestDictCursor, self).tearDown()
