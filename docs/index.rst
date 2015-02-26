@@ -126,6 +126,7 @@ Contents:
 
    api
    cursors
+   pool
    examples
    glossary
 
