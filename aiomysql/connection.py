@@ -454,17 +454,11 @@ class Connection:
         try:
             while True:
                 packet_header = yield from self._reader.readexactly(4)
-                # logger.debug(_convert_to_str(packet_header))
-                packet_length_bin = packet_header[:3]
-
+                btrl, btrh, packet_number = struct.unpack(
+                    '<HBB', packet_header)
+                bytes_to_read = btrl + (btrh << 16)
                 # TODO: check sequence id
-                #  packet_number
-                byte2int(packet_header[3])
-                # pad little-endian number
-                bin_length = packet_length_bin + b'\0'
-                bytes_to_read = struct.unpack('<I', bin_length)[0]
                 recv_data = yield from self._reader.readexactly(bytes_to_read)
-                # logger.debug(dump_packet(recv_data))
                 buff += recv_data
                 if bytes_to_read < MAX_PACKET_LEN:
                     break
@@ -550,9 +544,8 @@ class Connection:
         if isinstance(self._user, str):
             user = self._user.encode(self._encoding)
 
-        data_init = (
-            struct.pack('<i', self.client_flag) + struct.pack("<I", 1) +
-            int2byte(charset_id) + int2byte(0) * 23)
+        data_init = struct.pack('<iIB23s', self.client_flag, 1,
+                                charset_id, b'')
 
         next_packet = 1
 
