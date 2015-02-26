@@ -4,7 +4,7 @@ FLAGS=
 
 
 flake:
-	flake8 aiomysql tests
+	flake8 aiomysql tests examples
 
 test: flake
 	nosetests -s $(FLAGS) ./tests/
