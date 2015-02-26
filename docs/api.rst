@@ -107,36 +107,39 @@ Example::
         Close the connection now (rather than whenever `del` is executed).
         The connection will be unusable from this point forward.
 
-   .. method:: wait_closed
+   .. method:: wait_closed()
 
         A :ref:`coroutine <coroutine>` ends quit command and then closes
         socket connection.
 
-   .. method:: autocommit
+   .. method:: autocommit(value)
 
-        Enable/disable autocommit mode for current MySQL session.
+        A :ref:`coroutine <coroutine>` to enable/disable autocommit mode for
+        current MySQL session.
         :param bool value: toggle atutocommit mode.
 
-   .. method:: get_autocommit
+   .. method:: get_autocommit()
 
         Returns autocommit status for current MySQL sesstion.
         :returns bool: current autocommit status.
 
-   .. method:: begin
+   .. method:: begin()
 
-        Begin transaction.
+        A :ref:`coroutine <coroutine>` to egin transaction.
 
-   .. method:: commit
+   .. method:: commit()
 
-        Commit changes to stable storage.
+        Commit changes to stable storage :ref:`coroutine <coroutine>`.
 
-   .. method:: rollback
+   .. method:: rollback()
 
-        Roll back the current transaction.
+        Roll back the current transaction :ref:`coroutine <coroutine>`.
 
-   .. method:: select_db
+   .. method:: select_db(db)
 
-        Set current db.
+        A :ref:`coroutine <coroutine>` to set current db.
+
+        :param str db: database name
 
    .. attribute:: closed
 
@@ -175,8 +178,6 @@ Example::
    .. attribute:: charset
 
         Returns the character set for current connection.
-
-
 
 
 .. _sql-mode: http://dev.mysql.com/doc/refman/5.0/en/sql-mode.html
