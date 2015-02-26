@@ -11,7 +11,7 @@ def test_example():
                                        user='root', password='', db='mysql',
                                        loop=loop)
 
-    cur = conn.cursor()
+    cur = yield from conn.cursor()
     yield from cur.execute("SELECT Host,User FROM user")
     print(cur.description)
     r = yield from cur.fetchall()

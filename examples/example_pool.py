@@ -11,7 +11,7 @@ def test_example():
                                                user='root', password='',
                                                db='mysql', loop=loop)
         with (yield from pool) as conn:
-            cur = conn.cursor()
+            cur = yield from conn.cursor()
             yield from cur.execute("SELECT 10")
             # print(cur.description)
             (r,) = yield from cur.fetchone()
