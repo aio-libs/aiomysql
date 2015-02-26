@@ -33,3 +33,26 @@ class TestExample(AIOPyMySQLTestCase):
             self.assertTrue(r, 10)
         pool.close()
         yield from pool.wait_closed()
+
+    @run_until_complete
+    def test_callproc(self):
+
+        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                           user='root', password='',
+                                           db='mysql', loop=self.loop)
+
+        cur = yield from conn.cursor()
+
+        yield from cur.execute("DROP PROCEDURE IF EXISTS myinc;")
+        yield from cur.execute("""CREATE PROCEDURE myinc(p1 INT)
+                               BEGIN
+                                   SELECT p1 + 1;
+                               END
+                               """)
+
+        yield from cur.callproc('myinc', [1])
+        (ret, ) = yield from cur.fetchone()
+        assert 2, ret
+
+        yield from cur.close()
+        conn.close()
