@@ -124,7 +124,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   api
+   connection
    cursors
    pool
    examples

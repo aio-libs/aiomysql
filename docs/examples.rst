@@ -10,11 +10,13 @@ Every example is a correct tiny python program.
 
 Low-level API
 -------------
+Bassic example, fetch host and user information from internal table: user.
 
 .. literalinclude:: ../examples/example.py
 
+Example of stored procedure, which just increments input value.
 
-.. _aiomysql-examples-sa-simple:
+.. literalinclude:: ../examples/example_callproc.py
 
 Simple sqlalchemy usage
 -----------------------
