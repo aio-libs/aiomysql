@@ -8,7 +8,7 @@ aiomysql
     :target: https://pypi.python.org/pypi/aiomysql/
     :alt: Latest Version
 .. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
-    :target: https://readthedocs.org/projects/aiomysql/?badge=latest
+    :target: http://aiomysql.readthedocs.org/
     :alt: Documentation Status
 
 **aiomysql** is a "driver" for accessing a `MySQL` database
