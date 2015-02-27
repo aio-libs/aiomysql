@@ -4,7 +4,12 @@ aiomysql
     :target: https://travis-ci.org/aio-libs/aiomysql
 .. image:: https://coveralls.io/repos/aio-libs/aiomysql/badge.svg
     :target: https://coveralls.io/r/aio-libs/aiomysql
-
+.. image:: https://pypip.in/version/aiomysql/badge.svg
+    :target: https://pypi.python.org/pypi/aiomysql/
+    :alt: Latest Version
+.. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
+    :target: https://readthedocs.org/projects/aiomysql/?badge=latest
+    :alt: Documentation Status
 
 **aiomysql** is a "driver" for accessing a `MySQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It depends and reuses most parts
