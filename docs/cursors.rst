@@ -229,19 +229,17 @@ Cursor
         due to the specified number of rows not being available, fewer rows
         may be returned ::
 
-            @asyncio.coroutine
-            def go()
-                yield from connection.cursor()
-                yield from cursor.execute("SELECT * FROM test;")
-                r = cursor.fetchmany(2)
-                print(r)
-                # [(1, 100, "abc'def"), (2, None, 'dada')]
-                r = yield from cursor.fetchmany(2)
-                print(r)
-                # [(3, 42, 'bar')]
-                r = yield from cursor.fetchmany(2)
-                print(r)
-                # []
+            cursor = yield from connection.cursor()
+            yield from cursor.execute("SELECT * FROM test;")
+            r = cursor.fetchmany(2)
+            print(r)
+            # [(1, 100, "abc'def"), (2, None, 'dada')]
+            r = yield from cursor.fetchmany(2)
+            print(r)
+            # [(3, 42, 'bar')]
+            r = yield from cursor.fetchmany(2)
+            print(r)
+            # []
 
         :param int size: number of rows to return
         :returns list: of fetched rows
@@ -300,7 +298,7 @@ Cursor
                                                user='root', password='',
                                                db='mysql', loop=loop)
 
-            # create default cursor
+            # create dict cursor
             cursor = yield from conn.cursor(aiomysql.DictCursor)
 
             # execute sql query
