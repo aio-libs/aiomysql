@@ -127,6 +127,7 @@ Contents:
    connection
    cursors
    pool
+   tutorial
    examples
    glossary
 
