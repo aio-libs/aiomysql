@@ -346,6 +346,8 @@ class Connection:
     @asyncio.coroutine
     def query(self, sql, unbuffered=False):
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
+        if isinstance(sql, str):
+            sql = sql.encode(self.encoding, 'surrogateescape')
         yield from self._execute_command(COM_QUERY, sql)
         yield from self._read_query_result(unbuffered=unbuffered)
         return self._affected_rows

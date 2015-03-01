@@ -123,20 +123,20 @@ class TestConversion(base.AIOPyMySQLTestCase):
             yield from c.execute("drop table test_dict")
 
     @run_until_complete
-    def test_big_blob(self):
-        """ test tons of data """
+    def test_blob(self):
+        # test binary data
+        data = bytes(bytearray(range(256)) * 4)
         conn = self.connections[0]
-        c = yield from conn.cursor()
-        yield from c.execute("create table test_big_blob (b blob)")
+        cur = yield from conn.cursor()
         try:
-            data = "pymysql" * 1024
-            yield from c.execute("insert into test_big_blob (b) values (%s)",
-                                 (data,))
-            yield from c.execute("select b from test_big_blob")
-            r = yield from c.fetchone()
-            self.assertEqual(data.encode(conn.charset), r[0])
+            yield from cur.execute("create table test_blob (b blob)")
+            yield from cur.execute("insert into test_blob (b) values (%s)",
+                                   (data,))
+            yield from cur.execute("select b from test_blob")
+            (r,) = yield from cur.fetchone()
+            self.assertEqual(data, r)
         finally:
-            yield from c.execute("drop table test_big_blob")
+            yield from cur.execute("drop table test_blob")
 
     @run_until_complete
     def test_untyped(self):
