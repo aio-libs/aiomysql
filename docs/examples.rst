@@ -18,7 +18,11 @@ Example of stored procedure, which just increments input value.
 
 .. literalinclude:: ../examples/example_callproc.py
 
-Simple sqlalchemy usage
------------------------
+Example of using `executemany` method:
+
+.. literalinclude:: ../examples/example_executemany.py
+
+sqlalchemy usage
+----------------
 
 .. literalinclude:: ../examples/example_sa.py
