@@ -246,7 +246,7 @@ Cursor
 
    .. method:: fetchall()
 
-        Returns all rows of a query result set::
+        :ref:`Coroutine <coroutine>` returns all rows of a query result set::
 
          yield from cursor.execute("SELECT * FROM test;")
          r = yield from cursor.fetchall()
@@ -258,7 +258,7 @@ Cursor
    .. method:: scroll(value, mode='relative')
 
         Scroll the cursor in the result set to a new position according
-        to mode.
+        to mode. This method is :ref:`coroutine <coroutine>`.
 
         If mode is ``relative`` (default), value is taken as offset to the
         current position in the result set, if set to ``absolute``, value
@@ -328,6 +328,21 @@ Cursor
     returning the total number of rows, so the only way to tell how many rows
     there are is to iterate over every row returned. Also, it currently isn't
     possible to scroll backwards, as only the current row is held in memory.
+    All methods are the same as in :class:`Cursor` but with different
+    behaviour.
+
+   .. method:: fetchall()
+        Same as :meth:`Cursor.fetchall` :ref:`coroutine <coroutine>`,
+        useless for large queries, as all rows fetched one by one.
+
+   .. method:: fetchmany(size=None, mode='relative')
+        Same as :meth:`Cursor.fetchall`, but each row fetched one by one.
+
+   .. method:: scroll(size=None)
+        Same as :meth:`Cursor.scroll`, but move cursor on server side one by
+        one. If you want to move 20 rows forward scroll will make 20 queries
+        to move cursor. Currently only forward scrolling is supported.
+
 
 .. class:: SSDictCursor
 

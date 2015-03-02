@@ -588,6 +588,16 @@ class SSCursor(Cursor):
 
     @asyncio.coroutine
     def scroll(self, value, mode='relative'):
+        """Scroll the cursor in the result set to a new position
+        according to mode . Same as :meth:`Cursor.scroll`, but move cursor
+        on server side one by one row. If you want to move 20 rows forward
+        scroll will make 20 queries to move cursor. Currently only forward
+        scrolling is supported.
+
+        :param int value: move cursor to next position according to mode.
+        :param str mode: scroll mode, possible modes: `relative` and `absolute`
+        """
+
         self._check_executed()
 
         if mode == 'relative':
