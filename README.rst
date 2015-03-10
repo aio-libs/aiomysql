@@ -128,13 +128,6 @@ Documentation (work in progress)
 http://aiomysql.readthedocs.org/
 
 
-TODO
-----
-* implement ssl transport support
-* rethink autocommit in tests
-* documentation
-* bring back loggers like in pymysql
-
 Requirements
 ------------
 
