@@ -1,15 +1,26 @@
 Changes
 -------
 
+0.0.3 (2015-03-10)
+^^^^^^^^^^^^^^^^^^
+
+* Added support for PyMySQL up to 0.6.6.
+
+* Ported improvements from PyMySQL.
+
+* Added basic documentation.
+
+* Fixed and added more examples.
+
+
 0.0.2 (2015-02-17)
 ^^^^^^^^^^^^^^^^^^
 
-* Added MANIFEST.in
+* Added MANIFEST.in.
 
 
 0.0.1 (2015-02-17)
 ^^^^^^^^^^^^^^^^^^
-
 
 * Initial release.
 
