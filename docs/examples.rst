@@ -22,6 +22,11 @@ Example of using `executemany` method:
 
 .. literalinclude:: ../examples/example_executemany.py
 
+Example of using transactions `rollback` and `commit` methods:
+
+.. literalinclude:: ../examples/example_transaction.py
+
+
 sqlalchemy usage
 ----------------
 
