@@ -9,7 +9,7 @@ loop = asyncio.get_event_loop()
 def test_example():
     conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
                                        user='root', password='',
-                                       db='mysql', loop=loop)
+                                       db='test_pymysql', loop=loop)
 
     cur = yield from conn.cursor()
     yield from cur.execute("DROP PROCEDURE IF EXISTS myinc;")
