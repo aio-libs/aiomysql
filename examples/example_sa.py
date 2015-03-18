@@ -12,12 +12,22 @@ tbl = sa.Table('tbl', metadata,
 
 
 @asyncio.coroutine
+def create_table(engine):
+    with (yield from engine) as conn:
+        yield from conn.execute('DROP TABLE IF EXISTS tbl')
+        yield from conn.execute('''CREATE TABLE tbl (
+                                            id serial PRIMARY KEY,
+                                            val varchar(255))''')
+
+
+@asyncio.coroutine
 def go():
     engine = yield from create_engine(user='root',
                                       db='test_pymysql',
                                       host='127.0.0.1',
                                       password='')
 
+    yield from create_table(engine)
     with (yield from engine) as conn:
         yield from conn.execute(tbl.insert().values(val='abc'))
 

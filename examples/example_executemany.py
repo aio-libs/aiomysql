@@ -12,6 +12,7 @@ def test_example_executemany():
                                        db='test_pymysql', loop=loop)
 
     cur = yield from conn.cursor()
+    yield from cur.execute("DROP TABLE IF EXISTS music_style;")
     yield from cur.execute("""CREATE TABLE music_style
                               (id INT,
                               name VARCHAR(255),
