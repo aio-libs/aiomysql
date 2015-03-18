@@ -4,7 +4,7 @@
 ===============================================================
 
 .. module:: aiomysql.sa
-   :synopsis: support for SQLAlchemy functional SQL layer
+    :synopsis: support for SQLAlchemy functional SQL layer
 .. currentmodule:: aiomysql.sa
 
 
@@ -18,8 +18,6 @@ to :term:`MySQL` database, manipulations with raw SQL
 strings too annoying.
 
 Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
-
-
 
 
 Example::
@@ -66,3 +64,117 @@ Also we provide SQL transactions support. Please take a look on
 
 
 .. _aiopg: https://github.com/aio-libs/aiopg
+
+Engine
+------
+
+.. function:: create_engine(*, minsize=10, maxsize=10, loop=None, \
+                            dialect=dialect, timeout=60, **kwargs)
+
+    A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
+
+    Returns :class:`Engine` instance with embedded connection pool.
+
+    The pool has *minsize* opened connections to :term:`MySQL` server.
+
+
+.. data:: dialect
+
+    An instance of :term:`SQLAlchemy` dialect set up for :term:`pymysql` usage.
+
+    An :class:`sqlalchemy.engine.interfaces.Dialect` instance.
+
+    .. seealso:: :mod:`sqlalchemy.dialects.mysql.pymysql`
+                 PyMySQL dialect.
+
+
+.. class:: Engine
+
+    Connects a :class:`aiomysql.Pool` and
+    :class:`sqlalchemy.engine.interfaces.Dialect` together to provide a
+    source of database connectivity and behavior.
+
+    An :class:`Engine` object is instantiated publicly using the
+    :func:`create_engine` coroutine.
+
+
+    .. attribute:: dialect
+
+        A :class:`sqlalchemy.engine.interfaces.Dialect` for the engine,
+        readonly property.
+
+    .. attribute:: name
+
+        A name of the dialect, readonly property.
+
+    .. attribute:: driver
+
+        A driver of the dialect, readonly property.
+
+    .. attribute:: minsize
+
+        A minimal size of the pool (*read-only*), ``10`` by default.
+
+    .. attribute:: maxsize
+
+        A maximal size of the pool (*read-only*), ``10`` by default.
+
+    .. attribute:: size
+
+        A current size of the pool (*readonly*). Includes used and free
+        connections.
+
+    .. attribute:: freesize
+
+        A count of free connections in the pool (*readonly*).
+
+    .. attribute:: timeout
+
+        A read-only float representing default timeout for operations
+        for connections from pool.
+
+    .. method:: close()
+
+        Close engine.
+
+        Mark all engine connections to be closed on getting back to engine.
+        Closed engine doesn't allow to acquire new connections.
+
+        If you want to wait for actual closing of acquired connection please
+        call :meth:`wait_closed` after :meth:`close`.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
+    .. method:: terminate()
+
+        Terminate engine.
+
+        Close engine's pool with instantly closing all acquired connections
+        also.
+
+        :meth:`wait_closed` should be called after :meth:`terminate` for
+        waiting for actual finishing.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
+    .. method:: wait_closed()
+
+        A :ref:`coroutine <coroutine>` that waits for releasing and
+        closing all acquired connections.
+
+        Should be called after :meth:`close` for waiting for actual engine
+        closing.
+
+    .. method:: acquire()
+
+        Get a connection from pool.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        Returns a :class:`SAConnection` instance.
+
+    .. method:: release()
+
+        Revert back connection *conn* to pool.
+
+      .. warning:: The method is not a :ref:`coroutine <coroutine>`.
