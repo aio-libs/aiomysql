@@ -15,7 +15,7 @@ Welcome to aiomysql's documentation!
 
 **aiomysql** is a library for accessing a :term:`MySQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It depends and reuses most parts
-of :term:`PyMySQL` . **aiomysql** try to be like awesome aiopg_ library and preserve
+of :term:`PyMySQL` . **aiomysql** tries to be like awesome aiopg_ library and preserve
 same api, look and feel.
 
 Internally **aiomysql** is copy of PyMySQL, underlying io calls switched
