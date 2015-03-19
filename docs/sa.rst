@@ -178,3 +178,177 @@ Engine
         Revert back connection *conn* to pool.
 
       .. warning:: The method is not a :ref:`coroutine <coroutine>`.
+
+Connection
+----------
+
+.. class:: SAConnection
+
+   A wrapper for :class:`aiomysql.Connection` instance.
+
+   The class provides methods for executing *SQL queries* and working with
+   *SQL transactions*.
+
+   .. method:: execute(query, *multiparams, **params)
+
+        Executes a *SQL* *query* with optional parameters.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        :param query: a SQL query string or any :term:`sqlalchemy`
+                        expression (see :ref:`core_toplevel`)
+
+        :param \*multiparams/\**params: represent bound parameter values
+         to be used in the execution.  Typically, the format is either a
+         dictionary passed to \*multiparams::
+
+             yield from conn.execute(
+                 table.insert(),
+                 {"id":1, "value":"v1"}
+             )
+
+         ...or individual key/values interpreted by \**params::
+
+             yield from conn.execute(
+                 table.insert(), id=1, value="v1"
+             )
+
+         In the case that a plain SQL string is passed, a tuple or
+         individual values in \*multiparams may be passed::
+
+             yield from conn.execute(
+                 "INSERT INTO table (id, value) VALUES (%d, %s)",
+                 (1, "v1")
+             )
+
+             yield from conn.execute(
+                 "INSERT INTO table (id, value) VALUES (%s, %s)",
+                 1, "v1"
+             )
+
+        :returns: :class:`ResultProxy` instance with results of SQL
+                  query execution.
+
+   .. method:: scalar(query, *multiparams, **params)
+
+        Executes a *SQL* *query* and returns a scalar value.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        .. seealso:: :meth:`SAConnection.execute` and :meth:`ResultProxy.scalar`.
+
+   .. attribute:: closed
+
+        The readonly property that returns ``True`` if connections is closed.
+
+   .. method:: begin()
+
+        Begin a transaction and return a transaction handle.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        The returned object is an instance of :class:`.Transaction`.
+        This object represents the "scope" of the transaction,
+        which completes when either the :meth:`.Transaction.rollback`
+        or :meth:`.Transaction.commit` method is called.
+
+        Nested calls to :meth:`.begin` on the same :class:`.SAConnection`
+        will return new :class:`.Transaction` objects that represent
+        an emulated transaction within the scope of the enclosing
+        transaction, that is::
+
+            trans = yield from conn.begin()   # outermost transaction
+            trans2 = yield from conn.begin()  # "inner"
+            yield from trans2.commit()          # does nothing
+            yield from trans.commit()           # actually commits
+
+        Calls to :meth:`.Transaction.commit` only have an effect
+        when invoked via the outermost :class:`.Transaction` object, though the
+        :meth:`.Transaction.rollback` method of any of the
+        :class:`.Transaction` objects will roll back the
+        transaction.
+
+        .. seealso::
+
+           :meth:`.SAConnection.begin_nested` - use a SAVEPOINT
+
+           :meth:`.SAConnection.begin_twophase` - use a two phase (XA)
+                     transaction
+
+   .. method:: begin_nested()
+
+        Begin a nested transaction and return a transaction handle.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        The returned object is an instance of :class:`.NestedTransaction`.
+
+        Any transaction in the hierarchy may ``commit`` and
+        ``rollback``, however the outermost transaction still controls
+        the overall ``commit`` or ``rollback`` of the transaction of a
+        whole. It utilizes SAVEPOINT facility of :term:`MySQL` server.
+
+        .. seealso::
+
+           :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
+
+   .. method:: begin_twophase(xid=None)
+
+        Begin a two-phase or XA transaction and return a transaction
+        handle.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        The returned object is an instance of
+        :class:`.TwoPhaseTransaction`, which in addition to the methods
+        provided by :class:`.Transaction`, also provides a
+        :meth:`~.TwoPhaseTransaction.prepare` method.
+
+        :param xid: the two phase transaction id.  If not supplied, a
+            random id will be generated.
+
+        .. seealso::
+           :meth:`.SAConnection.begin`, :meth:`.SAConnection.begin_twophase`.
+
+   .. method:: recover_twophase()
+
+        Return a list of prepared twophase transaction ids.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+   .. method:: rollback_prepared(xid)
+
+        Rollback prepared twophase transaction *xid*.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+   .. method:: commit_prepared(xid)
+
+        Commit prepared twophase transaction *xid*.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+   .. attribute:: in_transaction
+
+        The readonly property that returns ``True`` if a transaction is
+        in progress.
+
+   .. method:: close()
+
+        Close this :class:`SAConnection`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        This results in a release of the underlying database
+        resources, that is, the :class:`aiomysql.Connection` referenced
+        internally. The :class:`aiomysql.Connection` is typically restored
+        back to the connection-holding :class:`aiomysql.Pool` referenced
+        by the :class:`.Engine` that produced this
+        :class:`SAConnection`. Any transactional state present on
+        the :class:`aiomysql.Connection` is also unconditionally released via
+        calling :meth:`Transaction.rollback` method.
+
+        After :meth:`~.SAConnection.close` is called, the
+        :class:`.SAConnection` is permanently in a closed state,
+        and will allow no further operations.
+
