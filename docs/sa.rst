@@ -397,23 +397,20 @@ ResultProxy
 
             Notes regarding :attr:`ResultProxy.rowcount`:
 
-
             * This attribute returns the number of rows *matched*,
-             which is not necessarily the same as the number of rows
-             that were actually *modified* - an UPDATE statement, for example,
-             may have no net change on a given row if the SET values
-             given are the same as those present in the row already.
-             Such a row would be matched but not modified.
-
+              which is not necessarily the same as the number of rows
+              that were actually *modified* - an UPDATE statement, for example,
+              may have no net change on a given row if the SET values
+              given are the same as those present in the row already.
+              Such a row would be matched but not modified.
             * :attr:`ResultProxy.rowcount` is *only* useful in conjunction
-             with an UPDATE or DELETE statement.  Contrary to what the Python
-             DBAPI says, it does *not* return the
-             number of rows available from the results of a SELECT statement
-             as DBAPIs cannot support this functionality when rows are
-             unbuffered.
-
-           * Statements that use RETURNING does not return a correct
-             rowcount.
+              with an UPDATE or DELETE statement.  Contrary to what the Python
+              DBAPI says, it does *not* return the
+              number of rows available from the results of a SELECT statement
+              as DBAPIs cannot support this functionality when rows are
+              unbuffered.
+            * Statements that use RETURNING does not return a correct
+              rowcount.
 
     .. attribute:: lastrowid
 
@@ -503,3 +500,23 @@ ResultProxy
         Fetch the first column of the first row, and close the result set.
 
         Returns ``None`` if no row is present or an :class:`RowProxy` instance.
+
+
+.. class:: RowProxy
+
+    A :class:`collections.abc.Mapping` for representing a row in query result.
+
+    Keys are column names, values are result values.
+
+    Individual columns may be accessed by their integer position,
+    case-sensitive column name, or by :class:`sqlalchemy.schema.Column``
+    object.
+
+    Has overloaded operators ``__eq__`` and ``__ne__`` for comparing two rows.
+
+    The :class:`RowProxy` is *not hashable*.
+
+    ..method:: as_tuple()
+
+     Return a tuple with values from :meth:`RowProxy.values`.
+
