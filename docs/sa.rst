@@ -352,3 +352,154 @@ Connection
         :class:`.SAConnection` is permanently in a closed state,
         and will allow no further operations.
 
+ResultProxy
+-----------
+
+.. class:: ResultProxy
+
+    Wraps a *DB-API like* :class:`Cursor` object to provide easier
+    access to row columns.
+
+    Individual columns may be accessed by their integer position,
+    case-sensitive column name, or by :class:`sqlalchemy.schema.Column``
+    object. e.g.::
+
+        for row in (yield from conn.execute(...)):
+            col1 = row[0]    # access via integer position
+            col2 = row['col2']   # access via name
+            col3 = row[mytable.c.mycol] # access via Column object.
+
+    :class:`ResultProxy` also handles post-processing of result column
+    data using :class:`sqlalchemy.types.TypeEngine` objects, which are
+    referenced from the originating SQL statement that produced this
+    result set.
+
+    .. attribute:: dialect
+
+        The readonly property that returns
+        :class:`sqlalchemy.engine.interfaces.Dialect` dialect
+        for the :class:`ResultProxy` instance.
+
+        .. seealso:: :data:`dialect` global data.
+
+    .. method:: keys()
+
+        Return the current set of string keys for rows.
+
+    .. attribute:: rowcount
+
+        The readonly property that returns the 'rowcount' for this result.
+
+        The 'rowcount' reports the number of rows *matched*
+        by the WHERE criterion of an UPDATE or DELETE statement.
+
+        .. note::
+
+            Notes regarding :attr:`ResultProxy.rowcount`:
+
+
+            * This attribute returns the number of rows *matched*,
+             which is not necessarily the same as the number of rows
+             that were actually *modified* - an UPDATE statement, for example,
+             may have no net change on a given row if the SET values
+             given are the same as those present in the row already.
+             Such a row would be matched but not modified.
+
+            * :attr:`ResultProxy.rowcount` is *only* useful in conjunction
+             with an UPDATE or DELETE statement.  Contrary to what the Python
+             DBAPI says, it does *not* return the
+             number of rows available from the results of a SELECT statement
+             as DBAPIs cannot support this functionality when rows are
+             unbuffered.
+
+           * Statements that use RETURNING does not return a correct
+             rowcount.
+
+    .. attribute:: lastrowid
+
+        Returns the 'lastrowid' accessor on the DBAPI cursor.
+
+        value generated for an *AUTO_INCREMENT* column by the previous INSERT
+        or UPDATE statement or None when there is no such value available. For
+        example, if you perform an *INSERT* into a table that contains an
+        AUTO_INCREMENT column, `lastrowid` returns the *AUTO_INCREMENT* value
+        for the new row.
+
+    .. attribute:: returns_rows
+
+        A readonly property that returns ``True`` if this
+        :class:`ResultProxy` returns rows.
+
+        I.e. if it is legal to call the methods
+        :meth:`ResultProxy.fetchone`,
+        :meth:`ResultProxy.fetchmany`,
+        :meth:`ResultProxy.fetchall`.
+
+    .. attribute:: closed
+
+        Return ``True`` if this :class:`ResultProxy` is closed (no
+        pending rows in underlying cursor).
+
+    .. method:: close()
+
+        Close this :class:`ResultProxy`.
+
+        Closes the underlying :class:`aiomysql.Cursor` corresponding to the
+        execution.
+
+        Note that any data cached within this :class:`ResultProxy` is
+        still available.  For some types of results, this may include
+        buffered rows.
+
+        This method is called automatically when:
+
+        * all result rows are exhausted using the fetchXXX() methods.
+        * cursor.description is None.
+
+    .. method:: fetchall()
+
+        Fetch all rows, just like :meth:`aiomysql.Cursor.fetchall`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        The connection is closed after the call.
+
+        Returns a list of :class:`RowProxy`.
+
+    .. method:: fetchone()
+
+        Fetch one row, just like :meth:`aiomysql.Cursor.fetchone`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        If a row is present, the cursor remains open after this is called.
+
+        Else the cursor is automatically closed and ``None`` is returned.
+
+        Returns an :class:`RowProxy` instance or ``None``.
+
+    .. method:: fetchmany(size=None)
+
+        Fetch many rows, just like :meth:`aiomysql.Cursor.fetchmany`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        If rows are present, the cursor remains open after this is called.
+
+        Else the cursor is automatically closed and an empty list is returned.
+
+        Returns a list of :class:`RowProxy`.
+
+    .. method:: first()
+
+        Fetch the first row and then close the result set unconditionally.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        Returns ``None`` if no row is present or an :class:`RowProxy` instance.
+
+    .. method:: scalar()
+
+        Fetch the first column of the first row, and close the result set.
+
+        Returns ``None`` if no row is present or an :class:`RowProxy` instance.
