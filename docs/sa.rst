@@ -520,3 +520,105 @@ ResultProxy
 
      Return a tuple with values from :meth:`RowProxy.values`.
 
+Transaction objects
+-------------------
+
+.. class:: Transaction
+
+    Represent a database transaction in progress.
+
+    The :class:`Transaction` object is procured by
+    calling the :meth:`SAConnection.begin` method of
+    :class:`SAConnection`::
+
+       with (yield from engine) as conn:
+           trans = yield from conn.begin()
+           try:
+               yield from conn.execute("insert into x (a, b) values (1, 2)")
+           except Exception:
+               yield from trans.rollback()
+           else:
+               yield from trans.commit()
+
+    The object provides :meth:`.rollback` and :meth:`.commit`
+    methods in order to control transaction boundaries.
+
+    .. seealso::
+
+        :meth:`SAConnection.begin`, :meth:`SAConnection.begin_twophase`,
+        :meth:`SAConnection.begin_nested`.
+
+    .. attribute:: is_active
+
+        A readonly property that returns ``True`` if a transaction is active.
+
+    .. attribute:: connection
+
+        A readonly property that returns :class:`SAConnection` for transaction.
+
+    .. method:: close()
+
+        Close this :class:`Transaction`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        If this transaction is the base transaction in a begin/commit
+        nesting, the transaction will :meth:`Transaction.rollback`.
+        Otherwise, the method returns.
+
+        This is used to cancel a :class:`Transaction` without affecting
+        the scope of an enclosing transaction.
+
+    .. method:: rollback()
+
+        Roll back this :class:`Transaction`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+    .. method:: commit()
+
+        Commit this :class:`Transaction`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+
+.. class:: NestedTransaction
+
+    Represent a 'nested', or SAVEPOINT transaction.
+
+    A new :class:`NestedTransaction` object may be procured
+    using the :meth:`SAConnection.begin_nested` method.
+
+    The interface is the same as that of :class:`Transaction`.
+
+     .. seealso::  `SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT`__
+          on :term:`MySQL`:
+
+    .. __: http://dev.mysql.com/doc/refman/5.7/en/savepoint.html
+
+
+.. class:: TwoPhaseTransaction
+
+    Represent a two-phase transaction.
+
+    A new :class:`TwoPhaseTransaction` object may be procured
+    using the :meth:`SAConnection.begin_twophase` method.
+
+    The interface is the same as that of :class:`Transaction`
+    with the addition of the :meth:`TwoPhaseTransaction.prepare` method.
+
+    .. attribute:: xid
+
+        A readonly property that returns twophase transaction id.
+
+    .. method:: prepare()
+
+        Prepare this :class:`TwoPhaseTransaction`.
+
+        This method is a :ref:`coroutine <coroutine>`.
+
+        After a `PREPARE`, the transaction can be committed.
+
+    .. seealso:: :term:`MySQL` commands for two phase transactions:
+
+        http://dev.mysql.com/doc/refman/5.7/en/xa-statements.html
