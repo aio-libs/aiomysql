@@ -83,7 +83,7 @@ class RowProxy(Mapping):
         return repr(self.as_tuple())
 
 
-class ResultMetaData(object):
+class ResultMetaData:
     """Handle cursor.description, applying additional info from an execution
     context."""
 
@@ -286,19 +286,11 @@ class ResultProxy:
 
     @property
     def lastrowid(self):
-        """return the 'lastrowid' accessor on the DBAPI cursor.
+        """Returns the 'lastrowid' accessor on the DBAPI cursor.
 
         This is a DBAPI specific method and is only functional
         for those backends which support it, for statements
-        where it is appropriate.  It's behavior is not
-        consistent across backends.
-
-        Usage of this method is normally unnecessary when
-        using insert() expression constructs; the
-        :attr:`~ResultProxy.inserted_primary_key` attribute provides a
-        tuple of primary key values for a newly inserted row,
-        regardless of database backend.
-
+        where it is appropriate.
         """
         return self._lastrowid
 
