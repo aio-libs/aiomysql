@@ -21,6 +21,12 @@ to async, basically ``yield from`` and ``asyncio.coroutine`` added in
 proper places)). `sqlalchemy` support ported from aiopg_.
 
 
+Documentation
+-------------
+
+http://aiomysql.readthedocs.org/
+
+
 Basic Example
 -------------
 
@@ -121,12 +127,6 @@ for aiopg_ user.:
 
 
    asyncio.get_event_loop().run_until_complete(go())
-
-
-Documentation
--------------
-
-http://aiomysql.readthedocs.org/
 
 
 Requirements
