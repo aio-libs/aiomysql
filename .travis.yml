@@ -22,7 +22,13 @@ install:
     - pip install coveralls
 
 script:
-  - make cov
+- make cov
+# checking examples
+- >
+  for example in $(find $PWD/examples/ -name "*.py"); do
+  echo "Running ${example}";
+  python3 ${example} || exit 1;
+  done;
 
 after_success:
   - coveralls
