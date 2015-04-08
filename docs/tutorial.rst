@@ -4,7 +4,7 @@ Tutorial
 ========
 
 Python database access modules all have similar interfaces, described by the
-:term:`DBAPI`. Most relational databses use the same synchronous interface,
+:term:`DBAPI`. Most relational databases use the same synchronous interface,
 *aiomysql* tries to provide same api you just need
 to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
 every method.
@@ -77,3 +77,7 @@ from the server::
 
 After that, ``conn`` becomes invalid and should not be used to access the
 server.
+
+Inserting Data
+--------------
+
