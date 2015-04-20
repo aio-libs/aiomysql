@@ -27,8 +27,11 @@ class TestPool(unittest.TestCase):
         asyncio.set_event_loop(None)
         self.pool = None
 
-        self.params = {"host": "localhost", "user": "root", "password": "",
-                       "db": "test_pymysql", "use_unicode": True},
+        self.host = os.environ.get('MYSQL_HOST', 'localhost')
+        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
+        self.password = os.environ.get('MYSQL_PASSWORD', '')
 
     def tearDown(self):
         if self.pool is not None:
@@ -38,9 +41,16 @@ class TestPool(unittest.TestCase):
         self.loop = None
 
     @asyncio.coroutine
-    def create_pool(self, no_loop=False, **kwargs):
+    def create_pool(self, no_loop=False, use_unicode=True, **kwargs):
         loop = None if no_loop else self.loop
-        pool = yield from aiomysql.create_pool(loop=loop, **kwargs)
+        pool = yield from aiomysql.create_pool(loop=loop,
+                                               host=self.host,
+                                               port=self.port,
+                                               user=self.user,
+                                               db=self.db,
+                                               password=self.password,
+                                               use_unicode=use_unicode,
+                                               **kwargs)
         self.pool = pool
         return pool
 

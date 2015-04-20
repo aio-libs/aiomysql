@@ -27,7 +27,7 @@ class AIOPyMySQLTestCase(BaseTest):
         self.user = os.environ.get('MYSQL_USER', 'root')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
         self.other_db = os.environ.get('OTHER_MYSQL_DB', 'test_pymysql2')
-        self.password = ''
+        self.password = os.environ.get('MYSQL_PASSWORD', '')
 
         self.connections = []
         self.loop.run_until_complete(self._connect_all())
