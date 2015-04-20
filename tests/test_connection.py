@@ -7,16 +7,25 @@ from tests.base import AIOPyMySQLTestCase
 
 class TestConnection(AIOPyMySQLTestCase):
 
+    def fill_my_cnf(self):
+        tests_root = os.path.abspath(os.path.dirname(__file__))
+        path1 = os.path.join(tests_root, 'fixtures/my.cnf.tmpl')
+        path2 = os.path.join(tests_root, 'fixtures/my.cnf')
+        with open(path1) as f1:
+            tmpl = f1.read()
+        with open(path2, 'w') as f2:
+            f2.write(tmpl.format_map(self.__dict__))
+
     @run_until_complete
     def test_config_file(self):
+        self.fill_my_cnf()
         tests_root = os.path.abspath(os.path.dirname(__file__))
         path = os.path.join(tests_root, 'fixtures/my.cnf')
-        conn = yield from aiomysql.connect(loop=self.loop,
-                                           read_default_file=path)
+        conn = yield from self.connect(read_default_file=path)
 
-        self.assertEqual(conn.host, '127.0.0.1')
-        self.assertEqual(conn.port, 3306)
-        self.assertEqual(conn.user, 'root')
+        self.assertEqual(conn.host, self.host)
+        self.assertEqual(conn.port, self.port)
+        self.assertEqual(conn.user, self.user)
 
         # make sure connection is working
         cur = yield from conn.cursor()
@@ -27,13 +36,14 @@ class TestConnection(AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_config_file_with_different_group(self):
+        self.fill_my_cnf()
         # same test with config file but actual settings
         # located in not default group.
         tests_root = os.path.abspath(os.path.dirname(__file__))
         path = os.path.join(tests_root, 'fixtures/my.cnf')
         group = 'client_with_unix_socket'
-        conn = yield from aiomysql.connect(
-            loop=self.loop, read_default_file=path, read_default_group=group)
+        conn = yield from self.connect(read_default_file=path,
+                                       read_default_group=group)
 
         self.assertEqual(conn.charset, 'utf8')
         self.assertEqual(conn.user, 'root')
@@ -49,7 +59,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_connect_using_unix_socket(self):
         sock = '/var/run/mysqld/mysqld.sock'
-        conn = yield from aiomysql.connect(loop=self.loop, unix_socket=sock)
+        conn = yield from self.connect(unix_socket=sock)
         self.assertEqual(conn.unix_socket, sock)
 
         cur = yield from conn.cursor()
@@ -62,7 +72,7 @@ class TestConnection(AIOPyMySQLTestCase):
     def test_utf8mb4(self):
         """This test requires MySQL >= 5.5"""
         charset = 'utf8mb4'
-        conn = yield from aiomysql.connect(loop=self.loop, charset=charset)
+        conn = yield from self.connect(charset=charset)
         self.assertEqual(conn.charset, charset)
         conn.close()
 

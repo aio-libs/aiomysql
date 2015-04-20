@@ -60,3 +60,6 @@ target/
 *.iml
 # rope
 .ropeproject
+
+
+tests/fixtures/my.cnf

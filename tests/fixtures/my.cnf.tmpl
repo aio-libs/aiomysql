@@ -2,17 +2,17 @@
 # The MySQL database server configuration file.
 #
 [client]
-user = root
-port = 3306
-host = 127.0.0.1
-password =
-database = test_pymysql
+user = {user}
+port = {port}
+host = {host}
+password = {password}
+database = {db}
 socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8
 
 [client_with_unix_socket]
-user = root
-password =
-database = test_pymysql
+user = {user}
+password = {password}
+database = {db}
 socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8
