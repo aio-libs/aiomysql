@@ -193,3 +193,12 @@ class TestConnection(AIOPyMySQLTestCase):
         self.assertEqual(conn.db, self.db)
         self.assertEqual(conn.echo, False)
         conn.close()
+
+    @run_until_complete
+    def test_connection_double_wait_closed(self):
+        conn = yield from self.connect(no_delay=True)
+        self.assertFalse(conn.closed)
+        yield from conn.wait_closed()
+        self.assertTrue(conn.closed)
+        yield from conn.wait_closed()
+        self.assertTrue(conn.closed)

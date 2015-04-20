@@ -242,6 +242,9 @@ class Connection:
     @asyncio.coroutine
     def wait_closed(self):
         """Send quit command and then close socket connection"""
+        if self._writer is None:
+            # connection has been closed
+            return
         send_data = struct.pack('<i', 1) + int2byte(COM_QUIT)
         self._writer.write(send_data)
         yield from self._writer.drain()

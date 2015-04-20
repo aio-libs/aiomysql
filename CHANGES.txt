@@ -1,6 +1,11 @@
 Changes
 -------
 
+x.x.x (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* allow to call connection.wait_closed twice.
+
 0.0.3 (2015-03-10)
 ^^^^^^^^^^^^^^^^^^
 
