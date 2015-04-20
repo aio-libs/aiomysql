@@ -464,6 +464,18 @@ class Cursor:
     ProgrammingError = ProgrammingError
     NotSupportedError = NotSupportedError
 
+    @asyncio.coroutine
+    def __aiter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __anext__(self):
+        ret = yield from self.fetchone()
+        if ret is not None:
+            return ret
+        else:
+            raise StopAsyncIteration
+
 
 class _DictCursorMixin:
     # You can override this to use OrderedDict or other dict-like types.
