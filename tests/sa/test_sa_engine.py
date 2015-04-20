@@ -2,6 +2,7 @@ import asyncio
 from aiomysql import sa
 # from aiomysql.connection import TIMEOUT
 
+import os
 import unittest
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
@@ -17,26 +18,33 @@ class TestEngine(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.host = os.environ.get('MYSQL_HOST', 'localhost')
+        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
+        self.password = os.environ.get('MYSQL_PASSWORD', '')
         self.engine = self.loop.run_until_complete(self.make_engine())
         self.loop.run_until_complete(self.start())
 
     def tearDown(self):
+        self.engine.terminate()
+        self.loop.run_until_complete(self.engine.wait_closed())
         self.loop.close()
 
     @asyncio.coroutine
     def make_engine(self, use_loop=True, **kwargs):
         if use_loop:
-            return (yield from sa.create_engine(db='test_pymysql',
-                                                user='root',
-                                                password='',
-                                                host='127.0.0.1',
+            return (yield from sa.create_engine(db=self.db,
+                                                user=self.user,
+                                                password=self.password,
+                                                host=self.host,
                                                 loop=self.loop,
                                                 **kwargs))
         else:
-            return (yield from sa.create_engine(db='test_pymysql',
-                                                user='root',
-                                                password='',
-                                                host='127.0.0.1',
+            return (yield from sa.create_engine(db=self.db,
+                                                user=self.user,
+                                                password=self.password,
+                                                host=self.host,
                                                 **kwargs))
 
     @asyncio.coroutine
