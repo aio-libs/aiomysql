@@ -516,6 +516,15 @@ class Connection:
             return 0
 
     @asyncio.coroutine
+    def __aenter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        yield from self.wait_closed()
+        return
+
+    @asyncio.coroutine
     def _execute_command(self, command, sql):
         if not self._writer:
             raise InterfaceError("(0, 'Not connected')")

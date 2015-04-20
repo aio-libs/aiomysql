@@ -60,3 +60,16 @@ class TestAsyncWith(AIOPyMySQLTestCase):
             self.assertTrue(cur.closed)
 
         self.loop.run_until_complete(go())
+
+    def test_connection(self):
+
+        async def go():
+            conn = self.connections[0]
+
+            self.assertFalse(conn.closed)
+            async with conn:
+                pass
+
+            self.assertTrue(conn.closed)
+
+        self.loop.run_until_complete(go())
