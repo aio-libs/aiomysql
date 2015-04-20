@@ -2,6 +2,7 @@ import asyncio
 import aiomysql
 from aiomysql import connect, sa, Cursor
 
+import os
 import unittest
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
@@ -19,16 +20,21 @@ class TestSAConnection(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.host = os.environ.get('MYSQL_HOST', 'localhost')
+        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
+        self.password = os.environ.get('MYSQL_PASSWORD', '')
 
     def tearDown(self):
         self.loop.close()
 
     @asyncio.coroutine
     def connect(self, **kwargs):
-        conn = yield from connect(db='test_pymysql',
-                                  user='root',
-                                  password='',
-                                  host='127.0.0.1',
+        conn = yield from connect(db=self.db,
+                                  user=self.user,
+                                  password=self.password,
+                                  host=self.host,
                                   loop=self.loop,
                                   **kwargs)
         yield from conn.autocommit(True)

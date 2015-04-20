@@ -2,6 +2,7 @@ import asyncio
 from aiomysql import connect, sa
 import functools
 
+import os
 import unittest
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
@@ -30,6 +31,11 @@ class TestTransaction(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
+        self.host = os.environ.get('MYSQL_HOST', 'localhost')
+        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
+        self.password = os.environ.get('MYSQL_PASSWORD', '')
         self.loop.run_until_complete(self.start())
 
     def tearDown(self):
@@ -47,10 +53,10 @@ class TestTransaction(unittest.TestCase):
 
     @asyncio.coroutine
     def connect(self, **kwargs):
-        conn = yield from connect(db='test_pymysql',
-                                  user='root',
-                                  password='',
-                                  host='127.0.0.1',
+        conn = yield from connect(db=self.db,
+                                  user=self.user,
+                                  password=self.password,
+                                  host=self.host,
                                   loop=self.loop,
                                   **kwargs)
         # TODO: fix this, should autocommit be enabled by default?
