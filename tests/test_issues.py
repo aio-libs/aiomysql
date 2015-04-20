@@ -363,7 +363,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
     @run_until_complete
     def test_issue_114(self):
         """ autocommit is not set after reconnecting with ping() """
-        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
+        conn = yield from self.connect(charset="utf8")
         yield from conn.autocommit(False)
         c = yield from conn.cursor()
         yield from c.execute("""select @@autocommit;""")
@@ -377,7 +377,7 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         yield from conn.wait_closed()
 
         # Ensure autocommit() is still working
-        conn = yield from aiomysql.connect(charset="utf8", loop=self.loop)
+        conn = yield from self.connect(charset="utf8")
         c = yield from conn.cursor()
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
