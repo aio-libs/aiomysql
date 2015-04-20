@@ -53,3 +53,20 @@ class AIOPyMySQLTestCase(BaseTest):
                                            db=db, use_unicode=use_unicode,
                                            no_delay=no_delay, **kwargs)
         return conn
+
+    @asyncio.coroutine
+    def create_pool(self, host=None, user=None, password=None,
+                    db=None, use_unicode=True, no_delay=None, **kwargs):
+        if host is None:
+            host = self.host
+        if user is None:
+            user = self.user
+        if password is None:
+            password = self.password
+        if db is None:
+            db = self.db
+        pool = yield from aiomysql.create_pool(loop=self.loop, host=host,
+                                               user=user, password=password,
+                                               db=db, use_unicode=use_unicode,
+                                               no_delay=no_delay, **kwargs)
+        return pool
