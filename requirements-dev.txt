@@ -1,0 +1,5 @@
+flake8
+nose
+coverage
+sphinx
+pymysql
