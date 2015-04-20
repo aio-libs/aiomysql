@@ -114,15 +114,8 @@ class ResultMetaData:
             # if dialect.requires_name_normalize:
             #     colname = dialect.normalize_name(colname)
 
-            if result_proxy._result_map:
-                try:
-                    name, obj, type_ = result_proxy._result_map[colname]
-                except KeyError:
-                    name, obj, type_ = \
-                        colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
-            else:
-                name, obj, type_ = \
-                    colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
+            name, obj, type_ = \
+                colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
 
             processor = type_._cached_result_processor(dialect, coltype)
 
@@ -220,12 +213,11 @@ class ResultProxy:
     the originating SQL statement that produced this result set.
     """
 
-    def __init__(self, connection, cursor, dialect, result_map):
+    def __init__(self, connection, cursor, dialect):
         self._dialect = dialect
         self._closed = False
         self._cursor = cursor
         self._connection = connection
-        self._result_map = result_map
         self._rowcount = cursor.rowcount
         self._lastrowid = cursor.lastrowid
 

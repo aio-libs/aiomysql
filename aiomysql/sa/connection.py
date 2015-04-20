@@ -68,7 +68,6 @@ class SAConnection:
             dp = dp[0]
 
         if isinstance(query, str):
-            result_map = None
             yield from cursor.execute(query, dp)
         elif isinstance(query, ClauseElement):
             compiled = query.compile(dialect=self._dialect)
@@ -94,20 +93,18 @@ class SAConnection:
                     processed_parameters.append(params)
                 post_processed_params = self._dialect.execute_sequence_format(
                     processed_parameters)
-                result_map = compiled.result_map
             else:
                 if dp:
                     raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
                                             "and execution with parameters")
                 post_processed_params = [compiled.construct_params()]
-                result_map = None
             yield from cursor.execute(str(compiled), post_processed_params[0])
         else:
             raise exc.ArgumentError("sql statement should be str or "
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        ret = ResultProxy(self, cursor, self._dialect, result_map)
+        ret = ResultProxy(self, cursor, self._dialect)
         self._weak_results.add(ret)
         return ret
 
