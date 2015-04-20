@@ -436,3 +436,15 @@ class ResultProxy:
             return row[0]
         else:
             return None
+
+    @asyncio.coroutine
+    def __aiter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __anext__(self):
+        data = yield from self.fetchone()
+        if data is not None:
+            return data
+        else:
+            raise StopAsyncIteration

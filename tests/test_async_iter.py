@@ -1,9 +1,18 @@
 import asyncio
 from tests.base import AIOPyMySQLTestCase
 from aiomysql import SSCursor
+from aiomysql import sa
+
+from sqlalchemy import MetaData, Table, Column, Integer, String
+
+meta = MetaData()
+tbl = Table('tbl', meta,
+            Column('id', Integer, nullable=False,
+                   primary_key=True),
+            Column('name', String(255)))
 
 
-class TestAsyncIterationOverCursor(AIOPyMySQLTestCase):
+class TestAsyncIter(AIOPyMySQLTestCase):
 
     @asyncio.coroutine
     def _prepare(self, conn):
@@ -44,5 +53,24 @@ class TestAsyncIterationOverCursor(AIOPyMySQLTestCase):
                 ret.append(i)
 
             self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+
+        self.loop.run_until_complete(go())
+
+    def test_async_iter_over_sa_result(self):
+
+        async def go():
+
+            ret = []
+            engine = await sa.create_engine(loop=self.loop,
+                                            db=self.db,
+                                            user=self.user,
+                                            password=self.password,
+                                            host=self.host)
+            conn = await engine.acquire()
+            async for i in (await conn.execute(tbl.select())):
+                ret.append(i)
+
+            self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+            engine.terminate()
 
         self.loop.run_until_complete(go())
