@@ -15,12 +15,13 @@ from .transaction import (RootTransaction, Transaction,
 
 class SAConnection:
 
-    def __init__(self, connection, dialect):
-        self._dialect = dialect
+    def __init__(self, connection, engine):
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
         self._weak_results = weakref.WeakSet()
+        self._engine = engine
+        self._dialect = engine.dialect
 
     @asyncio.coroutine
     def execute(self, query, *multiparams, **params):
@@ -302,18 +303,25 @@ class SAConnection:
         After .close() is called, the SAConnection is permanently in a
         closed state, and will allow no further operations.
         """
-        try:
-            self._connection
-        except AttributeError:
-            pass
-        else:
-            if self._transaction is not None:
-                yield from self._transaction.rollback()
-            # don't close underlying connection, it can be reused by pool
-            # conn.close()
-            del self._connection
-        self._can_reconnect = False
-        self._transaction = None
+        if self._connection is None:
+            return
+
+        if self._transaction is not None:
+            yield from self._transaction.rollback()
+            self._transaction = None
+        # don't close underlying connection, it can be reused by pool
+        # conn.close()
+        self._engine.release(self)
+        self._connection = None
+        self._engine = None
+
+    @asyncio.coroutine
+    def __aenter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        yield from self.close()
 
 
 def _distill_params(multiparams, params):
