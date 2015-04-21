@@ -155,8 +155,7 @@ class Engine:
         self.close()
         yield from self.wait_closed()
 
-    @asyncio.coroutine
-    def __await__(self):
+    def connect(self):
         return _ConnectionContextManager(self, None)
 
 
