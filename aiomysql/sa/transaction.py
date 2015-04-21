@@ -86,6 +86,17 @@ class Transaction(object):
     def _do_commit(self):
         pass
 
+    @asyncio.coroutine
+    def __aenter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            yield from self.commit()
+        else:
+            yield from self.rollback()
+
 
 class RootTransaction(Transaction):
 
