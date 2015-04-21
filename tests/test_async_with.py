@@ -1,7 +1,7 @@
 import asyncio
 from tests.base import AIOPyMySQLTestCase
 from aiomysql import SSCursor
-from aiomysql import sa
+from aiomysql import sa, create_pool
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
@@ -77,7 +77,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
     def test_pool(self):
 
         async def go():
-            async with (await create_poll(host=self.host,
+            async with (await create_pool(host=self.host,
                                           port=self.port,
                                           user=self.user,
                                           db=self.db,
@@ -86,8 +86,10 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                           loop=self.loop)) as pool:
                 async with (await pool) as conn:
                     async with (await conn.cursor()) as cur:
-                        cur.execute("SELECT * from tbl")
+                        await cur.execute("SELECT * from tbl")
                         ret = []
                         async for i in cur:
                             ret.append(i)
                         self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+
+        self.loop.run_until_complete(go())
