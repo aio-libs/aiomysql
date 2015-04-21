@@ -141,3 +141,57 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                 self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
+
+    def test_sa_transaction(self):
+
+        async def go():
+            async with (await sa.create_engine(host=self.host,
+                                               port=self.port,
+                                               user=self.user,
+                                               db=self.db,
+                                               password=self.password,
+                                               use_unicode=True,
+                                               loop=self.loop)) as engine:
+                async with (await engine) as conn:
+                    await self._prepare(conn.connection)
+
+                    cnt = await conn.scalar(tbl.count())
+                    self.assertEqual(3, cnt)
+
+                    async with (await conn.begin()) as tr:
+                        self.assertTrue(tr.is_active)
+                        await conn.execute(tbl.delete())
+
+                    self.assertFalse(tr.is_active)
+                    cnt = await conn.scalar(tbl.count())
+                    self.assertEqual(0, cnt)
+
+        self.loop.run_until_complete(go())
+
+    def test_sa_transaction_rollback(self):
+
+        async def go():
+            async with (await sa.create_engine(host=self.host,
+                                               port=self.port,
+                                               user=self.user,
+                                               db=self.db,
+                                               password=self.password,
+                                               use_unicode=True,
+                                               loop=self.loop)) as engine:
+                async with (await engine) as conn:
+                    await self._prepare(conn.connection)
+
+                    cnt = await conn.scalar(tbl.count())
+                    self.assertEqual(3, cnt)
+
+                    with self.assertRaisesRegex(RuntimeError, "Exit"):
+                        async with (await conn.begin()) as tr:
+                            self.assertTrue(tr.is_active)
+                            await conn.execute(tbl.delete())
+                            raise RuntimeError("Exit")
+
+                    self.assertFalse(tr.is_active)
+                    cnt = await conn.scalar(tbl.count())
+                    self.assertEqual(3, cnt)
+
+        self.loop.run_until_complete(go())
