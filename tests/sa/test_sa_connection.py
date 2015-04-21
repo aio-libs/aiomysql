@@ -4,6 +4,7 @@ from aiomysql import connect, sa, Cursor
 
 import os
 import unittest
+from unittest import mock
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.schema import DropTable, CreateTable
@@ -47,7 +48,9 @@ class TestSAConnection(unittest.TestCase):
 
         yield from cur._connection.commit()
         # yield from cur.close()
-        return sa.SAConnection(conn, sa.engine._dialect)
+        engine = mock.Mock()
+        engine.dialect = sa.engine._dialect
+        return sa.SAConnection(conn, engine)
 
     def test_execute_text_select(self):
         @asyncio.coroutine

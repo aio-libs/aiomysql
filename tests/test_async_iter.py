@@ -31,8 +31,11 @@ class TestAsyncIter(AIOPyMySQLTestCase):
     def test_async_cursor(self):
 
         async def go():
+
             ret = []
             conn = self.connections[0]
+            await self._prepare(conn)
+
             cur = await conn.cursor()
             await cur.execute('SELECT * from tbl;')
             async for i in cur:
@@ -47,6 +50,8 @@ class TestAsyncIter(AIOPyMySQLTestCase):
         async def go():
             ret = []
             conn = self.connections[0]
+            await self._prepare(conn)
+
             cur = await conn.cursor(SSCursor)
             await cur.execute('SELECT * from tbl;')
             async for i in cur:
@@ -67,6 +72,8 @@ class TestAsyncIter(AIOPyMySQLTestCase):
                                             password=self.password,
                                             host=self.host)
             conn = await engine.acquire()
+            await self._prepare(conn.connection)
+
             async for i in (await conn.execute(tbl.select())):
                 ret.append(i)
 
