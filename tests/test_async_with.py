@@ -110,7 +110,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                                password=self.password,
                                                use_unicode=True,
                                                loop=self.loop)) as engine:
-                async with (await engine) as conn:
+                async with engine.connect() as conn:
                     await self._prepare(conn.connection)
 
                     ret = []
@@ -152,7 +152,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                                password=self.password,
                                                use_unicode=True,
                                                loop=self.loop)) as engine:
-                async with (await engine) as conn:
+                async with engine.connect() as conn:
                     await self._prepare(conn.connection)
 
                     cnt = await conn.scalar(tbl.count())
@@ -178,7 +178,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                                password=self.password,
                                                use_unicode=True,
                                                loop=self.loop)) as engine:
-                async with (await engine) as conn:
+                async with engine.connect() as conn:
                     await self._prepare(conn.connection)
 
                     cnt = await conn.scalar(tbl.count())
