@@ -6,6 +6,9 @@ x.x.x (XXXX-XX-XX)
 
 * Allow to call connection.wait_closed twice.
 
+* Fixed sqlalchemy 1.0.0 support.
+
+
 0.0.3 (2015-03-10)
 ^^^^^^^^^^^^^^^^^^
 
