@@ -64,7 +64,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         c = yield from conn.cursor()
         self.assertEqual(conn.db, 'mysql')
         yield from c.execute("select * from user")
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
 
     @run_until_complete
     def test_issue_8(self):
@@ -369,12 +369,12 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertFalse(r[0])
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
         yield from conn.ping()
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertFalse(r[0])
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
 
         # Ensure autocommit() is still working
         conn = yield from self.connect(charset="utf8")
@@ -382,13 +382,13 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertFalse(r[0])
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
         yield from conn.ping()
         yield from conn.autocommit(True)
         yield from c.execute("""select @@autocommit;""")
         r = yield from c.fetchone()
         self.assertTrue(r[0])
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
 
     @run_until_complete
     def test_issue_175(self):

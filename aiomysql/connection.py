@@ -240,7 +240,7 @@ class Connection:
         self._reader = None
 
     @asyncio.coroutine
-    def wait_closed(self):
+    def ensure_closed(self):
         """Send quit command and then close socket connection"""
         if self._writer is None:
             # connection has been closed

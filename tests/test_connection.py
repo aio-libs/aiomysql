@@ -195,10 +195,10 @@ class TestConnection(AIOPyMySQLTestCase):
         conn.close()
 
     @run_until_complete
-    def test_connection_double_wait_closed(self):
+    def test_connection_double_ensure_closed(self):
         conn = yield from self.connect(no_delay=True)
         self.assertFalse(conn.closed)
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
         self.assertTrue(conn.closed)
-        yield from conn.wait_closed()
+        yield from conn.ensure_closed()
         self.assertTrue(conn.closed)

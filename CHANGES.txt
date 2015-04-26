@@ -8,6 +8,8 @@ x.x.x (XXXX-XX-XX)
 
 * Fixed sqlalchemy 1.0.0 support.
 
+* Fix #11: Rename Connection.wait_closed() to .ensure_closed()
+
 
 0.0.3 (2015-03-10)
 ^^^^^^^^^^^^^^^^^^

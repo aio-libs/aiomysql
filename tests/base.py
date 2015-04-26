@@ -34,7 +34,7 @@ class AIOPyMySQLTestCase(BaseTest):
 
     def tearDown(self):
         for connection in self.connections:
-            self.loop.run_until_complete(connection.wait_closed())
+            self.loop.run_until_complete(connection.ensure_closed())
         super(AIOPyMySQLTestCase, self).tearDown()
 
     @asyncio.coroutine

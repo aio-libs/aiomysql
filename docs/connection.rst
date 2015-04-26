@@ -107,7 +107,7 @@ Example::
         Close the connection now (rather than whenever `del` is executed).
         The connection will be unusable from this point forward.
 
-   .. method:: wait_closed()
+   .. method:: ensure_closed()
 
         A :ref:`coroutine <coroutine>` ends quit command and then closes
         socket connection.

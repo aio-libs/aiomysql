@@ -116,7 +116,7 @@ class TestPool(unittest.TestCase):
             pool = yield from self.create_pool()
             conn = yield from pool.acquire()
             self.assertEqual(9, pool.freesize)
-            yield from conn.wait_closed()
+            yield from conn.ensure_closed()
             pool.release(conn)
             self.assertEqual(9, pool.freesize)
             self.assertFalse(pool._used)
