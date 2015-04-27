@@ -7,6 +7,7 @@ import socket
 import hashlib
 import struct
 import sys
+import warnings
 import configparser
 import getpass
 from functools import partial
@@ -40,6 +41,7 @@ from .cursors import Cursor
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
+PY_34 = sys.version_info >= (3, 4)
 sha_new = partial(hashlib.new, 'sha1')
 
 
@@ -642,6 +644,12 @@ class Connection:
     def get_server_info(self):
         return self.server_version
 
+    if PY_34:  # pragma: no branch
+        def __del__(self):
+            if not self._writer:
+                warnings.warn("Unclosed connection {!r}".format(self),
+                              ResourceWarning)
+                self.close()
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
