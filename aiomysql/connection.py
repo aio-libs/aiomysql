@@ -436,11 +436,14 @@ class Connection:
 
             if self.autocommit_mode is not None:
                 yield from self.autocommit(self.autocommit_mode)
-        except OSError as e:
-            self._reader, self._writer = None, None
-            raise OperationalError(
-                2003, "Can't connect to MySQL server on %r (%s)"
-                % (self._host, e))
+        except Exception as e:
+            if self._writer:
+                self._writer.transport.close()
+            self._reader = None
+            self._writer = None
+            raise OperationalError(2003,
+                                   "Can't connect to MySQL server on %r" %
+                                   self._host) from e
 
     def _set_nodelay(self, value):
         flag = int(bool(value))
