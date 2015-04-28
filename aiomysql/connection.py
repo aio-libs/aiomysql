@@ -66,7 +66,7 @@ def connect(host="localhost", user=None, password="",
                       read_default_group=read_default_group, no_delay=no_delay,
                       autocommit=autocommit, echo=echo, loop=loop)
 
-    yield from conn.connect()
+    yield from conn._connect()
     return conn
 
 
@@ -376,7 +376,7 @@ class Connection:
         """Check if the server is alive"""
         if self._writer is None and self._reader is None:
             if reconnect:
-                yield from self.connect()
+                yield from self._connect()
                 reconnect = False
             else:
                 raise Error("Already closed")
@@ -385,7 +385,7 @@ class Connection:
             yield from self._read_ok_packet()
         except Exception:
             if reconnect:
-                yield from self.connect()
+                yield from self._connect()
                 yield from self.ping(False)
             else:
                 raise
@@ -402,7 +402,7 @@ class Connection:
         self._encoding = encoding
 
     @asyncio.coroutine
-    def connect(self):
+    def _connect(self):
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
