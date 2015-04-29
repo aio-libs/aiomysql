@@ -46,7 +46,7 @@ def test_example_transaction():
     resp = yield from cursor.fetchall()
     print(resp)
     # Do a commit
-    conn.commit()
+    yield from conn.commit()
 
     yield from cursor.execute(stmt_select)
     print(resp)
