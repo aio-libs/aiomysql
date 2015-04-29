@@ -35,4 +35,8 @@ def go():
         for row in res:
             print(row.id, row.val)
 
+    engine.close()
+    yield from engine.wait_closed()
+
+
 asyncio.get_event_loop().run_until_complete(go())
