@@ -17,7 +17,7 @@ tbl = Table('sa_tbl2', meta,
 def check_prepared_transactions(func):
     @functools.wraps(func)
     def wrapper(self):
-        conn = yield from self.loop.run_until_complete(self.connect())
+        conn = yield from self.loop.run_until_complete(self._connect())
         val = yield from conn.scalar('show max_prepared_transactions')
         if not val:
             raise unittest.SkipTest('Twophase transacions are not supported. '
