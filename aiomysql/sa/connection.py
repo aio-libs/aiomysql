@@ -8,7 +8,7 @@ from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.ddl import DDLElement
 
 from . import exc
-from .result import ResultProxy
+from .result import create_result_proxy
 from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
 
@@ -104,7 +104,7 @@ class SAConnection:
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        ret = ResultProxy(self, cursor, self._dialect)
+        ret = yield from create_result_proxy(self, cursor, self._dialect)
         self._weak_results.add(ret)
         return ret
 
