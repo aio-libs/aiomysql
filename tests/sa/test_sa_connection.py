@@ -307,10 +307,10 @@ class TestSAConnection(unittest.TestCase):
         def go():
             conn = yield from self.connect()
             res = yield from conn.execute("SELECT 1")
-            res.close()
+            yield from res.close()
             self.assertTrue(res.closed)
             self.assertIsNone(res.cursor)
-            res.close()
+            yield from res.close()
             self.assertTrue(res.closed)
             self.assertIsNone(res.cursor)
 
@@ -356,7 +356,7 @@ class TestSAConnection(unittest.TestCase):
             yield from conn.execute(tbl.insert().values(name='second'))
 
             res = yield from conn.execute(tbl.select())
-            res.close()
+            yield from res.close()
             with self.assertRaises(sa.ResourceClosedError):
                 yield from res.fetchall()
 
@@ -379,7 +379,7 @@ class TestSAConnection(unittest.TestCase):
             yield from conn.execute(tbl.insert().values(name='second'))
 
             res = yield from conn.execute(tbl.select())
-            res.close()
+            yield from res.close()
             with self.assertRaises(sa.ResourceClosedError):
                 yield from res.fetchone()
 
@@ -432,7 +432,7 @@ class TestSAConnection(unittest.TestCase):
             yield from conn.execute(tbl.insert().values(name='second'))
 
             res = yield from conn.execute(tbl.select())
-            res.close()
+            yield from res.close()
             with self.assertRaises(sa.ResourceClosedError):
                 yield from res.fetchmany()
 
@@ -445,7 +445,7 @@ class TestSAConnection(unittest.TestCase):
             yield from conn.execute(tbl.insert().values(name='second'))
 
             res = yield from conn.execute(tbl.select())
-            res.close()
+            yield from res.close()
             with self.assertRaises(sa.ResourceClosedError):
                 yield from res.fetchmany(5555)
 
