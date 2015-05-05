@@ -228,12 +228,6 @@ class ResultProxy:
         self._rowcount = cursor.rowcount
         self._lastrowid = cursor.lastrowid
 
-        if cursor.description is not None:
-            self._metadata = ResultMetaData(self, cursor.description)
-            # self._weak = weakref.ref(self, lambda wr: cursor.close())
-        else:
-            self._metadata = None
-
     @asyncio.coroutine
     def _prepare(self):
         cursor = self._cursor
