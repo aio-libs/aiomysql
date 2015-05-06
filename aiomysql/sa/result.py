@@ -230,10 +230,12 @@ class ResultProxy:
 
     @asyncio.coroutine
     def _prepare(self):
+        loop = self._connection.connection.loop
         cursor = self._cursor
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
-            self._weak = weakref.ref(self, lambda wr: cursor.close())
+            callback = lambda wr: asyncio.Task(cursor.close(), loop=loop)
+            self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
             yield from self.close()
