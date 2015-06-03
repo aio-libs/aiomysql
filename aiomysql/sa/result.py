@@ -10,6 +10,13 @@ from sqlalchemy.sql import expression, sqltypes
 from . import exc
 
 
+@asyncio.coroutine
+def create_result_proxy(connection, cursor, dialect):
+    result_proxy = ResultProxy(connection, cursor, dialect)
+    yield from result_proxy._prepare()
+    return result_proxy
+
+
 class RowProxy(Mapping):
 
     __slots__ = ('_result_proxy', '_row', '_processors', '_keymap')
@@ -221,12 +228,17 @@ class ResultProxy:
         self._rowcount = cursor.rowcount
         self._lastrowid = cursor.lastrowid
 
+    @asyncio.coroutine
+    def _prepare(self):
+        loop = self._connection.connection.loop
+        cursor = self._cursor
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
-            self._weak = weakref.ref(self, lambda wr: cursor.close())
+            callback = lambda wr: asyncio.Task(cursor.close(), loop=loop)
+            self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
-            self.close()
+            yield from self.close()
             self._weak = None
 
     @property
@@ -299,6 +311,7 @@ class ResultProxy:
     def closed(self):
         return self._closed
 
+    @asyncio.coroutine
     def close(self):
         """Close this ResultProxy.
 
@@ -319,7 +332,7 @@ class ResultProxy:
 
         if not self._closed:
             self._closed = True
-            self._cursor.close()
+            yield from self._cursor.close()
             # allow consistent errors
             self._cursor = None
             self._weak = None
@@ -357,7 +370,7 @@ class ResultProxy:
             self._non_result()
         else:
             l = self._process_rows(rows)
-            self.close()
+            yield from self.close()
             return l
 
     @asyncio.coroutine
@@ -375,7 +388,7 @@ class ResultProxy:
             if row is not None:
                 return self._process_rows([row])[0]
             else:
-                self.close()
+                yield from self.close()
                 return None
 
     @asyncio.coroutine
@@ -396,7 +409,7 @@ class ResultProxy:
         else:
             l = self._process_rows(rows)
             if len(l) == 0:
-                self.close()
+                yield from self.close()
             return l
 
     @asyncio.coroutine
@@ -410,7 +423,7 @@ class ResultProxy:
         try:
             return (yield from self.fetchone())
         finally:
-            self.close()
+            yield from self.close()
 
     @asyncio.coroutine
     def scalar(self):
