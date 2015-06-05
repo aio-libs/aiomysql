@@ -131,6 +131,7 @@ Contents:
    sa
    examples
    glossary
+   contributing
 
 Indices and tables
 ==================
