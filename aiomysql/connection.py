@@ -41,7 +41,7 @@ from .cursors import Cursor
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
-PY_34 = sys.version_info >= (3, 4)
+PY_341 = sys.version_info >= (3, 4, 1)
 sha_new = partial(hashlib.new, 'sha1')
 
 
@@ -647,7 +647,7 @@ class Connection:
     def get_server_info(self):
         return self.server_version
 
-    if PY_34:  # pragma: no branch
+    if PY_341:  # pragma: no branch
         def __del__(self):
             if not self._writer:
                 warnings.warn("Unclosed connection {!r}".format(self),
