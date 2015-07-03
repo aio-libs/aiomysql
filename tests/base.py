@@ -35,6 +35,7 @@ class AIOPyMySQLTestCase(BaseTest):
     def tearDown(self):
         for connection in self.connections:
             self.loop.run_until_complete(connection.ensure_closed())
+        self.doCleanups()
         super(AIOPyMySQLTestCase, self).tearDown()
 
     @asyncio.coroutine
@@ -52,6 +53,7 @@ class AIOPyMySQLTestCase(BaseTest):
                                            user=user, password=password,
                                            db=db, use_unicode=use_unicode,
                                            no_delay=no_delay, **kwargs)
+        self.addCleanup(conn.close)
         return conn
 
     @asyncio.coroutine
@@ -69,4 +71,5 @@ class AIOPyMySQLTestCase(BaseTest):
                                                user=user, password=password,
                                                db=db, use_unicode=use_unicode,
                                                no_delay=no_delay, **kwargs)
+        self.addCleanup(pool.close)
         return pool
