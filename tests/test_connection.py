@@ -1,8 +1,14 @@
 import asyncio
+import gc
 import os
+import sys
+import unittest
 import aiomysql
 from tests._testutils import run_until_complete
 from tests.base import AIOPyMySQLTestCase
+
+
+PY_341 = sys.version_info >= (3, 4, 1)
 
 
 class TestConnection(AIOPyMySQLTestCase):
@@ -202,3 +208,15 @@ class TestConnection(AIOPyMySQLTestCase):
         self.assertTrue(conn.closed)
         yield from conn.ensure_closed()
         self.assertTrue(conn.closed)
+
+    @unittest.skipIf(not PY_341,
+                     "Python 3.3 doesnt support __del__ calls from GC")
+    @run_until_complete
+    def test___del__(self):
+        conn = yield from aiomysql.connect(loop=self.loop, host=self.host,
+                                           port=self.port, db=self.db,
+                                           user=self.user,
+                                           password=self.password)
+        with self.assertWarns(ResourceWarning):
+            del conn
+            gc.collect()
