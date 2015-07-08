@@ -878,12 +878,12 @@ class LoadLocalFile(object):
                 self._file_object = open(filename, 'rb')
             except IOError:
                 raise OperationalError(1017, "Can't find file"
-                                       " '{0}'".format(self.filename))
+                                       " '{0}'".format(filename))
 
         fut = self._loop.run_in_executor(None, opener, self.filename)
         return fut
 
-    def _fread_chunk(self, chunk_size):
+    def _file_read(self, chunk_size):
 
         def freader(chunk_size):
             try:
@@ -891,11 +891,12 @@ class LoadLocalFile(object):
 
                 if not chunk:
                     self._file_object.close()
-                    return None
+                    self._file_object = None
                 return chunk
 
             except Exception as e:
                 self._file_object.close()
+                self._file_object = None
                 raise e
 
         fut = self._loop.run_in_executor(None, freader, chunk_size)
@@ -913,7 +914,7 @@ class LoadLocalFile(object):
             yield from self._open_file()
             chunk_size = MAX_PACKET_LEN
             while True:
-                chunk = yield from self._fread_chunk(chunk_size)
+                chunk = yield from self._file_read(chunk_size)
                 if not chunk:
                     break
                 packet = (struct.pack('<i', len(chunk))[:3] +
