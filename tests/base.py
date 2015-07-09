@@ -18,7 +18,14 @@ class AIOPyMySQLTestCase(BaseTest):
                                             db=self.other_db,
                                             password=self.password,
                                             use_unicode=False, echo=True)
-        self.connections = [conn1, conn2]
+        conn3 = yield from aiomysql.connect(loop=self.loop, host=self.host,
+                                            port=self.port, user=self.user,
+                                            db=self.db,
+                                            password=self.password,
+                                            use_unicode=True, echo=True,
+                                            local_infile=True)
+
+        self.connections = [conn1, conn2, conn3]
 
     def setUp(self):
         super(AIOPyMySQLTestCase, self).setUp()
