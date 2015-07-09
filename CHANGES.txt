@@ -1,5 +1,10 @@
 Changes
 -------
+0.0.5 (xxxx-xx-xx)
+^^^^^^^^^^^^^^^^^^
+
+* Support for "LOAD LOCAL INFILE" query.
+
 
 0.0.4 (2015-05-23)
 ^^^^^^^^^^^^^^^^^^
