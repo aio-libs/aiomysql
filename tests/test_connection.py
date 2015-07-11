@@ -108,6 +108,17 @@ class TestConnection(AIOPyMySQLTestCase):
         self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
 
     @run_until_complete
+    def test_sql_mode_param(self):
+        con = yield from self.connect(sql_mode='NO_BACKSLASH_ESCAPES')
+        self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
+
+    @run_until_complete
+    def test_init_param(self):
+        init_command = "SET sql_mode='NO_BACKSLASH_ESCAPES';"
+        con = yield from self.connect(init_command=init_command)
+        self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
+
+    @run_until_complete
     def test_autocommit(self):
         con = self.connections[0]
         self.assertFalse(con.get_autocommit())
