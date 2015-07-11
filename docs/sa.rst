@@ -1,7 +1,7 @@
 .. _aiomysql-rpc:
 
 :mod:`aiomysql.sa` --- support for SQLAlchemy functional SQL layer
-===============================================================
+==================================================================
 
 .. module:: aiomysql.sa
     :synopsis: support for SQLAlchemy functional SQL layer
@@ -13,9 +13,9 @@ Intro
 .. note::  :term:`sqlalchemy` support ported from aiopg_, so api should be
            very familiar for aiopg_ user.
 
-While :ref:`core API <aiomysql-core>` provides a core support for access
-to :term:`MySQL` database, manipulations with raw SQL
-strings too annoying.
+While :ref:`core API <aiomysql-core>` provides a core support for
+access to :term:`MySQL` database, manipulations with raw SQL strings
+too annoying.
 
 Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
 

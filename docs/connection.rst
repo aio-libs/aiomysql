@@ -79,7 +79,7 @@ Example::
 
 
     Representation of a socket with a mysql server. The proper way to get an
-    instance of this class is to call :func:`aiomysql.connnect'.
+    instance of this class is to call :func:`aiomysql.connnect`.
 
    Its insterface is almost the same as `pymysql.connection` except all methods
    are :ref:`coroutines <coroutine>`.
@@ -94,7 +94,7 @@ Example::
 
         By default, :class:`Cursor` is returned. It is possible to also give a
         custom cursor through the `cursor` parameter, but it needs to
-        be a subclass of :class:`Cursor
+        be a subclass of :class:`Cursor`
 
         :param cursor: subclass of :class:`Cursor` or ``None`` for default
             cursor.
