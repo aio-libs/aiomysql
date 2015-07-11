@@ -658,7 +658,7 @@ class Connection:
 
     if PY_341:  # pragma: no branch
         def __del__(self):
-            if not self._writer:
+            if self._writer:
                 warnings.warn("Unclosed connection {!r}".format(self),
                               ResourceWarning)
                 self.close()
