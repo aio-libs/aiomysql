@@ -892,12 +892,13 @@ class LoadLocalFile(object):
                 if not chunk:
                     self._file_object.close()
                     self._file_object = None
-                return chunk
 
             except Exception as e:
                 self._file_object.close()
                 self._file_object = None
-                raise e
+                raise OperationalError(
+                    1024, "Error reading file {}".format(self.filename)) from e
+            return chunk
 
         fut = self._loop.run_in_executor(None, freader, chunk_size)
         return fut

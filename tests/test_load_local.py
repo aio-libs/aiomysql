@@ -1,7 +1,9 @@
 import asyncio
+from unittest.mock import patch, MagicMock
 from pymysql.err import OperationalError
 
 import os
+import builtins
 from tests._testutils import run_until_complete
 from tests.base import AIOPyMySQLTestCase
 
@@ -42,6 +44,24 @@ class TestLoadLocal(AIOPyMySQLTestCase):
         yield from c.close()
 
     @run_until_complete
+    def test_error_on_file_read(self):
+        # Test exception while reading file
+        conn = self.connections[2]
+        c = yield from conn.cursor()
+
+        with patch.object(builtins, 'open') as open_mocked:
+            m = MagicMock()
+            m.read.side_effect = OperationalError(1024, 'Error reading file')
+            m.close.return_value = None
+            open_mocked.return_value = m
+
+            with self.assertRaises(OperationalError):
+                yield from c.execute("LOAD DATA LOCAL INFILE 'some.txt'"
+                                     " INTO TABLE test_load_local fields "
+                                     "terminated by ','")
+        yield from c.close()
+
+    @run_until_complete
     def test_load_file(self):
         # Test load local infile with a valid file
         conn = self.connections[2]
@@ -55,6 +75,7 @@ class TestLoadLocal(AIOPyMySQLTestCase):
         )
         yield from c.execute("SELECT COUNT(*) FROM test_load_local")
         resp = yield from c.fetchone()
+        yield from c.close()
         self.assertEqual(22749, resp[0])
 
     @run_until_complete
