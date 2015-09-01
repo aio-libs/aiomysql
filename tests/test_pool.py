@@ -558,6 +558,9 @@ class TestPool(unittest.TestCase):
                 cur = yield from conn.cursor()
                 # query should not throw exception OperationalError
                 yield from cur.execute('SELECT 1;')
+                pool.release(conn)
+                pool.close()
+                yield from pool.wait_closed()
             finally:
                 # set default timeouts
                 conn = yield from self.connect()
