@@ -125,6 +125,10 @@ class Pool(asyncio.AbstractServer):
                     conn = self._free.popleft()
                     assert not conn.closed, conn
                     assert conn not in self._used, (conn, self._used)
+                    # drop if connection timedout
+                    if conn._reader.at_eof():
+                        conn.close()
+                        continue
                     self._used.add(conn)
                     return conn
                 else:

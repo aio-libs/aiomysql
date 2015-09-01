@@ -41,6 +41,23 @@ class TestPool(unittest.TestCase):
         self.loop = None
 
     @asyncio.coroutine
+    def connect(self, host=None, user=None, password=None,
+                db=None, use_unicode=True, no_delay=None, **kwargs):
+        if host is None:
+            host = self.host
+        if user is None:
+            user = self.user
+        if password is None:
+            password = self.password
+        if db is None:
+            db = self.db
+        conn = yield from aiomysql.connect(loop=self.loop, host=host,
+                                           user=user, password=password,
+                                           db=db, use_unicode=use_unicode,
+                                           no_delay=no_delay, **kwargs)
+        return conn
+
+    @asyncio.coroutine
     def create_pool(self, no_loop=False, use_unicode=True, **kwargs):
         loop = None if no_loop else self.loop
         pool = yield from aiomysql.create_pool(loop=loop,
@@ -519,5 +536,34 @@ class TestPool(unittest.TestCase):
             with self.assertRaises(asyncio.TimeoutError):
                 yield from asyncio.wait_for(pool.wait_closed(),
                                             0.1, loop=self.loop)
+
+        self.loop.run_until_complete(go())
+
+    def test_drop_connection_if_timedout(self):
+        @asyncio.coroutine
+        def go():
+            # create separate connection to setup global connection timeouts
+            # https://dev.mysql.com/doc/refman/5.1/en/server-system-variables
+            # .html#sysvar_interactive_timeout
+            conn = yield from self.connect()
+            cur = yield from conn.cursor()
+            yield from cur.execute('SET GLOBAL wait_timeout=2;')
+            yield from cur.execute('SET GLOBAL interactive_timeout=2;')
+            conn.close()
+            try:
+                pool = yield from self.create_pool(minsize=1, maxsize=1)
+                # sleep, more then connection timeout
+                yield from asyncio.sleep(3, loop=self.loop)
+                conn = yield from pool.acquire()
+                cur = yield from conn.cursor()
+                # query should not throw exception OperationalError
+                yield from cur.execute('SELECT 1;')
+            finally:
+                # set default timeouts
+                conn = yield from self.connect()
+                cur = yield from conn.cursor()
+                yield from cur.execute('SET GLOBAL wait_timeout=28800;')
+                yield from cur.execute('SET GLOBAL interactive_timeout=28800;')
+                conn.close()
 
         self.loop.run_until_complete(go())
