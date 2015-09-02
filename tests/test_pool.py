@@ -539,17 +539,22 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    @asyncio.coroutine
+    def _set_global_conn_timeout(self, t):
+        # create separate connection to setup global connection timeouts
+        # https://dev.mysql.com/doc/refman/5.1/en/server-system-variables
+        # .html#sysvar_interactive_timeout
+        conn = yield from self.connect()
+        cur = yield from conn.cursor()
+        yield from cur.execute('SET GLOBAL wait_timeout=%s;', t)
+        yield from cur.execute('SET GLOBAL interactive_timeout=%s;', t)
+        conn.close()
+
     def test_drop_connection_if_timedout(self):
         @asyncio.coroutine
         def go():
-            # create separate connection to setup global connection timeouts
-            # https://dev.mysql.com/doc/refman/5.1/en/server-system-variables
-            # .html#sysvar_interactive_timeout
-            conn = yield from self.connect()
-            cur = yield from conn.cursor()
-            yield from cur.execute('SET GLOBAL wait_timeout=2;')
-            yield from cur.execute('SET GLOBAL interactive_timeout=2;')
-            conn.close()
+
+            yield from self._set_global_conn_timeout(2)
             try:
                 pool = yield from self.create_pool(minsize=1, maxsize=1)
                 # sleep, more then connection timeout
@@ -562,11 +567,7 @@ class TestPool(unittest.TestCase):
                 pool.close()
                 yield from pool.wait_closed()
             finally:
-                # set default timeouts
-                conn = yield from self.connect()
-                cur = yield from conn.cursor()
-                yield from cur.execute('SET GLOBAL wait_timeout=28800;')
-                yield from cur.execute('SET GLOBAL interactive_timeout=28800;')
-                conn.close()
+                # setup default timeouts
+                yield from self._set_global_conn_timeout(28800)
 
         self.loop.run_until_complete(go())
