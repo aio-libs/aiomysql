@@ -125,10 +125,6 @@ class Pool(asyncio.AbstractServer):
                     conn = self._free.popleft()
                     assert not conn.closed, conn
                     assert conn not in self._used, (conn, self._used)
-                    # drop if connection timedout
-                    if conn._reader.at_eof():
-                        conn.close()
-                        continue
                     self._used.add(conn)
                     return conn
                 else:
@@ -136,6 +132,17 @@ class Pool(asyncio.AbstractServer):
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
+        # iterate over free connections and remove timeouted ones
+        free_size = len(self._free)
+        n = 0
+        while n < free_size:
+            conn = self._free.pop()
+            if conn._reader.at_eof():
+                conn.close()
+            else:
+                self._free.appendleft(conn)
+            n += 1
+
         while self.size < self.minsize:
             self._acquiring += 1
             try:
