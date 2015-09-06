@@ -132,6 +132,18 @@ class Pool(asyncio.AbstractServer):
 
     @asyncio.coroutine
     def _fill_free_pool(self, override_min):
+        # iterate over free connections and remove timeouted ones
+        free_size = len(self._free)
+        n = 0
+        while n < free_size:
+            conn = self._free[-1]
+            if conn._reader.at_eof():
+                self._free.pop()
+                conn.close()
+            else:
+                self._free.rotate()
+            n += 1
+
         while self.size < self.minsize:
             self._acquiring += 1
             try:
