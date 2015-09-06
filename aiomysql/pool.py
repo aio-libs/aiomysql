@@ -136,11 +136,12 @@ class Pool(asyncio.AbstractServer):
         free_size = len(self._free)
         n = 0
         while n < free_size:
-            conn = self._free.pop()
+            conn = self._free[-1]
             if conn._reader.at_eof():
+                self._free.pop()
                 conn.close()
             else:
-                self._free.appendleft(conn)
+                self._free.rotate()
             n += 1
 
         while self.size < self.minsize:

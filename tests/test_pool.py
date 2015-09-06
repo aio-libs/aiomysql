@@ -556,7 +556,7 @@ class TestPool(unittest.TestCase):
 
             yield from self._set_global_conn_timeout(2)
             try:
-                pool = yield from self.create_pool(minsize=1, maxsize=1)
+                pool = yield from self.create_pool(minsize=3, maxsize=3)
                 # sleep, more then connection timeout
                 yield from asyncio.sleep(3, loop=self.loop)
                 conn = yield from pool.acquire()
