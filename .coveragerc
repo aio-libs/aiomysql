@@ -1,0 +1,4 @@
+[run]
+branch = True
+source = aioodbc, tests
+omit = site-packages, .tox
