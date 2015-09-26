@@ -306,7 +306,7 @@ class TestPool(unittest.TestCase):
             self.assertEqual({conn}, pool._used)
             cur = yield from conn.cursor()
             yield from cur.execute('BEGIN')
-            cur.close()
+            yield from cur.close()
 
             pool.release(conn)
             self.assertEqual(9, pool.freesize)
