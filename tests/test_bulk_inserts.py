@@ -117,4 +117,4 @@ class TestBulkInserts(base.AIOPyMySQLTestCase):
             180 ) on duplicate key update
             age = values(age)"""))
         yield from cursor.execute('commit')
-        self._verify_records(data)
+        yield from self._verify_records(data)
