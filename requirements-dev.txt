@@ -1,5 +1,7 @@
+sqlalchemy
 flake8
-nose
+pytest
+pytest-cov
 coverage
 sphinx
 pymysql
