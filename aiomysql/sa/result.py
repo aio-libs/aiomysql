@@ -10,6 +10,12 @@ from sqlalchemy.sql import expression, sqltypes
 from . import exc
 
 
+try:
+    StopAsyncIteration
+except NameError:
+    from aiomysql.cursors import StopAsyncIteration
+
+
 @asyncio.coroutine
 def create_result_proxy(connection, cursor, dialect):
     result_proxy = ResultProxy(connection, cursor, dialect)
