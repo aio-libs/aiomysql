@@ -1,6 +1,6 @@
 import asyncio
 from tests.base import AIOPyMySQLTestCase
-from aiomysql import create_pool
+from aiomysql import sa, create_pool
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
 
