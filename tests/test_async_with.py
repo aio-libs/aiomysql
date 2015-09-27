@@ -1,9 +1,8 @@
 import asyncio
 from tests.base import AIOPyMySQLTestCase
-from aiomysql import SSCursor
-from aiomysql import sa, create_pool
-
+from aiomysql import create_pool
 from sqlalchemy import MetaData, Table, Column, Integer, String
+
 
 meta = MetaData()
 tbl = Table('tbl', meta,
