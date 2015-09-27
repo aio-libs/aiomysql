@@ -19,6 +19,14 @@ RE_INSERT_VALUES = re.compile(
     re.IGNORECASE | re.DOTALL)
 
 
+try:
+    StopAsyncIteration
+except NameError:
+    class StopAsyncIteration(Exception):
+        """Just stab for StopAsyncIteration from python 3.5"""
+        pass
+
+
 class Cursor:
     """Cursor is used to interact with the database."""
 
