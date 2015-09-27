@@ -521,7 +521,7 @@ class Connection:
 
     @asyncio.coroutine
     def __aexit__(self, exc_type, exc_val, exc_tb):
-        yield from self.wait_closed()
+        yield from self.ensure_closed()
         return
 
     @asyncio.coroutine
