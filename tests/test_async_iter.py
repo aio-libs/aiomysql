@@ -5,6 +5,7 @@ from aiomysql import sa
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
+
 meta = MetaData()
 tbl = Table('tbl', meta,
             Column('id', Integer, nullable=False,
