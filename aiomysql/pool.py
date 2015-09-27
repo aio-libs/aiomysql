@@ -220,8 +220,8 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
-    @asyncio.coroutine
     def __await__(self):
+        yield
         return _ConnectionContextManager(self, None)
 
     @asyncio.coroutine

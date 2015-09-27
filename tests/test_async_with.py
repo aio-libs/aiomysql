@@ -81,22 +81,19 @@ class TestAsyncWith(AIOPyMySQLTestCase):
     def test_pool(self):
 
         async def go():
-            async with (await create_pool(host=self.host,
-                                          port=self.port,
-                                          user=self.user,
-                                          db=self.db,
-                                          password=self.password,
-                                          use_unicode=True,
-                                          loop=self.loop)) as pool:
-                async with (await pool) as conn:
-                    await self._prepare(conn)
+            pool = await create_pool(host=self.host, port=self.port,
+                                     user=self.user, db=self.db,
+                                     password=self.password, use_unicode=True,
+                                     loop=self.loop)
+            async with (await pool) as conn:
+                await self._prepare(conn)
 
-                    async with (await conn.cursor()) as cur:
-                        await cur.execute("SELECT * from tbl")
-                        ret = []
-                        async for i in cur:
-                            ret.append(i)
-                        self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+                async with (await conn.cursor()) as cur:
+                    await cur.execute("SELECT * from tbl")
+                    ret = []
+                    async for i in cur:
+                        ret.append(i)
+                    self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
 
         self.loop.run_until_complete(go())
 
