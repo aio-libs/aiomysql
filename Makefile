@@ -4,7 +4,7 @@ FLAGS=
 
 
 flake:
-	flake8 aiomysql tests examples
+	flake8 --exclude=pep492 aiomysql tests examples
 
 test: flake
 	py.test -s $(FLAGS) ./tests/
