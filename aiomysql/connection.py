@@ -143,6 +143,13 @@ class Connection:
             port = int(_config("port", fallback=port))
             charset = _config("default-character-set", fallback=charset)
 
+        # pymysql port
+        if no_delay is not None:
+            warnings.warn("no_delay option is deprecated", DeprecationWarning)
+            no_delay = bool(no_delay)
+        else:
+            no_delay = True
+
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER

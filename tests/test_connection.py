@@ -231,3 +231,10 @@ class TestConnection(AIOPyMySQLTestCase):
         with self.assertWarns(ResourceWarning):
             del conn
             gc.collect()
+
+    @run_until_complete
+    def test_no_delay_warning(self):
+        with self.assertWarns(DeprecationWarning):
+            conn = yield from self.connect(no_delay=True)
+        conn.close()
+
