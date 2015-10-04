@@ -1,7 +1,10 @@
 Changes
 -------
+
 0.0.5 (xxxx-xx-xx)
 ^^^^^^^^^^^^^^^^^^
+
+* no_delay option is deprecated and True by default
 
 * Add Cursor.mogrify() method
 

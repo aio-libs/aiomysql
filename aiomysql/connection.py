@@ -143,6 +143,13 @@ class Connection:
             port = int(_config("port", fallback=port))
             charset = _config("default-character-set", fallback=charset)
 
+        # pymysql port
+        if no_delay is not None:
+            warnings.warn("no_delay option is deprecated", DeprecationWarning)
+            no_delay = bool(no_delay)
+        else:
+            no_delay = True
+
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
@@ -428,7 +435,8 @@ class Connection:
                                             loop=self._loop)
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
-            if self._no_delay:
+            # do not set no delay in case of unix_socket
+            if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
 
             yield from self._get_server_information()
@@ -552,7 +560,7 @@ class Connection:
     @asyncio.coroutine
     def _request_authentication(self):
         self.client_flag |= CAPABILITIES
-        if self.server_version.startswith('5'):
+        if int(self.server_version.split('.', 1)[0]) >= 5:
             self.client_flag |= MULTI_RESULTS
 
         if self._user is None:
