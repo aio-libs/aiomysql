@@ -552,7 +552,7 @@ class Connection:
     @asyncio.coroutine
     def _request_authentication(self):
         self.client_flag |= CAPABILITIES
-        if self.server_version.startswith('5'):
+        if int(self.server_version.split('.', 1)[0]) >= 5:
             self.client_flag |= MULTI_RESULTS
 
         if self._user is None:
