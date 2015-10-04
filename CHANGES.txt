@@ -3,6 +3,8 @@ Changes
 0.0.5 (xxxx-xx-xx)
 ^^^^^^^^^^^^^^^^^^
 
+* Add Cursor.mogrify() method
+
 * Support for "LOAD LOCAL INFILE" query.
 
 * Check connection inside pool, in case of timeout drop it, fixes #25

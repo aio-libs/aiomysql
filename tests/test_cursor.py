@@ -274,3 +274,15 @@ class TestCursor(base.AIOPyMySQLTestCase):
         conn = self.connections[0]
         with self.assertRaises(TypeError):
             yield from conn.cursor(MyCursor2)
+
+    @run_until_complete
+    def test_morgify(self):
+        conn = self.connections[0]
+        cur = yield from conn.cursor()
+        pairs = [(1, 'a'), (2, 'b'), (3, 'c')]
+        sql = "INSERT INTO tbl VALUES(%s, %s)"
+        results = [cur.mogrify(sql, p) for p in pairs]
+        expected = ["INSERT INTO tbl VALUES(1, 'a')",
+                    "INSERT INTO tbl VALUES(2, 'b')",
+                    "INSERT INTO tbl VALUES(3, 'c')"]
+        self.assertEqual(results, expected)
