@@ -198,6 +198,19 @@ class Cursor:
             # Worst case it will throw a Value error
             return conn.escape(args)
 
+    def mogrify(self, query, args=None):
+        """ Returns the exact string that is sent to the database by calling
+        the execute() method. This method follows the extension to the DB
+        API 2.0 followed by Psycopg.
+
+        :param query: ``str`` sql statement
+        :param args: ``tuple`` or ``list`` of arguments for sql query
+        """
+        conn = self._get_db()
+        if args is not None:
+            query = query % self._escape_args(args, conn)
+        return query
+
     @asyncio.coroutine
     def execute(self, query, args=None):
         """Executes the given operation
