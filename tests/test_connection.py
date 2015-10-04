@@ -237,4 +237,3 @@ class TestConnection(AIOPyMySQLTestCase):
         with self.assertWarns(DeprecationWarning):
             conn = yield from self.connect(no_delay=True)
         conn.close()
-

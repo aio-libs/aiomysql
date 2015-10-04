@@ -435,7 +435,8 @@ class Connection:
                                             loop=self._loop)
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
-            if self._no_delay:
+            # do not set no delay in case of unix_socket
+            if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
 
             yield from self._get_server_information()
