@@ -108,7 +108,7 @@ class Engine:
     def acquire(self):
         """Get a connection from pool."""
         raw = yield from self._pool.acquire()
-        conn = SAConnection(raw, self._dialect)
+        conn = SAConnection(raw, self)
         return conn
 
     def release(self, conn):
@@ -117,6 +117,8 @@ class Engine:
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
         raw = conn.connection
+        if raw is None:
+            return
         self._pool.release(raw)
 
     def __enter__(self):
@@ -144,6 +146,18 @@ class Engine:
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
+    @asyncio.coroutine
+    def __aenter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        yield from self.wait_closed()
+
+    def connect(self):
+        return _ConnectionContextManager(self, None)
+
 
 class _ConnectionContextManager:
     """Context manager.
@@ -167,9 +181,24 @@ class _ConnectionContextManager:
         self._conn = conn
 
     def __enter__(self):
+        assert self._conn is not None
         return self._conn
 
     def __exit__(self, *args):
+        try:
+            self._engine.release(self._conn)
+        finally:
+            self._engine = None
+            self._conn = None
+
+    @asyncio.coroutine
+    def __aenter__(self):
+        assert self._conn is None
+        self._conn = yield from self._engine.acquire()
+        return self._conn
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             self._engine.release(self._conn)
         finally:

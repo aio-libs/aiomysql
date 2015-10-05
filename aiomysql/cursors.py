@@ -19,6 +19,14 @@ RE_INSERT_VALUES = re.compile(
     re.IGNORECASE | re.DOTALL)
 
 
+try:
+    StopAsyncIteration
+except NameError:
+    class StopAsyncIteration(Exception):
+        """Just stab for StopAsyncIteration from python 3.5"""
+        pass
+
+
 class Cursor:
     """Cursor is used to interact with the database."""
 
@@ -476,6 +484,27 @@ class Cursor:
     InternalError = InternalError
     ProgrammingError = ProgrammingError
     NotSupportedError = NotSupportedError
+
+    @asyncio.coroutine
+    def __aiter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __anext__(self):
+        ret = yield from self.fetchone()
+        if ret is not None:
+            return ret
+        else:
+            raise StopAsyncIteration
+
+    @asyncio.coroutine
+    def __aenter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        yield from self.close()
+        return
 
 
 class _DictCursorMixin:
