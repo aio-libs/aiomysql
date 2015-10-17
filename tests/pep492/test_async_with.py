@@ -84,15 +84,12 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                      user=self.user, db=self.db,
                                      password=self.password, use_unicode=True,
                                      loop=self.loop)
-            async with (await pool) as conn:
-                await self._prepare(conn)
+            async with pool:
+                self.assertFalse(pool.closed)
+                conn = await pool.acquire()
+                pool.release(conn)
 
-                async with (await conn.cursor()) as cur:
-                    await cur.execute("SELECT * from tbl")
-                    ret = []
-                    async for i in cur:
-                        ret.append(i)
-                    self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+            self.assertTrue(pool.closed)
 
         self.loop.run_until_complete(go())
 
