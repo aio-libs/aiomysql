@@ -19,6 +19,12 @@ RE_INSERT_VALUES = re.compile(
     re.IGNORECASE | re.DOTALL)
 
 
+try:
+    StopAsyncIteration
+except NameError:
+    StopAsyncIteration = Exception
+
+
 class Cursor:
     """Cursor is used to interact with the database."""
 
