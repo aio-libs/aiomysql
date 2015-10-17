@@ -10,6 +10,14 @@ from sqlalchemy.sql import expression, sqltypes
 from . import exc
 
 
+try:
+    StopAsyncIteration
+except NameError:
+    class StopAsyncIteration(Exception):
+        """Just stab for StopAsyncIteration from python 3.5"""
+        pass
+
+
 @asyncio.coroutine
 def create_result_proxy(connection, cursor, dialect):
     result_proxy = ResultProxy(connection, cursor, dialect)
@@ -436,3 +444,15 @@ class ResultProxy:
             return row[0]
         else:
             return None
+
+    @asyncio.coroutine
+    def __aiter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __anext__(self):
+        data = yield from self.fetchone()
+        if data is not None:
+            return data
+        else:
+            raise StopAsyncIteration

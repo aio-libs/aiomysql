@@ -37,16 +37,17 @@ from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
 
 
-# from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
+from .utils import _ContextManager, _ConnectionContextManager
 # from .log import logger
+
 
 DEFAULT_USER = getpass.getuser()
 PY_341 = sys.version_info >= (3, 4, 1)
+PY_35 = sys.version_info >= (3, 5, 0)
 sha_new = partial(hashlib.new, 'sha1')
 
 
-@asyncio.coroutine
 def connect(host="localhost", user=None, password="",
             db=None, port=3306, unix_socket=None,
             charset='', sql_mode=None,
@@ -57,6 +58,28 @@ def connect(host="localhost", user=None, password="",
             local_infile=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
+    coro = _connect(host=host, user=user, password=password, db=db,
+                    port=port, unix_socket=unix_socket, charset=charset,
+                    sql_mode=sql_mode, read_default_file=read_default_file,
+                    conv=conv, use_unicode=use_unicode,
+                    client_flag=client_flag, cursorclass=cursorclass,
+                    init_command=init_command,
+                    connect_timeout=connect_timeout,
+                    read_default_group=read_default_group,
+                    no_delay=no_delay, autocommit=autocommit, echo=echo,
+                    local_infile=local_infile, loop=loop)
+    return _ConnectionContextManager(coro)
+
+
+@asyncio.coroutine
+def _connect(host="localhost", user=None, password="",
+             db=None, port=3306, unix_socket=None,
+             charset='', sql_mode=None,
+             read_default_file=None, conv=decoders, use_unicode=None,
+             client_flag=0, cursorclass=Cursor, init_command=None,
+             connect_timeout=None, read_default_group=None,
+             no_delay=False, autocommit=False, echo=False,
+             local_infile=False, loop=None):
 
     conn = Connection(host=host, user=user, password=password,
                       db=db, port=port, unix_socket=unix_socket,
@@ -361,7 +384,7 @@ class Connection:
         cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
         fut = asyncio.Future(loop=self._loop)
         fut.set_result(cur)
-        return fut
+        return _ContextManager(fut)
 
     # The following methods are INTERNAL USE ONLY (called from Cursor)
     @asyncio.coroutine
@@ -522,6 +545,19 @@ class Connection:
             return self._result.insert_id
         else:
             return 0
+
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            if exc_type is not None:
+                self.close()
+            else:
+                yield from self.ensure_closed()
+            return
 
     @asyncio.coroutine
     def _execute_command(self, command, sql):
