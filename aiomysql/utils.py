@@ -75,7 +75,25 @@ class _ConnectionContextManager(_ContextManager):
             if exc_type is not None:
                 self._obj.close()
             else:
-                yield from self._obj.wait_closed()
+                yield from self._obj.ensure_closed()
+
+
+class _PoolContextManager(_ContextManager):
+
+    if PY_35:
+        def __await__(self):
+            resp = yield from self._coro
+            return resp
+
+        @asyncio.coroutine
+        def __aenter__(self):
+            self._obj = yield from self._coro
+            return self._obj
+
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc, tb):
+            self._obj.close()
+            yield from self._obj.wait_closed()
 
 
 class _PoolConnectionContextManager:

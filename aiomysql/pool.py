@@ -5,11 +5,17 @@ import asyncio
 import collections
 
 from .connection import connect
-from .utils import _PoolConnectionContextManager
+from .utils import _PoolConnectionContextManager, _PoolContextManager 
+
+
+def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+    coro = _create_pool(minsize=minsize, maxsize=maxsize, echo=echo,
+                        loop=loop, **kwargs)
+    return _PoolContextManager(coro)
 
 
 @asyncio.coroutine
-def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+def _create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
