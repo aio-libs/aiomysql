@@ -1,8 +1,9 @@
 import asyncio
-from tests.base import AIOPyMySQLTestCase
+import aiomysql
 from aiomysql import sa, create_pool
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
+from tests.base import AIOPyMySQLTestCase
 
 meta = MetaData()
 tbl = Table('tbl', meta,
@@ -64,6 +65,19 @@ class TestAsyncWith(AIOPyMySQLTestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_cursor_method(self):
+
+        async def go():
+            conn = self.connections[0]
+            async with conn.cursor() as cur:
+                await cur.execute('SELECT 42;')
+                value = await cur.fetchone()
+                self.assertEqual(value, (42,))
+
+            self.assertTrue(cur.closed)
+
+        self.loop.run_until_complete(go())
+
     def test_connection(self):
 
         async def go():
@@ -71,8 +85,24 @@ class TestAsyncWith(AIOPyMySQLTestCase):
 
             self.assertFalse(conn.closed)
             async with conn:
-                pass
+                self.assertFalse(conn.closed)
 
+            self.assertTrue(conn.closed)
+
+        self.loop.run_until_complete(go())
+
+    def test_connect_method(self):
+        async def go():
+            async with aiomysql.connect(loop=self.loop, host=self.host,
+                                        port=self.port, user=self.user,
+                                        db=self.db, password=self.password,
+                                        use_unicode=True, echo=True) as conn:
+                async with (await conn.cursor()) as cur:
+                    await cur.execute("SELECT 42")
+                    value = await cur.fetchone()
+                    self.assertEqual(value, (42,))
+
+            self.assertTrue(cur.closed)
             self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
@@ -93,6 +123,24 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     async for i in cur:
                         ret.append(i)
                     self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+
+        self.loop.run_until_complete(go())
+
+    def test_create_pool(self):
+
+        async def go():
+            async with create_pool(host=self.host, port=self.port,
+                                   user=self.user, db=self.db,
+                                   password=self.password, use_unicode=True,
+                                   loop=self.loop) as pool:
+                async with pool.get() as conn:
+                    async with conn.cursor() as cur:
+                        await cur.execute("SELECT 42;")
+                        value = await cur.fetchone()
+                        self.assertEqual(value, (42,))
+
+            self.assertTrue(cur.closed)
+            self.assertTrue(conn.closed)
 
         self.loop.run_until_complete(go())
 

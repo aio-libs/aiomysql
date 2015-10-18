@@ -5,7 +5,7 @@ import asyncio
 import collections
 
 from .connection import connect
-from .utils import _PoolConnectionContextManager, _PoolContextManager 
+from .utils import _PoolConnectionContextManager, _PoolContextManager
 
 
 def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
