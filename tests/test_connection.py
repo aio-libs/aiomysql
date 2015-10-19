@@ -161,7 +161,7 @@ class TestConnection(AIOPyMySQLTestCase):
         with self.assertRaises(aiomysql.OperationalError) as cm:
             yield from cur.execute("SELECT 1+1")
         # error occures while reading, not writing because of socket buffer.
-        # self.assertEquals(cm.exception.args[0], 2006)
+        # self.assertEqual(cm.exception.args[0], 2006)
         self.assertIn(cm.exception.args[0], (2006, 2013))
         conn.close()
 
