@@ -203,7 +203,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         yield from cur.execute('SELECT * FROM tbl;')
         yield from cur.scroll(1)
         ret = yield from cur.fetchall()
-        self.assertEquals(((2, 'b'), (3, 'c')), ret)
+        self.assertEqual(((2, 'b'), (3, 'c')), ret)
 
     @run_until_complete
     def test_aggregates(self):
@@ -250,7 +250,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertEqual(row_count, 3)
         r = yield from cur.fetchall()
         # TODO: if this right behaviour
-        self.assertEquals(((3, 'c'),),  r)
+        self.assertEqual(((3, 'c'),),  r)
 
         # calling execute many without args
         row_count = yield from cur.executemany('SELECT 1;', ())
