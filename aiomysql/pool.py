@@ -5,10 +5,17 @@ import asyncio
 import collections
 
 from .connection import connect
+from .utils import _PoolConnectionContextManager, _PoolContextManager
+
+
+def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+    coro = _create_pool(minsize=minsize, maxsize=maxsize, echo=echo,
+                        loop=loop, **kwargs)
+    return _PoolContextManager(coro)
 
 
 @asyncio.coroutine
-def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+def _create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -195,6 +202,9 @@ class Pool(asyncio.AbstractServer):
                 self._free.append(conn)
             asyncio.Task(self._wakeup(), loop=self._loop)
 
+    def get(self):
+        return _PoolConnectionContextManager(self, None)
+
     def __enter__(self):
         raise RuntimeError(
             '"yield from" should be used as context manager expression')
@@ -218,36 +228,17 @@ class Pool(asyncio.AbstractServer):
         #     finally:
         #         conn.release()
         conn = yield from self.acquire()
-        return _ConnectionContextManager(self, conn)
+        return _PoolConnectionContextManager(self, conn)
 
+    def __await__(self):
+        yield
+        return _PoolConnectionContextManager(self, None)
 
-class _ConnectionContextManager:
-    """Context manager.
+    @asyncio.coroutine
+    def __aenter__(self):
+        return self
 
-    This enables the following idiom for acquiring and releasing a
-    connection around a block:
-
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-
-    while failing loudly when accidentally using:
-
-        with pool:
-            <block>
-    """
-
-    __slots__ = ('_pool', '_conn')
-
-    def __init__(self, pool, conn):
-        self._pool = pool
-        self._conn = conn
-
-    def __enter__(self):
-        return self._conn
-
-    def __exit__(self, *args):
-        try:
-            self._pool.release(self._conn)
-        finally:
-            self._pool = None
-            self._conn = None
+    @asyncio.coroutine
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        yield from self.wait_closed()

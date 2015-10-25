@@ -4,6 +4,7 @@ import functools
 
 import os
 import unittest
+from unittest import mock
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
@@ -61,7 +62,16 @@ class TestTransaction(unittest.TestCase):
                                   **kwargs)
         # TODO: fix this, should autocommit be enabled by default?
         yield from conn.autocommit(True)
-        ret = sa.SAConnection(conn, sa.engine._dialect)
+        engine = mock.Mock()
+        engine.dialect = sa.engine._dialect
+
+        @asyncio.coroutine
+        def release(*args):
+            return
+            yield
+        engine.release = release
+
+        ret = sa.SAConnection(conn, engine)
         return ret
 
     def test_without_transactions(self):
