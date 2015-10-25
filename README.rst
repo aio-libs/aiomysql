@@ -31,8 +31,8 @@ Basic Example
 -------------
 
 **aiomysql** based on PyMySQL_ , and provides same api, you just need
-to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
-every method.
+to use  ``await conn.f()`` or ``yield from conn.f()`` instead of calling
+``conn.f()`` for every method.
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
 ``conn.prop = val``.
@@ -41,25 +41,23 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
 .. code:: python
 
     import asyncio
-    import aiomysql
+    from aiomysql import create_pool
+
 
     loop = asyncio.get_event_loop()
 
-    @asyncio.coroutine
-    def test_example():
-        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
-                                           user='root', password='', db='mysql',
-                                           loop=loop)
+    async def go():
+        async with create_pool(host='127.0.0.1', port=3306,
+                               user='root', password='',
+                               db='mysql', loop=loop) as pool:
+            async with pool.get() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute("SELECT 42;")
+                    value = await cur.fetchone()
+                    print(value)
 
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT Host,User FROM user")
-        print(cur.description)
-        r = yield from cur.fetchall()
-        print(r)
-        yield from cur.close()
-        conn.close()
 
-    loop.run_until_complete(test_example())
+    loop.run_until_complete(go())
 
 
 Connection Pool
