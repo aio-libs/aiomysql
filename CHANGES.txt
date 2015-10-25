@@ -12,6 +12,8 @@ Changes
 
 * Check connection inside pool, in case of timeout drop it, fixes #25
 
+* Add support of python 3.5 features to pool, connection and cursor
+
 
 0.0.4 (2015-05-23)
 ^^^^^^^^^^^^^^^^^^
