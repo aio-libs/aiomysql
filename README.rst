@@ -23,8 +23,12 @@ proper places)). `sqlalchemy` support ported from aiopg_.
 
 Documentation
 -------------
-
 http://aiomysql.readthedocs.org/
+
+
+Mailing List
+------------
+https://groups.google.com/forum/#!forum/aio-libs
 
 
 Basic Example
