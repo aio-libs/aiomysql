@@ -91,7 +91,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=False, autocommit=False, echo=False,
+                 no_delay=None, autocommit=False, echo=False,
                  local_infile=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
