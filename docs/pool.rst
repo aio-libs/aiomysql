@@ -67,7 +67,7 @@ The basic usage is::
 
 
     See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
-    :class`Connection` without *with statement*.
+    :class:`Connection` without *with statement*.
 
     .. attribute:: echo
 
