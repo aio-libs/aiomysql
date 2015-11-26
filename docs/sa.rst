@@ -77,6 +77,9 @@ Engine
 
     The pool has *minsize* opened connections to :term:`MySQL` server.
 
+    At *kwargs* function accepts all parameters that
+    :func:`aiomysql.connect` does.
+
 
 .. data:: dialect
 
