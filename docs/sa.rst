@@ -69,7 +69,7 @@ Engine
 ------
 
 .. function:: create_engine(*, minsize=10, maxsize=10, loop=None, \
-                            dialect=dialect, timeout=60, **kwargs)
+                            dialect=dialect, **kwargs)
 
     A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
 
@@ -127,11 +127,6 @@ Engine
     .. attribute:: freesize
 
         A count of free connections in the pool (*readonly*).
-
-    .. attribute:: timeout
-
-        A read-only float representing default timeout for operations
-        for connections from pool.
 
     .. method:: close()
 
