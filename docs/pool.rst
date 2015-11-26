@@ -91,11 +91,6 @@ The basic usage is::
 
         A count of free connections in the pool (*readonly*).
 
-    .. attribute:: timeout
-
-        A read-only float representing default timeout for operations
-        for connections from pool.
-
     .. method:: clear()
 
        A :ref:`coroutine <coroutine>` that closes all *free* connections
