@@ -10,7 +10,7 @@ Every example is a correct tiny python program.
 
 Low-level API
 -------------
-Bassic example, fetch host and user information from internal table: user.
+Basic example, fetch host and user information from internal table: user.
 
 .. literalinclude:: ../examples/example.py
 
