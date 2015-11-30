@@ -98,7 +98,7 @@ or have some suggestion for library improvement.
 
 The library uses `Travis <https://travis-ci.org/aio-libs/aiomysql>`_ for
 Continious Integration and `Coveralls
-<https://coveralls.io/r/jettify/aiomysql?branch=master>`_ for
+<https://coveralls.io/r/aio-libs/aiomysql?branch=master>`_ for
 coverage reports.
 
 
