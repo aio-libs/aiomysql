@@ -1,6 +1,14 @@
 Changes
 -------
 
+0.0.6 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Fixed bug with SA rollback (Thanks @khlyestovillarion!)
+
+* Fixed issue with default no_delay option (Thanks @khlyestovillarion!)
+
+
 0.0.5 (2015-10-28)
 ^^^^^^^^^^^^^^^^^^
 
