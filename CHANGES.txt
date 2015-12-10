@@ -1,7 +1,7 @@
 Changes
 -------
 
-0.0.6 (XXXX-XX-XX)
+0.0.6 (2015-12-11)
 ^^^^^^^^^^^^^^^^^^
 
 * Fixed bug with SA rollback (Thanks @khlyestovillarion!)
