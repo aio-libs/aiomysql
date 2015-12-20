@@ -71,6 +71,7 @@ class _ContextManager(base):
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             yield from self._obj.close()
+            self._obj = None
 
 
 class _ConnectionContextManager(_ContextManager):
@@ -82,6 +83,7 @@ class _ConnectionContextManager(_ContextManager):
                 self._obj.close()
             else:
                 yield from self._obj.ensure_closed()
+            self._obj = None
 
 
 class _PoolContextManager(_ContextManager):
@@ -91,6 +93,7 @@ class _PoolContextManager(_ContextManager):
         def __aexit__(self, exc_type, exc, tb):
             self._obj.close()
             yield from self._obj.wait_closed()
+            self._obj = None
 
 
 class _PoolConnectionContextManager:
