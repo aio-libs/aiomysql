@@ -61,15 +61,6 @@ class _ContextManager(base):
 class _ConnectionContextManager(_ContextManager):
 
     if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             if exc_type is not None:
@@ -81,15 +72,6 @@ class _ConnectionContextManager(_ContextManager):
 class _PoolContextManager(_ContextManager):
 
     if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             self._obj.close()
