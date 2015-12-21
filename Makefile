@@ -4,7 +4,8 @@ FLAGS=
 
 
 flake:
-	flake8 --exclude=pep492 aiomysql tests examples
+	exclude=$$(python -c "import sys;sys.stdout.write('--exclude tests/pep492') if sys.version_info[:3] < (3, 5, 0) else None"); \
+	flake8 aiomysql examples tests $$exclude
 
 test: flake
 	py.test -s $(FLAGS) ./tests/

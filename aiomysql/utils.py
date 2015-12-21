@@ -38,6 +38,21 @@ class _ContextManager(base):
     def close(self):
         return self._coro.close()
 
+    @property
+    def gi_frame(self):
+        return self._coro.gi_frame
+
+    @property
+    def gi_running(self):
+        return self._coro.gi_running
+
+    @property
+    def gi_code(self):
+        return self._coro.gi_code
+
+    def __next__(self):
+        return self.send(None)
+
     @asyncio.coroutine
     def __iter__(self):
         resp = yield from self._coro
@@ -56,44 +71,29 @@ class _ContextManager(base):
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             yield from self._obj.close()
+            self._obj = None
 
 
 class _ConnectionContextManager(_ContextManager):
 
     if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             if exc_type is not None:
                 self._obj.close()
             else:
                 yield from self._obj.ensure_closed()
+            self._obj = None
 
 
 class _PoolContextManager(_ContextManager):
 
     if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             self._obj.close()
             yield from self._obj.wait_closed()
+            self._obj = None
 
 
 class _PoolConnectionContextManager:
