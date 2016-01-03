@@ -1,5 +1,9 @@
 Changes
 -------
+0.X.X (XXXX-XXXX-XX)
+
+* Raise error if previous cursor was not closed properly #50
+
 
 0.0.6 (2015-12-11)
 ^^^^^^^^^^^^^^^^^^
