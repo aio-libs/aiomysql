@@ -243,3 +243,12 @@ class TestConnection(AIOPyMySQLTestCase):
         conn = yield from self.connect()
         self.assertTrue(conn._no_delay)
         conn.close()
+
+    @run_until_complete
+    def test_previous_cursor_not_closed(self):
+        conn = yield from self.connect()
+        cur1 = yield from conn.cursor()
+        yield from cur1.execute("SELECT 1; SELECT 2")
+        cur2 = yield from conn.cursor()
+        with self.assertRaises(aiomysql.ProgrammingError):
+            yield from cur2.execute("SELECT 3")
