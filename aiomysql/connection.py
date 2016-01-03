@@ -372,6 +372,9 @@ class Connection:
     @asyncio.coroutine
     def query(self, sql, unbuffered=False):
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
+        if self._result is not None and self._result.has_next:
+            raise ProgrammingError("Previous results have not been fetched. "
+                                   "You may not close previous cursor.")
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
         yield from self._execute_command(COM_QUERY, sql)
