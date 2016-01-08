@@ -14,8 +14,8 @@ from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
-from pymysql.constants.CLIENT import *  # noqa
-from pymysql.constants.COMMAND import *  # noqa
+from pymysql.constants import CLIENT
+from pymysql.constants import COMMAND
 from pymysql.util import byte2int, int2byte
 from pymysql.converters import escape_item, encoders, decoders, escape_string
 from pymysql.err import (Warning, Error,
@@ -177,12 +177,12 @@ class Connection:
         self._encoding = charset_by_name(self._charset).encoding
 
         if local_infile:
-            client_flag |= LOCAL_FILES
+            client_flag |= CLIENT.LOCAL_FILES
 
-        client_flag |= CAPABILITIES
-        client_flag |= MULTI_STATEMENTS
+        client_flag |= CLIENT.CAPABILITIES
+        client_flag |= CLIENT.MULTI_STATEMENTS
         if self._db:
-            client_flag |= CONNECT_WITH_DB
+            client_flag |= CLIENT.CONNECT_WITH_DB
         self.client_flag = client_flag
 
         self.cursorclass = cursorclass
@@ -268,7 +268,7 @@ class Connection:
         if self._writer is None:
             # connection has been closed
             return
-        send_data = struct.pack('<i', 1) + int2byte(COM_QUIT)
+        send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
         self._writer.write(send_data)
         yield from self._writer.drain()
         self.close()
@@ -305,32 +305,32 @@ class Connection:
     def _send_autocommit_mode(self):
         """Set whether or not to commit after every execute() """
         yield from self._execute_command(
-            COM_QUERY,
+            COMMAND.COM_QUERY,
             "SET AUTOCOMMIT = %s" % self.escape(self.autocommit_mode))
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def begin(self):
         """Begin transaction."""
-        yield from self._execute_command(COM_QUERY, "BEGIN")
+        yield from self._execute_command(COMMAND.COM_QUERY, "BEGIN")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def commit(self):
         """Commit changes to stable storage."""
-        yield from self._execute_command(COM_QUERY, "COMMIT")
+        yield from self._execute_command(COMMAND.COM_QUERY, "COMMIT")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def rollback(self):
         """Roll back the current transaction."""
-        yield from self._execute_command(COM_QUERY, "ROLLBACK")
+        yield from self._execute_command(COMMAND.COM_QUERY, "ROLLBACK")
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
     def select_db(self, db):
         """Set current db"""
-        yield from self._execute_command(COM_INIT_DB, db)
+        yield from self._execute_command(COMMAND.COM_INIT_DB, db)
         yield from self._read_ok_packet()
 
     def escape(self, obj):
@@ -374,7 +374,7 @@ class Connection:
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
-        yield from self._execute_command(COM_QUERY, sql)
+        yield from self._execute_command(COMMAND.COM_QUERY, sql)
         yield from self._read_query_result(unbuffered=unbuffered)
         return self._affected_rows
 
@@ -389,7 +389,7 @@ class Connection:
     @asyncio.coroutine
     def kill(self, thread_id):
         arg = struct.pack('<I', thread_id)
-        yield from self._execute_command(COM_PROCESS_KILL, arg)
+        yield from self._execute_command(COMMAND.COM_PROCESS_KILL, arg)
         yield from self._read_ok_packet()
 
     @asyncio.coroutine
@@ -402,7 +402,7 @@ class Connection:
             else:
                 raise Error("Already closed")
         try:
-            yield from self._execute_command(COM_PING, "")
+            yield from self._execute_command(COMMAND.COM_PING, "")
             yield from self._read_ok_packet()
         except Exception:
             if reconnect:
@@ -416,7 +416,7 @@ class Connection:
         """Sets the character set for the current connection"""
         # Make sure charset is supported.
         encoding = charset_by_name(charset).encoding
-        yield from self._execute_command(COM_QUERY, "SET NAMES %s"
+        yield from self._execute_command(COMMAND.COM_QUERY, "SET NAMES %s"
                                          % self.escape(charset))
         yield from self._read_packet()
         self._charset = charset
@@ -581,9 +581,9 @@ class Connection:
 
     @asyncio.coroutine
     def _request_authentication(self):
-        self.client_flag |= CAPABILITIES
+        self.client_flag |= CLIENT.CAPABILITIES
         if int(self.server_version.split('.', 1)[0]) >= 5:
-            self.client_flag |= MULTI_RESULTS
+            self.client_flag |= CLIENT.MULTI_RESULTS
 
         if self._user is None:
             raise ValueError("Did not specify a username")
@@ -782,7 +782,8 @@ class MySQLResult:
 
     @asyncio.coroutine
     def _print_warnings(self):
-        yield from self.connection._execute_command(COM_QUERY, 'SHOW WARNINGS')
+        yield from self.connection._execute_command(
+            COMMAND.COM_QUERY, 'SHOW WARNINGS')
         yield from self.read()
         if self.rows:
             message = "\n"
