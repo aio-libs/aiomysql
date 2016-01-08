@@ -87,7 +87,9 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
         self.assertEqual(len(fetched_data), 2,
                          'fetchmany failed. Number of rows does not match')
 
+        yield from cursor.close()
         # test default fetchmany size
+        cursor = yield from conn.cursor(SSCursor)
         yield from cursor.execute('SELECT * FROM tz_data;')
         fetched_data = yield from cursor.fetchmany()
         self.assertEqual(len(fetched_data), 1)
