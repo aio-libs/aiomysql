@@ -65,10 +65,8 @@ class TestTransaction(unittest.TestCase):
         engine = mock.Mock()
         engine.dialect = sa.engine._dialect
 
-        @asyncio.coroutine
         def release(*args):
             return
-            yield
         engine.release = release
 
         ret = sa.SAConnection(conn, engine)
