@@ -372,9 +372,6 @@ class Connection:
     @asyncio.coroutine
     def query(self, sql, unbuffered=False):
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
-        if self._result is not None and self._result.has_next:
-            raise ProgrammingError("Previous results have not been fetched. "
-                                   "You may not close previous cursor.")
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
         yield from self._execute_command(COM_QUERY, sql)
@@ -550,8 +547,13 @@ class Connection:
 
         # If the last query was unbuffered, make sure it finishes before
         # sending new commands
-        if self._result is not None and self._result.unbuffered_active:
-            yield from self._result._finish_unbuffered_query()
+        if self._result is not None:
+            if self._result.unbuffered_active:
+                warnings.warn("Previous unbuffered result was left incomplete")
+                self._result._finish_unbuffered_query()
+            while self._result.has_next:
+                yield from self.next_result()
+            self._result = None
 
         if isinstance(sql, str):
             sql = sql.encode(self._encoding)

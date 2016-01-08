@@ -250,5 +250,16 @@ class TestConnection(AIOPyMySQLTestCase):
         cur1 = yield from conn.cursor()
         yield from cur1.execute("SELECT 1; SELECT 2")
         cur2 = yield from conn.cursor()
-        with self.assertRaises(aiomysql.ProgrammingError):
-            yield from cur2.execute("SELECT 3")
+        yield from cur2.execute("SELECT 3;")
+        resp = yield from cur2.fetchone()
+        self.assertEqual(resp[0], 3)
+
+    @run_until_complete
+    def test_commit_during_multi_result(self):
+        conn = yield from self.connect()
+        cur = yield from conn.cursor()
+        yield from cur.execute("SELECT 1; SELECT 2;")
+        yield from conn.commit()
+        yield from cur.execute("SELECT 3;")
+        resp = yield from cur.fetchone()
+        self.assertEqual(resp[0], 3)
