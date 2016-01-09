@@ -168,9 +168,6 @@ class Engine:
             self.close()
             yield from self.wait_closed()
 
-    def connect(self):
-        return _ConnectionContextManager(self, None)
-
 
 _EngineContextManager = _PoolContextManager
 _EngineAcquireContextManager = _PoolAcquireContextManager
