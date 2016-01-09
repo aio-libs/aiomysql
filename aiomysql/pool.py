@@ -122,9 +122,12 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
+        coro = self._acquire()
+        return _PoolAcquireContextManager(coro, self)
+
+    def _acquire(self):
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
         with (yield from self._cond):
