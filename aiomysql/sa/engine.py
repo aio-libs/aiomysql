@@ -204,17 +204,3 @@ class _ConnectionContextManager:
         finally:
             self._engine = None
             self._conn = None
-
-    @asyncio.coroutine
-    def __aenter__(self):
-        assert self._conn is None
-        self._conn = yield from self._engine.acquire()
-        return self._conn
-
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
-        try:
-            self._engine.release(self._conn)
-        finally:
-            self._engine = None
-            self._conn = None
