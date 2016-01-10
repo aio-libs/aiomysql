@@ -194,16 +194,8 @@ class TestConnection(AIOPyMySQLTestCase):
         self.assertEqual(conn.closed, False)
 
     @run_until_complete
-    def test_connection_set_nodelay_option(self):
-        conn = yield from self.connect(no_delay=True)
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT 1;")
-        (r, ) = yield from cur.fetchone()
-        self.assertEqual(r, 1)
-
-    @run_until_complete
     def test_connection_properties(self):
-        conn = yield from self.connect(no_delay=True)
+        conn = yield from self.connect()
         self.assertEqual(conn.host, self.host)
         self.assertEqual(conn.port, self.port)
         self.assertEqual(conn.user, self.user)
@@ -213,7 +205,7 @@ class TestConnection(AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_connection_double_ensure_closed(self):
-        conn = yield from self.connect(no_delay=True)
+        conn = yield from self.connect()
         self.assertFalse(conn.closed)
         yield from conn.ensure_closed()
         self.assertTrue(conn.closed)
