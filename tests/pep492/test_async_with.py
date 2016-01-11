@@ -1,8 +1,9 @@
-import asyncio
 import aiomysql
 from aiomysql import sa, create_pool
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
+import pytest
+import warnings
 from tests.base import AIOPyMySQLTestCase
 
 meta = MetaData()
@@ -14,19 +15,24 @@ tbl = Table('tbl', meta,
 
 class TestAsyncWith(AIOPyMySQLTestCase):
 
-    @asyncio.coroutine
-    def _prepare(self, conn):
-        cur = yield from conn.cursor()
-        yield from cur.execute("DROP TABLE IF EXISTS tbl;")
+    def _conn_kw(self):
+        kw = dict(host=self.host, port=self.port, user=self.user,
+                  db=self.db, password=self.password, use_unicode=True,
+                  loop=self.loop)
+        return kw
 
-        yield from cur.execute("""CREATE TABLE tbl (
+    async def _prepare(self, conn):
+        cur = await conn.cursor()
+        await cur.execute("DROP TABLE IF EXISTS tbl;")
+
+        await cur.execute("""CREATE TABLE tbl (
                  id MEDIUMINT NOT NULL AUTO_INCREMENT,
                  name VARCHAR(255) NOT NULL,
                  PRIMARY KEY (id));""")
 
         for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
-            yield from cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
-        yield from conn.commit()
+            await cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
+        await conn.commit()
 
     def test_cursor(self):
 
@@ -38,13 +44,13 @@ class TestAsyncWith(AIOPyMySQLTestCase):
             cur = await conn.cursor()
             await cur.execute('SELECT * from tbl;')
 
-            self.assertFalse(cur.closed)
+            assert not cur.closed
             async with cur:
                 async for i in cur:
                     ret.append(i)
 
-            self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
-            self.assertTrue(cur.closed)
+            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+            assert cur.closed
 
         self.loop.run_until_complete(go())
 
@@ -57,11 +63,11 @@ class TestAsyncWith(AIOPyMySQLTestCase):
             cur = await conn.cursor()
             await cur.execute('SELECT * from tbl;')
 
-            self.assertFalse(cur.closed)
+            assert not cur.closed
             async with cur:
                 pass
 
-            self.assertTrue(cur.closed)
+            assert cur.closed
 
         self.loop.run_until_complete(go())
 
@@ -72,9 +78,9 @@ class TestAsyncWith(AIOPyMySQLTestCase):
             async with conn.cursor() as cur:
                 await cur.execute('SELECT 42;')
                 value = await cur.fetchone()
-                self.assertEqual(value, (42,))
+                assert value == (42,)
 
-            self.assertTrue(cur.closed)
+            assert cur.closed
 
         self.loop.run_until_complete(go())
 
@@ -83,11 +89,11 @@ class TestAsyncWith(AIOPyMySQLTestCase):
         async def go():
             conn = self.connections[0]
 
-            self.assertFalse(conn.closed)
+            assert not conn.closed
             async with conn:
-                self.assertFalse(conn.closed)
+                assert not conn.closed
 
-            self.assertTrue(conn.closed)
+            assert conn.closed
 
         self.loop.run_until_complete(go())
 
@@ -97,24 +103,21 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                                         port=self.port, user=self.user,
                                         db=self.db, password=self.password,
                                         use_unicode=True, echo=True) as conn:
-                async with (await conn.cursor()) as cur:
+                async with conn.cursor() as cur:
                     await cur.execute("SELECT 42")
                     value = await cur.fetchone()
-                    self.assertEqual(value, (42,))
+                    assert value, (42,)
 
-            self.assertTrue(cur.closed)
-            self.assertTrue(conn.closed)
+            assert cur.closed
+            assert conn.closed
 
         self.loop.run_until_complete(go())
 
     def test_pool(self):
-
+        kw = self._conn_kw()
         async def go():
-            pool = await create_pool(host=self.host, port=self.port,
-                                     user=self.user, db=self.db,
-                                     password=self.password, use_unicode=True,
-                                     loop=self.loop)
-            async with (await pool) as conn:
+            pool = await create_pool(**kw)
+            async with pool.acquire() as conn:
                 await self._prepare(conn)
 
                 async with (await conn.cursor()) as cur:
@@ -122,120 +125,117 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     ret = []
                     async for i in cur:
                         ret.append(i)
-                    self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
         self.loop.run_until_complete(go())
 
-    def test_create_pool(self):
+    def test_create_pool_deprecations(self):
 
+        kw = self._conn_kw()
         async def go():
-            async with create_pool(host=self.host, port=self.port,
-                                   user=self.user, db=self.db,
-                                   password=self.password, use_unicode=True,
-                                   loop=self.loop) as pool:
-                async with pool.get() as conn:
-                    async with conn.cursor() as cur:
-                        await cur.execute("SELECT 42;")
-                        value = await cur.fetchone()
-                        self.assertEqual(value, (42,))
+            async with create_pool(**kw) as pool:
+                with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter("always")
+                    async with pool.get() as conn:
+                        pass
+            assert issubclass(w[-1].category, DeprecationWarning)
+            assert conn.closed
 
-            self.assertTrue(cur.closed)
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
-    def test_engine(self):
-
-        async def go():
-            async with (await sa.create_engine(host=self.host,
-                                               port=self.port,
-                                               user=self.user,
-                                               db=self.db,
-                                               password=self.password,
-                                               use_unicode=True,
-                                               loop=self.loop)) as engine:
-                async with engine.connect() as conn:
-                    await self._prepare(conn.connection)
-
-                    ret = []
-                    async for i in (await conn.execute(tbl.select())):
-                        ret.append(i)
-                    self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
+            async with create_pool(**kw) as pool:
+                with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter("always")
+                    with await pool as conn:
+                        pass
+            assert issubclass(w[-1].category, DeprecationWarning)
+            assert conn.closed
 
         self.loop.run_until_complete(go())
 
     def test_sa_connection(self):
 
+        kw = self._conn_kw()
         async def go():
-            async with (await sa.create_engine(host=self.host,
-                                               port=self.port,
-                                               user=self.user,
-                                               db=self.db,
-                                               password=self.password,
-                                               use_unicode=True,
-                                               loop=self.loop)) as engine:
+            async with sa.create_engine(**kw) as engine:
                 conn = await engine.acquire()
-                self.assertFalse(conn.closed)
+                assert not conn.closed
                 async with conn:
                     await self._prepare(conn.connection)
                     ret = []
                     async for i in (await conn.execute(tbl.select())):
                         ret.append(i)
-                    self.assertEqual([(1, 'a'), (2, 'b'), (3, 'c')], ret)
-                self.assertTrue(conn.closed)
+                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+                assert conn.closed
 
         self.loop.run_until_complete(go())
 
     def test_sa_transaction(self):
 
+        kw = self._conn_kw()
         async def go():
-            async with (await sa.create_engine(host=self.host,
-                                               port=self.port,
-                                               user=self.user,
-                                               db=self.db,
-                                               password=self.password,
-                                               use_unicode=True,
-                                               loop=self.loop)) as engine:
-                async with engine.connect() as conn:
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
                     await self._prepare(conn.connection)
 
                     cnt = await conn.scalar(tbl.count())
-                    self.assertEqual(3, cnt)
+                    assert 3 == cnt
 
                     async with (await conn.begin()) as tr:
-                        self.assertTrue(tr.is_active)
+                        assert tr.is_active
                         await conn.execute(tbl.delete())
 
-                    self.assertFalse(tr.is_active)
+                    assert not tr.is_active
                     cnt = await conn.scalar(tbl.count())
-                    self.assertEqual(0, cnt)
+                    assert 0 == cnt
 
         self.loop.run_until_complete(go())
 
     def test_sa_transaction_rollback(self):
-
+        kw = self._conn_kw()
         async def go():
-            async with (await sa.create_engine(host=self.host,
-                                               port=self.port,
-                                               user=self.user,
-                                               db=self.db,
-                                               password=self.password,
-                                               use_unicode=True,
-                                               loop=self.loop)) as engine:
-                async with engine.connect() as conn:
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
                     await self._prepare(conn.connection)
 
                     cnt = await conn.scalar(tbl.count())
-                    self.assertEqual(3, cnt)
+                    assert 3 == cnt
 
-                    with self.assertRaisesRegex(RuntimeError, "Exit"):
+                    with pytest.raises(RuntimeError) as ctx:
                         async with (await conn.begin()) as tr:
-                            self.assertTrue(tr.is_active)
+                            assert tr.is_active
                             await conn.execute(tbl.delete())
                             raise RuntimeError("Exit")
-
-                    self.assertFalse(tr.is_active)
+                    assert str(ctx.value) == "Exit"
+                    assert not tr.is_active
                     cnt = await conn.scalar(tbl.count())
-                    self.assertEqual(3, cnt)
+                    assert 3 == cnt
+
+        self.loop.run_until_complete(go())
+
+    def test_create_engine(self):
+        kw = self._conn_kw()
+        async def go():
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
+                    await self._prepare(conn.connection)
+
+                    ret = []
+                    async for i in (await conn.execute(tbl.select())):
+                        ret.append(i)
+                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+
+        self.loop.run_until_complete(go())
+
+    def test_engine(self):
+        kw = self._conn_kw()
+        async def go():
+            engine = await sa.create_engine(**kw)
+            async with engine:
+                async with engine.acquire() as conn:
+                    await self._prepare(conn.connection)
+
+                    ret = []
+                    async for i in (await conn.execute(tbl.select())):
+                        ret.append(i)
+                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
         self.loop.run_until_complete(go())

@@ -3,9 +3,11 @@
 
 import asyncio
 import collections
+import warnings
 
 from .connection import connect
-from .utils import _PoolConnectionContextManager, _PoolContextManager
+from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
+                    _PoolAcquireContextManager)
 
 
 def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
@@ -120,9 +122,12 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    @asyncio.coroutine
     def acquire(self):
         """Acquire free connection from the pool."""
+        coro = self._acquire()
+        return _PoolAcquireContextManager(coro, self)
+
+    def _acquire(self):
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
         with (yield from self._cond):
@@ -203,6 +208,9 @@ class Pool(asyncio.AbstractServer):
             asyncio.Task(self._wakeup(), loop=self._loop)
 
     def get(self):
+        warnings.warn("pool.get deprecated use pool.acquire instead",
+                      DeprecationWarning,
+                      stacklevel=2)
         return _PoolConnectionContextManager(self, None)
 
     def __enter__(self):
@@ -230,15 +238,19 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self.acquire()
         return _PoolConnectionContextManager(self, conn)
 
-    def __await__(self):
-        yield
-        return _PoolConnectionContextManager(self, None)
+    if PY_35:
+        def __await__(self):
+            msg = "with await pool as conn deprecated, use" \
+                  "async with pool.acquire() as conn instead"
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            conn = yield from self.acquire()
+            return _PoolConnectionContextManager(self, conn)
 
-    @asyncio.coroutine
-    def __aenter__(self):
-        return self
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        yield from self.wait_closed()
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            self.close()
+            yield from self.wait_closed()

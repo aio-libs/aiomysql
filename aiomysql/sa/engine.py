@@ -5,6 +5,7 @@ import asyncio
 import aiomysql
 from .connection import SAConnection
 from .exc import InvalidRequestError
+from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
 
 
 try:
@@ -17,7 +18,6 @@ _dialect = MySQLDialect_pymysql(paramstyle='pyformat')
 _dialect.default_paramstyle = 'pyformat'
 
 
-@asyncio.coroutine
 def create_engine(minsize=10, maxsize=10, loop=None,
                   dialect=_dialect, **kwargs):
     """A coroutine for Engine creation.
@@ -26,6 +26,14 @@ def create_engine(minsize=10, maxsize=10, loop=None,
 
     The pool has *minsize* opened connections to PostgreSQL server.
     """
+    coro = _create_engine(minsize=minsize, maxsize=maxsize, loop=loop,
+                          dialect=dialect, **kwargs)
+    return _EngineContextManager(coro)
+
+
+@asyncio.coroutine
+def _create_engine(minsize=10, maxsize=10, loop=None,
+                   dialect=_dialect, **kwargs):
 
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -104,9 +112,13 @@ class Engine:
         """Wait for closing all engine's connections."""
         yield from self._pool.wait_closed()
 
-    @asyncio.coroutine
     def acquire(self):
         """Get a connection from pool."""
+        coro = self._acquire()
+        return _EngineAcquireContextManager(coro, self)
+
+    @asyncio.coroutine
+    def _acquire(self):
         raw = yield from self._pool.acquire()
         conn = SAConnection(raw, self)
         return conn
@@ -146,17 +158,19 @@ class Engine:
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
-    @asyncio.coroutine
-    def __aenter__(self):
-        return self
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        yield from self.wait_closed()
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            self.close()
+            yield from self.wait_closed()
 
-    def connect(self):
-        return _ConnectionContextManager(self, None)
+
+_EngineContextManager = _PoolContextManager
+_EngineAcquireContextManager = _PoolAcquireContextManager
 
 
 class _ConnectionContextManager:
@@ -185,20 +199,6 @@ class _ConnectionContextManager:
         return self._conn
 
     def __exit__(self, *args):
-        try:
-            self._engine.release(self._conn)
-        finally:
-            self._engine = None
-            self._conn = None
-
-    @asyncio.coroutine
-    def __aenter__(self):
-        assert self._conn is None
-        self._conn = yield from self._engine.acquire()
-        return self._conn
-
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             self._engine.release(self._conn)
         finally:
