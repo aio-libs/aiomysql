@@ -97,6 +97,21 @@ class TestAsyncWith(AIOPyMySQLTestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_connection_exception(self):
+
+        async def go():
+            conn = self.connections[0]
+
+            assert not conn.closed
+            with pytest.raises(RuntimeError) as ctx:
+                async with conn:
+                    assert not conn.closed
+                    raise RuntimeError('boom')
+            assert str(ctx.value) == 'boom'
+            assert conn.closed
+
+        self.loop.run_until_complete(go())
+
     def test_connect_method(self):
         async def go():
             async with aiomysql.connect(loop=self.loop, host=self.host,
@@ -109,6 +124,21 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     assert value, (42,)
 
             assert cur.closed
+            assert conn.closed
+
+        self.loop.run_until_complete(go())
+
+    def test_connect_method_exception(self):
+        kw = dict(loop=self.loop, host=self.host, port=self.port,
+                  user=self.user, db=self.db, password=self.password,
+                  use_unicode=True, echo=True)
+        async def go():
+            with pytest.raises(RuntimeError) as ctx:
+                async with aiomysql.connect(**kw) as conn:
+                    assert not conn.closed
+                    raise RuntimeError('boom')
+
+            assert str(ctx.value) == 'boom'
             assert conn.closed
 
         self.loop.run_until_complete(go())
