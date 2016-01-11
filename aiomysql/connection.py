@@ -39,12 +39,11 @@ from pymysql.connections import LoadLocalPacketWrapper
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import PY_35, _ConnectionContextManager, _ContextManager
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
 PY_341 = sys.version_info >= (3, 4, 1)
-PY_35 = sys.version_info >= (3, 5, 0)
 sha_new = partial(hashlib.new, 'sha1')
 
 
@@ -528,17 +527,18 @@ class Connection:
         else:
             return 0
 
-    @asyncio.coroutine
-    def __aenter__(self):
-        return self
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aenter__(self):
+            return self
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            self.close()
-        else:
-            yield from self.ensure_closed()
-        return
+        @asyncio.coroutine
+        def __aexit__(self, exc_type, exc_val, exc_tb):
+            if exc_type:
+                self.close()
+            else:
+                yield from self.ensure_closed()
+            return
 
     @asyncio.coroutine
     def _execute_command(self, command, sql):
