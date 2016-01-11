@@ -490,7 +490,7 @@ class Cursor:
             if ret is not None:
                 return ret
             else:
-                raise StopAsyncIteration
+                raise StopAsyncIteration  # noqa
 
         @asyncio.coroutine
         def __aenter__(self):
