@@ -10,12 +10,6 @@ else:
     base = object
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    StopAsyncIteration = Exception
-
-
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')
@@ -58,7 +52,7 @@ class _ContextManager(base):
         resp = yield from self._coro
         return resp
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         def __await__(self):
             resp = yield from self._coro
             return resp
@@ -76,7 +70,7 @@ class _ContextManager(base):
 
 class _ConnectionContextManager(_ContextManager):
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             if exc_type is not None:
@@ -88,7 +82,7 @@ class _ConnectionContextManager(_ContextManager):
 
 class _PoolContextManager(_ContextManager):
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         @asyncio.coroutine
         def __aexit__(self, exc_type, exc, tb):
             self._obj.close()
@@ -105,7 +99,7 @@ class _PoolAcquireContextManager(_ContextManager):
         self._conn = None
         self._pool = pool
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         @asyncio.coroutine
         def __aenter__(self):
             self._conn = yield from self._coro
@@ -150,7 +144,7 @@ class _PoolConnectionContextManager:
             self._pool = None
             self._conn = None
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         @asyncio.coroutine
         def __aenter__(self):
             assert not self._conn

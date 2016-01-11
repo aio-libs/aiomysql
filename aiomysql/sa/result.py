@@ -8,12 +8,7 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
-
-
-try:
-    StopAsyncIteration
-except NameError:
-    from aiomysql.cursors import StopAsyncIteration
+from ..utils import PY_35
 
 
 @asyncio.coroutine
@@ -443,14 +438,15 @@ class ResultProxy:
         else:
             return None
 
-    @asyncio.coroutine
-    def __aiter__(self):
-        return self
+    if PY_35:  # pragma: no branch
+        @asyncio.coroutine
+        def __aiter__(self):
+            return self
 
-    @asyncio.coroutine
-    def __anext__(self):
-        data = yield from self.fetchone()
-        if data is not None:
-            return data
-        else:
-            raise StopAsyncIteration
+        @asyncio.coroutine
+        def __anext__(self):
+            data = yield from self.fetchone()
+            if data is not None:
+                return data
+            else:
+                raise StopAsyncIteration  # noqa

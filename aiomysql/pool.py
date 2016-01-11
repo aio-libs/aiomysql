@@ -238,7 +238,7 @@ class Pool(asyncio.AbstractServer):
         conn = yield from self.acquire()
         return _PoolConnectionContextManager(self, conn)
 
-    if PY_35:
+    if PY_35:  # pragma: no branch
         def __await__(self):
             msg = "with await pool as conn deprecated, use" \
                   "async with pool.acquire() as conn instead"
