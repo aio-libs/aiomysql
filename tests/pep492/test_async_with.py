@@ -191,7 +191,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                 async with conn:
                     await self._prepare(conn.connection)
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
                 assert conn.closed
@@ -249,7 +249,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     await self._prepare(conn.connection)
 
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
@@ -264,7 +264,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     await self._prepare(conn.connection)
 
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
