@@ -129,7 +129,6 @@ class SAConnection:
     def connection(self):
         return self._connection
 
-    @asyncio.coroutine
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
@@ -157,6 +156,11 @@ class SAConnection:
           .begin_twophase - use a two phase/XA transaction
 
         """
+        coro = self._begin()
+        return _TransactionContextManager(coro)
+
+    @asyncio.coroutine
+    def _begin(self):
         if self._transaction is None:
             self._transaction = RootTransaction(self)
             yield from self._begin_impl()
