@@ -235,7 +235,9 @@ class ResultProxy:
         cursor = self._cursor
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
-            callback = lambda wr: asyncio.Task(cursor.close(), loop=loop)
+
+            def callback(wr):
+                asyncio.Task(cursor.close(), loop=loop)
             self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None

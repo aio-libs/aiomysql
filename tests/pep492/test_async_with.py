@@ -191,7 +191,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                 async with conn:
                     await self._prepare(conn.connection)
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
                 assert conn.closed
@@ -249,7 +249,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     await self._prepare(conn.connection)
 
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
@@ -264,8 +264,70 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                     await self._prepare(conn.connection)
 
                     ret = []
-                    async for i in (await conn.execute(tbl.select())):
+                    async for i in conn.execute(tbl.select()):
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
+        self.loop.run_until_complete(go())
+
+    def test_transaction_context_manager(self):
+        async def go():
+            kw = self._conn_kw()
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
+                    await self._prepare(conn.connection)
+                    async with conn.begin() as tr:
+                        async with conn.execute(tbl.select()) as cursor:
+                            ret = []
+                            async for i in conn.execute(tbl.select()):
+                                ret.append(i)
+                            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+                        assert cursor.closed
+                    assert not tr.is_active
+
+                    tr2 = await conn.begin()
+                    async with tr2:
+                        assert tr2.is_active
+                        async with conn.execute('SELECT 1;') as cursor:
+                            rec = await cursor.scalar()
+                            assert rec == 1
+                            cursor.close()
+                    assert not tr2.is_active
+
+            assert conn.closed
+        self.loop.run_until_complete(go())
+
+    def test_transaction_context_manager_error(self):
+        async def go():
+            kw = self._conn_kw()
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
+                    with pytest.raises(RuntimeError) as ctx:
+                        async with conn.begin() as tr:
+                            assert tr.is_active
+                            raise RuntimeError('boom')
+                    assert str(ctx.value) == 'boom'
+                    assert not tr.is_active
+            assert conn.closed
+        self.loop.run_until_complete(go())
+
+    def test_transaction_context_manager_commit_once(self):
+        async def go():
+            kw = self._conn_kw()
+            async with sa.create_engine(**kw) as engine:
+                async with engine.acquire() as conn:
+                    async with conn.begin() as tr:
+                        # check that in context manager we do not execute
+                        # commit for second time. Two commits in row causes
+                        # InvalidRequestError exception
+                        await tr.commit()
+                    assert not tr.is_active
+
+                    tr2 = await conn.begin()
+                    async with tr2:
+                        assert tr2.is_active
+                        # check for double commit one more time
+                        await tr2.commit()
+                    assert not tr2.is_active
+            assert conn.closed
         self.loop.run_until_complete(go())
