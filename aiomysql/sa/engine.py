@@ -130,8 +130,10 @@ class Engine:
                                       "not finished transaction")
         raw = conn.connection
         if raw is None:
-            return
-        self._pool.release(raw)
+            fut = asyncio.Future(loop=self._loop)
+            fut.set_result(None)
+            return fut
+        return self._pool.release(raw)
 
     def __enter__(self):
         raise RuntimeError(
