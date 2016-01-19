@@ -2,7 +2,15 @@ Changes
 -------
 0.X.X (XXXX-XXXX-XX)
 
-* Raise error if previous cursor was not closed properly #50
+* Fix for multiple results issue, ported from pymysql #52
+
+* Fixed useless warning with no_delay option #55
+
+* Added async/await support for Engine, SAConnection, Transaction #57
+
+* pool.release returns future so we can wait on it in __aexit__ #60
+
+* Update to PyMySQL 0.6.7
 
 
 0.0.6 (2015-12-11)
