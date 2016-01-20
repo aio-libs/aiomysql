@@ -129,9 +129,7 @@ class Engine:
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
         raw = conn.connection
-        if raw is None:
-            return
-        self._pool.release(raw)
+        return self._pool.release(raw)
 
     def __enter__(self):
         raise RuntimeError(

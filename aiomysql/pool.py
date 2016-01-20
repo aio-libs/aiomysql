@@ -205,7 +205,11 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            asyncio.Task(self._wakeup(), loop=self._loop)
+            fut = asyncio.Task(self._wakeup(), loop=self._loop)
+        else:
+            fut = asyncio.Future(loop=self._loop)
+            fut.set_result(None)
+        return fut
 
     def get(self):
         warnings.warn("pool.get deprecated use pool.acquire instead",
