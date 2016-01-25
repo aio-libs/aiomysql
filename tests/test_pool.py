@@ -315,6 +315,24 @@ class TestPool(unittest.TestCase):
 
         self.loop.run_until_complete(go())
 
+    def test_release_with_invalid_status_wait_release(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            self.assertEqual(9, pool.freesize)
+            self.assertEqual({conn}, pool._used)
+            cur = yield from conn.cursor()
+            yield from cur.execute('BEGIN')
+            yield from cur.close()
+
+            yield from pool.release(conn)
+            self.assertEqual(9, pool.freesize)
+            self.assertFalse(pool._used)
+            self.assertTrue(conn.closed)
+
+        self.loop.run_until_complete(go())
+
     def test__fill_free(self):
         @asyncio.coroutine
         def go():
@@ -521,6 +539,20 @@ class TestPool(unittest.TestCase):
             yield from pool.wait_closed()
 
             pool.release(conn)
+            pool.close()
+
+        self.loop.run_until_complete(go())
+
+    def test_release_terminated_pool_wait_release(self):
+
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool()
+            conn = yield from pool.acquire()
+            pool.terminate()
+            yield from pool.wait_closed()
+
+            yield from pool.release(conn)
             pool.close()
 
         self.loop.run_until_complete(go())
