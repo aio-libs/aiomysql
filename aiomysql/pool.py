@@ -190,25 +190,25 @@ class Pool(asyncio.AbstractServer):
 
         This is **NOT** a coroutine.
         """
+        fut = asyncio.Future(loop=self._loop)
+        fut.set_result(None)
+
         if conn in self._terminated:
             assert conn.closed, conn
             self._terminated.remove(conn)
-            return
+            return fut
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
         if not conn.closed:
             in_trans = conn.get_transaction_status()
             if in_trans:
                 conn.close()
-                return
+                return fut
             if self._closing:
                 conn.close()
             else:
                 self._free.append(conn)
             fut = asyncio.Task(self._wakeup(), loop=self._loop)
-        else:
-            fut = asyncio.Future(loop=self._loop)
-            fut.set_result(None)
         return fut
 
     def get(self):
