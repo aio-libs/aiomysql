@@ -1,6 +1,8 @@
 Changes
 -------
-0.X.X (XXXX-XXXX-XX)
+
+0.0.7 (2016-01-27)
+^^^^^^^^^^^^^^^^^^
 
 * Fix for multiple results issue, ported from pymysql #52
 
