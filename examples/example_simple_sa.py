@@ -22,8 +22,6 @@ async def create_table(engine):
 async def go(loop):
     engine = await create_engine(user='root', db='test_pymysql',
                                  host='127.0.0.1', password='', loop=loop)
-    import ipdb
-    ipdb.set_trace()
     await create_table(engine)
     async with engine.acquire() as conn:
         await conn.execute(tbl.insert().values(val='abc'))
