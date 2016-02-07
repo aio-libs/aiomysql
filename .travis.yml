@@ -8,7 +8,7 @@ python:
 env:
     matrix:
         - PYTHONASYNCIODEBUG=1
-        - PYTHONASYNCIODEBUG=0
+        - PYTHONASYNCIODEBUG=
 
 matrix:
    include:
@@ -17,7 +17,7 @@ matrix:
           addons:
               mariadb: 5.5
         - python: 3.4
-          env: PYTHONASYNCIODEBUG=0
+          env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 5.5
         - python: 3.4
@@ -25,7 +25,7 @@ matrix:
           addons:
               mariadb: 10.0
         - python: 3.3
-          env: PYTHONASYNCIODEBUG=0
+          env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 10.0
         - python: 3.3
@@ -33,7 +33,7 @@ matrix:
           addons:
               mariadb: 10.1
         - python: 3.4
-          env: PYTHONASYNCIODEBUG=0
+          env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 10.1
 
