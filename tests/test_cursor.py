@@ -307,6 +307,6 @@ class TestCursor(base.AIOPyMySQLTestCase):
         names = [x[0] for x in cur2.description]
         # If we receive ["id", "xxx"] - we corrupted the connection
         self.assertEqual(names, ["value", "xxx"])
-        res = yield from cur2.fetchone()
+        res = yield from cur2.fetchall()
         # If we receive [(1, 0)] - we retrieved old cursor's values
         self.assertEqual(list(res), [(2, 0)])

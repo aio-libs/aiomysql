@@ -1,6 +1,11 @@
 import asyncio
 import sys
 
+try:
+    from asyncio import ensure_future
+except ImportError:
+    ensure_future = asyncio.async
+
 
 PY_35 = sys.version_info >= (3, 5)
 if PY_35:
@@ -184,6 +189,17 @@ class _PoolConnectionContextManager:
                 self._pool = None
                 self._conn = None
 
+
+@asyncio.coroutine
+def shield_wait(coro_or_future, *, loop):
+    """ Used for cancellation crytical sections
+    """
+    task = ensure_future(coro_or_future, loop=loop)
+    try:
+        return (yield from asyncio.shield(task, loop=loop))
+    except asyncio.CancelledError:
+        yield from asyncio.wait([task], loop=loop)
+        raise
 
 if not PY_35:
     try:
