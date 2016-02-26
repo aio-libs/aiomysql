@@ -443,6 +443,8 @@ class Connection:
             if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
 
+            self._next_seq_id = 0
+
             yield from self._get_server_information()
             yield from self._request_authentication()
 
@@ -476,6 +478,16 @@ class Connection:
         raw_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, flag)
         transport.resume_reading()
 
+    def write_packet(self, payload):
+        """Writes an entire "mysql packet" in its entirety to the network
+        addings its length and sequence number.
+        """
+        # Internal note: when you build packet manualy and calls _write_bytes()
+        # directly, you should set self._next_seq_id properly.
+        data = pack_int24(len(payload)) + int2byte(self._next_seq_id) + payload
+        self._write_bytes(data)
+        self._next_seq_id = (self._next_seq_id + 1) % 256
+
     @asyncio.coroutine
     def _read_packet(self, packet_type=MysqlPacket):
         """Read an entire "mysql packet" in its entirety from the network
@@ -488,7 +500,16 @@ class Connection:
                 btrl, btrh, packet_number = struct.unpack(
                     '<HBB', packet_header)
                 bytes_to_read = btrl + (btrh << 16)
-                # TODO: check sequence id
+
+                # Outbound and inbound packets are numbered sequentialy, so
+                # we increment in both write_packet and read_packet. The count
+                # is reset at new COMMAND PHASE.
+                if packet_number != self._next_seq_id:
+                    raise InternalError(
+                        "Packet sequence number wrong - got %d expected %d" %
+                        (packet_number, self._next_seq_id))
+                self._next_seq_id = (self._next_seq_id + 1) % 256
+
                 recv_data = yield from self._reader.readexactly(bytes_to_read)
                 buff += recv_data
                 if bytes_to_read < MAX_PACKET_LEN:
@@ -560,24 +581,21 @@ class Connection:
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 
-        prelude = struct.pack('<i', chunk_size) + int2byte(command)
+        prelude = struct.pack('<iB', chunk_size, command)
         self._write_bytes(prelude + sql[:chunk_size - 1])
         # logger.debug(dump_packet(prelude + sql))
+        self._next_seq_id = 1
+
         if chunk_size < MAX_PACKET_LEN:
             return
 
-        seq_id = 1
         sql = sql[chunk_size - 1:]
         while True:
             chunk_size = min(MAX_PACKET_LEN, len(sql))
-            prelude = struct.pack('<i', chunk_size)[:3]
-            data = prelude + int2byte(seq_id % 256) + sql[:chunk_size]
-            self._write_bytes(data)
-            # logger.debug(dump_packet(data))
+            self.write_packet(sql[:chunk_size])
             sql = sql[chunk_size:]
             if not sql and chunk_size < MAX_PACKET_LEN:
                 break
-            seq_id += 1
 
     @asyncio.coroutine
     def _request_authentication(self):
@@ -596,22 +614,17 @@ class Connection:
         data_init = struct.pack('<iIB23s', self.client_flag, 1,
                                 charset_id, b'')
 
-        next_packet = 1
-
         data = data_init + user + b'\0' + _scramble(
             self._password.encode('latin1'), self.salt)
 
+        # TODO: sync auth code with changes in PyMySQL
         if self._db:
             db = self._db
             if isinstance(self._db, str):
                 db = self._db.encode(self._encoding)
             data += db + int2byte(0)
 
-        data = pack_int24(len(data)) + int2byte(next_packet) + data
-        next_packet += 2
-        # logger.debug(dump_packet(data))
-        self._write_bytes(data)
-
+        self.write_packet(data)
         auth_packet = yield from self._read_packet()
 
         # if old_passwords is enabled the packet will be 1 byte long and
@@ -621,8 +634,7 @@ class Connection:
             # send legacy handshake
             data = _scramble_323(self._password.encode('latin1'),
                                  self.salt) + b'\0'
-            data = pack_int24(len(data)) + int2byte(next_packet) + data
-            self._write_bytes(data)
+            self.write_packet(data)
             auth_packet = self._read_packet()
 
     # _mysql support
@@ -678,7 +690,8 @@ class Connection:
         if len(data) >= i + salt_len:
             # salt_len includes auth_plugin_data_part_1 and filler
             self.salt += data[i:i + salt_len]
-            # TODO: AUTH PLUGIN NAME may appeare here.
+
+        # TODO: AUTH PLUGIN NAME may appeare here.
 
     def get_transaction_status(self):
         return bool(self.server_status & SERVER_STATUS.SERVER_STATUS_IN_TRANS)
@@ -769,7 +782,12 @@ class MySQLResult:
         load_packet = LoadLocalPacketWrapper(first_packet)
         local_packet = LoadLocalFile(load_packet.filename, self.connection)
         self.filename = load_packet.filename
-        yield from local_packet.send_data()
+        try:
+            yield from local_packet.send_data()
+        except Exception:
+            # Skip ok packet
+            yield from self.connection._read_packet()
+            raise
 
         ok_packet = yield from self.connection._read_packet()
         if not ok_packet.is_ok_packet():
@@ -939,24 +957,17 @@ class LoadLocalFile(object):
         """Send data packets from the local file to the server"""
         if not self.connection._writer:
             raise InterfaceError("(0, '')")
+        conn = self.connection
 
-        # sequence id is 2 as we already sent a query packet
-        seq_id = 2
         try:
             yield from self._open_file()
-            chunk_size = MAX_PACKET_LEN
-            while True:
-                chunk = yield from self._file_read(chunk_size)
-                if not chunk:
-                    break
-                packet = (struct.pack('<i', len(chunk))[:3] +
-                          int2byte(seq_id))
-                format_str = '!{0}s'.format(len(chunk))
-                packet += struct.pack(format_str, chunk)
-                self.connection._write_bytes(packet)
-                seq_id += 1
-
+            with self._file_object:
+                chunk_size = MAX_PACKET_LEN
+                while True:
+                    chunk = yield from self._file_read(chunk_size)
+                    if not chunk:
+                        break
+                    conn.write_packet(chunk)
         finally:
             # send the empty packet to signify we are done sending data
-            packet = struct.pack('<i', 0)[:3] + int2byte(seq_id)
-            self.connection._write_bytes(packet)
+            conn.write_packet(b"")
