@@ -1,7 +1,9 @@
 import asyncio
 import gc
+import os
 import sys
 
+import aiomysql
 import pytest
 
 
@@ -55,3 +57,53 @@ def pytest_ignore_collect(path, config):
     if 'pep492' in str(path):
         if sys.version_info < (3, 5, 0):
             return True
+
+
+@pytest.fixture
+def mysql_params():
+    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
+              "port": os.environ.get('MYSQL_PORT', 3306),
+              "user": os.environ.get('MYSQL_USER', 'root'),
+              "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
+              "password": os.environ.get('MYSQL_PASSWORD', '')}
+    return params
+
+
+@pytest.yield_fixture
+def cursor(connection, loop):
+    # TODO: fix this workaround
+    @asyncio.coroutine
+    def f():
+        cur = yield from connection.cursor()
+        return cur
+
+    cur = loop.run_until_complete(f())
+    yield cur
+    loop.run_until_complete(cur.close())
+
+
+@pytest.yield_fixture
+def connection(mysql_params, loop):
+    coro = aiomysql.connect(loop=loop, **mysql_params)
+    conn = loop.run_until_complete(coro)
+    yield conn
+    loop.run_until_complete(conn.ensure_closed())
+
+
+@pytest.yield_fixture
+def pool_creator(mysql_params, loop):
+    pool = None
+
+    @asyncio.coroutine
+    def f(*kw):
+        nonlocal pool
+        conn_kw = mysql_params.copy()
+        conn_kw.update(kw)
+        pool = yield from aiomysql.create_pool(**conn_kw)
+        return pool
+
+    yield f
+
+    if pool is not None:
+        pool.close()
+        loop.run_until_complete(pool.wait_closed())
