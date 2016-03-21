@@ -1,76 +1,72 @@
-import unittest
-
-from tests import base
-from tests._testutils import run_until_complete
+import pytest
 
 
-class TestNextset(base.AIOPyMySQLTestCase):
-    def setUp(self):
-        super(TestNextset, self).setUp()
-        self.con = self.connections[0]
+@pytest.mark.run_loop
+def test_nextset(cursor):
+    yield from cursor.execute("SELECT 1; SELECT 2;")
+    r = yield from cursor.fetchall()
+    assert [(1,)] == list(r)
 
-    @run_until_complete
-    def test_nextset(self):
-        cur = yield from self.con.cursor()
-        yield from cur.execute("SELECT 1; SELECT 2;")
-        r = yield from cur.fetchall()
-        self.assertEqual([(1,)], list(r))
+    r = yield from cursor.nextset()
+    assert r
 
-        r = yield from cur.nextset()
-        self.assertTrue(r)
+    r = yield from cursor.fetchall()
+    assert [(2,)] == list(r)
+    res = yield from cursor.nextset()
+    assert res is None
 
-        r = yield from cur.fetchall()
-        self.assertEqual([(2,)], list(r))
-        res = yield from cur.nextset()
-        self.assertIsNone(res)
 
-    @run_until_complete
-    def test_skip_nextset(self):
-        cur = yield from self.con.cursor()
-        yield from cur.execute("SELECT 1; SELECT 2;")
-        r = yield from cur.fetchall()
-        self.assertEqual([(1,)], list(r))
+@pytest.mark.run_loop
+def test_skip_nextset(cursor):
+    yield from cursor.execute("SELECT 1; SELECT 2;")
+    r = yield from cursor.fetchall()
+    assert [(1,)] == list(r)
 
-        yield from cur.execute("SELECT 42")
-        r = yield from cur.fetchall()
-        self.assertEqual([(42,)], list(r))
+    yield from cursor.execute("SELECT 42")
+    r = yield from cursor.fetchall()
+    assert [(42,)] == list(r)
 
-    @run_until_complete
-    def test_ok_and_next(self):
-        cur = yield from self.con.cursor()
-        yield from cur.execute("SELECT 1; commit; SELECT 2;")
-        r = yield from cur.fetchall()
-        self.assertEqual([(1,)], list(r))
-        res = yield from cur.nextset()
-        self.assertTrue(res)
-        res = yield from cur.nextset()
-        self.assertTrue(res)
-        r = yield from cur.fetchall()
-        self.assertEqual([(2,)], list(r))
-        res = yield from cur.nextset()
-        self.assertIsNone(res)
 
-    @unittest.expectedFailure
-    @run_until_complete
-    def test_multi_cursor(self):
-        cur1 = yield from self.con.cursor()
-        cur2 = yield from self.con.cursor()
+@pytest.mark.run_loop
+def test_ok_and_next(cursor):
+    yield from cursor.execute("SELECT 1; commit; SELECT 2;")
+    r = yield from cursor.fetchall()
+    assert [(1,)] == list(r)
 
-        yield from cur1.execute("SELECT 1; SELECT 2;")
-        yield from cur2.execute("SELECT 42")
+    res = yield from cursor.nextset()
+    assert res
 
-        r1 = yield from cur1.fetchall()
-        r2 = yield from cur2.fetchall()
+    res = yield from cursor.nextset()
+    assert res
 
-        self.assertEqual([(1,)], list(r1))
-        self.assertEqual([(42,)], list(r2))
+    r = yield from cursor.fetchall()
+    assert [(2,)] == list(r)
 
-        res = yield from cur1.nextset()
-        self.assertTrue(res)
+    res = yield from cursor.nextset()
+    assert res is None
 
-        self.assertEqual([(2,)], list(r1))
-        res = yield from cur1.nextset()
-        self.assertIsNone(res)
 
-        # TODO: How about SSCursor and nextset?
-        # It's very hard to implement correctly...
+@pytest.mark.xfail
+@pytest.mark.run_loop
+def test_multi_cursorxx(connection):
+    cur1 = yield from connection.cursor()
+    cur2 = yield from connection.cursor()
+
+    yield from cur1.execute("SELECT 1; SELECT 2;")
+    yield from cur2.execute("SELECT 42")
+
+    r1 = yield from cur1.fetchall()
+    r2 = yield from cur2.fetchall()
+
+    assert [(1,)] == list(r1)
+    assert [(42,)] == list(r2)
+
+    res = yield from cur1.nextset()
+    assert res
+
+    assert [(2,)] == list(r1)
+    res = yield from cur1.nextset()
+    assert res is None
+
+    # TODO: How about SSCursor and nextset?
+    # It's very hard to implement correctly...
