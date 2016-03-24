@@ -1,9 +1,10 @@
-sqlalchemy
-flake8
-pytest
-pytest-cov
 coverage
-sphinx
-pymysql
+flake8
 ipdb
 ipython
+pytest
+pytest-cov
+pytest-sugar
+sphinx
+sphinxcontrib-asyncio
+sqlalchemy
