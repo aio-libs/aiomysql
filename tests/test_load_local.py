@@ -30,15 +30,13 @@ def table_local_file(connection, loop):
 
 
 @pytest.mark.run_loop
-def test_no_file(connection, table_local_file):
+def test_no_file(cursor, table_local_file):
     # Test load local infile when the file does not exist
-    c = yield from connection.cursor()
     sql = "LOAD DATA LOCAL INFILE 'no_data.txt'" + \
           " INTO TABLE test_load_local fields " + \
           "terminated by ','"
     with pytest.raises(OperationalError):
-        yield from c.execute(sql)
-    yield from c.close()
+        yield from cursor.execute(sql)
 
 
 @pytest.mark.run_loop
@@ -54,32 +52,27 @@ def test_error_on_file_read(cursor, table_local_file):
             yield from cursor.execute("LOAD DATA LOCAL INFILE 'some.txt'"
                                       " INTO TABLE test_load_local fields "
                                       "terminated by ','")
-    yield from cursor.close()
 
 
 @pytest.mark.run_loop
-def test_load_file(connection, table_local_file):
+def test_load_file(cursor, table_local_file):
     # Test load local infile with a valid file
-    c = yield from connection.cursor()
     filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                             'fixtures',
                             'load_local_data.txt')
-    yield from c.execute(
+    yield from cursor.execute(
         ("LOAD DATA LOCAL INFILE '{0}' INTO TABLE " +
          "test_load_local FIELDS TERMINATED BY ','").format(filename)
     )
-    yield from c.execute("SELECT COUNT(*) FROM test_load_local")
-    resp = yield from c.fetchone()
-    yield from c.close()
+    yield from cursor.execute("SELECT COUNT(*) FROM test_load_local")
+    resp = yield from cursor.fetchone()
     assert 22749 == resp[0]
 
 
 @pytest.mark.run_loop
-def test_load_warnings(connection, table_local_file):
+def test_load_warnings(cursor, table_local_file):
     # Test load local infile produces the appropriate warnings
     import warnings
-
-    c = yield from connection.cursor()
 
     # TODO: Move to pathlib
     filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -89,5 +82,5 @@ def test_load_warnings(connection, table_local_file):
            "test_load_local FIELDS TERMINATED BY ','").format(filename)
 
     with warnings.catch_warnings(record=True) as w:
-        yield from c.execute(sql)
+        yield from cursor.execute(sql)
     assert "Incorrect integer value" in str(w[-1].message)
