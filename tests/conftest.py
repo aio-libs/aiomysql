@@ -65,7 +65,10 @@ def mysql_params():
               "port": os.environ.get('MYSQL_PORT', 3306),
               "user": os.environ.get('MYSQL_USER', 'root'),
               "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', '')}
+              "password": os.environ.get('MYSQL_PASSWORD', ''),
+              "local_infile": True,
+              "use_unicode": True,
+              }
     return params
 
 
