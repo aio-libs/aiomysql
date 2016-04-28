@@ -4,8 +4,8 @@ aiomysql
     :target: https://travis-ci.org/aio-libs/aiomysql
 .. image:: https://coveralls.io/repos/aio-libs/aiomysql/badge.svg
     :target: https://coveralls.io/r/aio-libs/aiomysql
-.. image:: https://pypip.in/version/aiomysql/badge.svg
-    :target: https://pypi.python.org/pypi/aiomysql/
+.. image:: https://badge.fury.io/py/aiomysql.svg
+    :target: https://badge.fury.io/py/aiomysql
     :alt: Latest Version
 .. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
     :target: http://aiomysql.readthedocs.org/
