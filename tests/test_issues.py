@@ -48,6 +48,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
             self.assertTrue(isinstance(r[0], datetime.datetime))
         finally:
             yield from c.execute("drop table issue4")
+            yield from c.close()
 
     @run_until_complete
     def test_issue_5(self):
@@ -55,6 +56,8 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         con = self.connections[0]
         cur = yield from con.cursor()
         yield from cur.execute("select * from information_schema.tables")
+        yield from cur.close()
+        yield from con.ensure_closed()
 
     @run_until_complete
     def test_issue_6(self):
@@ -64,6 +67,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         c = yield from conn.cursor()
         self.assertEqual(conn.db, 'mysql')
         yield from c.execute("select * from user")
+        yield from c.close()
         yield from conn.ensure_closed()
 
     @run_until_complete
