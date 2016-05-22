@@ -33,13 +33,30 @@ Example::
       ret = yield from cur.fetchall()
 
 
-.. function:: connect(host="localhost", user=None, password="",
-            db=None, port=3306, unix_socket=None,
-            charset='', sql_mode=None,
-            read_default_file=None, conv=decoders, use_unicode=None,
-            client_flag=0, cursorclass=Cursor, init_command=None,
-            connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, echo=False, loop=None)
+.. cofunction:: connect(
+               host="localhost",
+               user=None,
+               password="",
+               db=None,
+               port=3306,
+               unix_socket=None,
+               charset='',
+               sql_mode=None,
+               read_default_file=None,
+               conv=decoders,
+               use_unicode=None,
+               client_flag=0,
+               cursorclass=Cursor,
+               init_command=None,
+               connect_timeout=None,
+               read_default_group=None,
+               no_delay=False,
+               autocommit=False,
+               echo=False,
+               loop=None)
+
+    :coroutine:
+    :async-with:
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -52,7 +69,7 @@ Example::
     :param str password: password to use.
     :param str db: database to use, None to not use a particular one.
     :param int port: MySQL port to use, default is usually OK.
-    :param str unix_socket: optionally, you can use a unix socket rather
+    :param unix_socket str: optionally, you can use a unix socket rather
         than TCP/IP.
     :param str charset: charset you want to use, for example 'utf8'.
     :param sql_mode: default sql-mode_ to use, like 'NO_BACKSLASH_ESCAPES'

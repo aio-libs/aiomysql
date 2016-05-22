@@ -15,6 +15,7 @@
 
 import sys
 import os
+import alabaster
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -146,6 +147,18 @@ html_theme = 'default'
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
+
+html_theme_path = [alabaster.get_path()]
+html_theme = 'alabaster'
+html_sidebars = {
+     '**': [
+         'about.html',
+         'navigation.html',
+         'relations.html',
+         'searchbox.html',
+         'donate.html',
+     ]
+}
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
