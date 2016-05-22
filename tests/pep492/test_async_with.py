@@ -291,7 +291,7 @@ class TestAsyncWith(AIOPyMySQLTestCase):
                         async with conn.execute('SELECT 1;') as cursor:
                             rec = await cursor.scalar()
                             assert rec == 1
-                            cursor.close()
+                            await cursor.close()
                     assert not tr2.is_active
 
             assert conn.closed
