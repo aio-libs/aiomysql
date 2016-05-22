@@ -31,10 +31,10 @@ class AIOPyMySQLTestCase(BaseTest):
         super(AIOPyMySQLTestCase, self).setUp()
         self.host = os.environ.get('MYSQL_HOST', 'localhost')
         self.port = os.environ.get('MYSQL_PORT', 3306)
-        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.user = os.environ.get('MYSQL_USER', 'aiomysql')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
         self.other_db = os.environ.get('OTHER_MYSQL_DB', 'test_pymysql2')
-        self.password = os.environ.get('MYSQL_PASSWORD', '')
+        self.password = os.environ.get('MYSQL_PASSWORD', 'mypass')
 
         self.connections = []
         self.loop.run_until_complete(self._connect_all())
@@ -60,7 +60,6 @@ class AIOPyMySQLTestCase(BaseTest):
                                            user=user, password=password,
                                            db=db, use_unicode=use_unicode,
                                            no_delay=no_delay, **kwargs)
-        self.addCleanup(conn.close)
         return conn
 
     @asyncio.coroutine

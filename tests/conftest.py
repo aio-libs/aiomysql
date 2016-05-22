@@ -63,9 +63,9 @@ def pytest_ignore_collect(path, config):
 def mysql_params():
     params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
               "port": os.environ.get('MYSQL_PORT', 3306),
-              "user": os.environ.get('MYSQL_USER', 'root'),
+              "user": os.environ.get('MYSQL_USER', 'aiomysql'),
               "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
+              "password": os.environ.get('MYSQL_PASSWORD', 'mypass'),
               "local_infile": True,
               "use_unicode": True,
               }

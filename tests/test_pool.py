@@ -17,9 +17,9 @@ class TestPool(unittest.TestCase):
             databases = json.load(f)
     else:
         databases = [
-            {"host": "localhost", "user": "root", "password": "",
+            {"host": "localhost", "user": "aiomysql", "password": "mypass",
              "db": "test_pymysql", "use_unicode": True},
-            {"host": "localhost", "user": "root", "password": "",
+            {"host": "localhost", "user": "aiomysql", "password": "mypass",
              "db": "test_pymysql2"}]
 
     def setUp(self):
@@ -29,9 +29,9 @@ class TestPool(unittest.TestCase):
 
         self.host = os.environ.get('MYSQL_HOST', 'localhost')
         self.port = os.environ.get('MYSQL_PORT', 3306)
-        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.user = os.environ.get('MYSQL_USER', 'aiomysql')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
-        self.password = os.environ.get('MYSQL_PASSWORD', '')
+        self.password = os.environ.get('MYSQL_PASSWORD', 'mypass')
 
     def tearDown(self):
         if self.pool is not None:

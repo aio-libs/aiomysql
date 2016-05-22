@@ -23,9 +23,9 @@ class TestSAConnection(unittest.TestCase):
         asyncio.set_event_loop(None)
         self.host = os.environ.get('MYSQL_HOST', 'localhost')
         self.port = os.environ.get('MYSQL_PORT', 3306)
-        self.user = os.environ.get('MYSQL_USER', 'root')
+        self.user = os.environ.get('MYSQL_USER', 'aiomysql')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
-        self.password = os.environ.get('MYSQL_PASSWORD', '')
+        self.password = os.environ.get('MYSQL_PASSWORD', 'mypass')
 
     def tearDown(self):
         self.loop.close()
