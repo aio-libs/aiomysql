@@ -32,6 +32,15 @@ clean:
 	rm -rf htmlcov
 	rm -rf dist
 
+start_mysql:
+	@echo "----------------------------------------------------"
+	@echo "Starting mysql, see docker-compose.yml for user/pass"
+	@echo "----------------------------------------------------"
+	docker-compose -f docker-compose.yml up -d mysql
+
+stop_mysql:
+	docker-compose -f docker-compose.yml stop mysql
+
 doc:
 	make -C docs html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
