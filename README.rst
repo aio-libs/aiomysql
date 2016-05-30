@@ -8,7 +8,7 @@ aiomysql
     :target: https://badge.fury.io/py/aiomysql
     :alt: Latest Version
 .. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
-    :target: http://aiomysql.readthedocs.org/
+    :target: https://aiomysql.readthedocs.io/
     :alt: Documentation Status
 
 **aiomysql** is a "driver" for accessing a `MySQL` database
@@ -23,7 +23,7 @@ proper places)). `sqlalchemy` support ported from aiopg_.
 
 Documentation
 -------------
-http://aiomysql.readthedocs.org/
+https://aiomysql.readthedocs.io/
 
 
 Mailing List
