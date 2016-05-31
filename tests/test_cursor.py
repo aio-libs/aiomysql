@@ -286,3 +286,27 @@ class TestCursor(base.AIOPyMySQLTestCase):
                     "INSERT INTO tbl VALUES(2, 'b')",
                     "INSERT INTO tbl VALUES(3, 'c')"]
         self.assertEqual(results, expected)
+
+    @run_until_complete
+    def test_execute_cancel(self):
+        conn = self.connections[0]
+        cur = yield from conn.cursor()
+        # Cancel a cursor in the middle of execution, before it could
+        # read even the first packet (SLEEP assures the timings)
+        task = self.loop.create_task(cur.execute(
+            "SELECT 1 as id, SLEEP(0.1) as xxx"))
+        yield from asyncio.sleep(0.05, loop=self.loop)
+        task.cancel()
+        try:
+            yield from task
+        except asyncio.CancelledError:
+            pass
+
+        cur2 = yield from conn.cursor()
+        yield from cur2.execute("SELECT 2 as value, 0 as xxx")
+        names = [x[0] for x in cur2.description]
+        # If we receive ["id", "xxx"] - we corrupted the connection
+        self.assertEqual(names, ["value", "xxx"])
+        res = yield from cur2.fetchall()
+        # If we receive [(1, 0)] - we retrieved old cursor's values
+        self.assertEqual(list(res), [(2, 0)])

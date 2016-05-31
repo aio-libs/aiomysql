@@ -39,7 +39,8 @@ from pymysql.connections import LoadLocalPacketWrapper
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import PY_35, _ConnectionContextManager, _ContextManager
+from .utils import (
+    PY_35, _ConnectionContextManager, _ContextManager, shield_wait)
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
@@ -526,6 +527,12 @@ class Connection:
 
     @asyncio.coroutine
     def _read_query_result(self, unbuffered=False):
+        yield from shield_wait(
+            self._read_query_result_impl(unbuffered),
+            loop=self._loop)
+
+    @asyncio.coroutine
+    def _read_query_result_impl(self, unbuffered=False):
         if unbuffered:
             try:
                 result = MySQLResult(self)
