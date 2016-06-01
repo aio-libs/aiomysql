@@ -365,7 +365,7 @@ class Connection:
         if cursor:
             cur = cursor(self, self._echo)
         else:
-            self.cursorclass(self, self._echo)
+            cur = self.cursorclass(self, self._echo)
         fut = asyncio.Future(loop=self._loop)
         fut.set_result(cur)
         return _ContextManager(fut)
