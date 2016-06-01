@@ -110,3 +110,18 @@ def pool_creator(mysql_params, loop):
     if pool is not None:
         pool.close()
         loop.run_until_complete(pool.wait_closed())
+
+
+@pytest.yield_fixture
+def table_cleanup(loop, connection):
+    table_list = []
+    cursor = loop.run_until_complete(_cursor_wrapper(connection))
+
+    def _register_table(table_name):
+        table_list.append(table_name)
+
+    yield _register_table
+    for t in table_list:
+        # TODO: probably this is not safe code
+        sql = "DROP TABLE IF EXISTS {};".format(t)
+        loop.run_until_complete(cursor.execute(sql))
