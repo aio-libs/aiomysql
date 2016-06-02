@@ -1,6 +1,12 @@
 Changes
 -------
 
+0.0.8 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Default min pool size reduced to 1 #80 (Thanks @Drizzt1991)
+
+
 0.0.7 (2016-01-27)
 ^^^^^^^^^^^^^^^^^^
 
