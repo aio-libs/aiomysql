@@ -59,6 +59,7 @@ class TestPool(unittest.TestCase):
 
     @asyncio.coroutine
     def create_pool(self, no_loop=False, use_unicode=True, **kwargs):
+        kwargs.setdefault("minsize", 10)
         loop = None if no_loop else self.loop
         pool = yield from aiomysql.create_pool(loop=loop,
                                                host=self.host,

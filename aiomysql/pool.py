@@ -10,14 +10,14 @@ from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
                     _PoolAcquireContextManager)
 
 
-def create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+def create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
     coro = _create_pool(minsize=minsize, maxsize=maxsize, echo=echo,
                         loop=loop, **kwargs)
     return _PoolContextManager(coro)
 
 
 @asyncio.coroutine
-def _create_pool(minsize=10, maxsize=10, echo=False, loop=None, **kwargs):
+def _create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
