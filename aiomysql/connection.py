@@ -202,6 +202,9 @@ class Connection:
         # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None
+        # If connection was closed for specific reason, we should show that to
+        # user
+        self._close_reason = None
 
     @property
     def host(self):
@@ -359,6 +362,7 @@ class Connection:
         :returns: instance of cursor, by default :class:`Cursor`
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
+        self._ensure_alive()
         if cursor is not None and not issubclass(cursor, Cursor):
             raise TypeError('Custom cursor must be subclass of Cursor')
 
@@ -514,6 +518,9 @@ class Connection:
                 buff += recv_data
                 if bytes_to_read < MAX_PACKET_LEN:
                     break
+        except asyncio.CancelledError:
+            self._close_on_cancel()
+            raise
         except (OSError, EOFError) as exc:
             msg = "MySQL server has gone away (%s)"
             raise OperationalError(2006, msg % (exc,)) from exc
@@ -563,8 +570,7 @@ class Connection:
 
     @asyncio.coroutine
     def _execute_command(self, command, sql):
-        if not self._writer:
-            raise InterfaceError("(0, 'Not connected')")
+        self._ensure_alive()
 
         # If the last query was unbuffered, make sure it finishes before
         # sending new commands
@@ -573,7 +579,11 @@ class Connection:
                 warnings.warn("Previous unbuffered result was left incomplete")
                 self._result._finish_unbuffered_query()
             while self._result.has_next:
-                yield from self.next_result()
+                try:
+                    yield from self.next_result()
+                except asyncio.CancelledError:
+                    self._close_on_cancel()
+                    raise
             self._result = None
 
         if isinstance(sql, str):
@@ -698,6 +708,19 @@ class Connection:
 
     def get_server_info(self):
         return self.server_version
+
+    # Just to always have consistent errors 2 helpers
+
+    def _close_on_cancel(self):
+        self.close()
+        self._close_reason = "Cancelled during execution"
+
+    def _ensure_alive(self):
+        if not self._writer:
+            if self._close_reason is None:
+                raise InterfaceError("(0, 'Not connected')")
+            else:
+                raise InterfaceError(self._close_reason)
 
     if PY_341:  # pragma: no branch
         def __del__(self):
@@ -955,8 +978,7 @@ class LoadLocalFile(object):
     @asyncio.coroutine
     def send_data(self):
         """Send data packets from the local file to the server"""
-        if not self.connection._writer:
-            raise InterfaceError("(0, '')")
+        self.connection._ensure_alive()
         conn = self.connection
 
         try:
@@ -968,6 +990,9 @@ class LoadLocalFile(object):
                     if not chunk:
                         break
                     conn.write_packet(chunk)
+        except asyncio.CancelledError:
+            self.connection._close_on_cancel()
+            raise
         finally:
             # send the empty packet to signify we are done sending data
             conn.write_packet(b"")

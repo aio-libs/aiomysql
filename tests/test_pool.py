@@ -603,3 +603,34 @@ class TestPool(unittest.TestCase):
                 yield from self._set_global_conn_timeout(28800)
 
         self.loop.run_until_complete(go())
+
+    def test_cancelled_connection(self):
+        @asyncio.coroutine
+        def go():
+            pool = yield from self.create_pool(minsize=0, maxsize=1)
+
+            try:
+                with (yield from pool) as conn:
+                    curs = yield from conn.cursor()
+                    # Cancel a cursor in the middle of execution, before it
+                    # could read even the first packet (SLEEP assures the
+                    # timings)
+                    task = self.loop.create_task(curs.execute(
+                        "SELECT 1 as id, SLEEP(0.1) as xxx"))
+                    yield from asyncio.sleep(0.05, loop=self.loop)
+                    task.cancel()
+                    yield from task
+            except asyncio.CancelledError:
+                pass
+
+            with (yield from pool) as conn:
+                cur2 = yield from conn.cursor()
+                res = yield from cur2.execute("SELECT 2 as value, 0 as xxx")
+                names = [x[0] for x in cur2.description]
+                # If we receive ["id", "xxx"] - we corrupted the connection
+                self.assertEqual(names, ["value", "xxx"])
+                res = yield from cur2.fetchall()
+                # If we receive [(1, 0)] - we retrieved old cursor's values
+                self.assertEqual(list(res), [(2, 0)])
+
+        self.loop.run_until_complete(go())
