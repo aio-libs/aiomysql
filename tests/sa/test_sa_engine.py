@@ -39,12 +39,14 @@ class TestEngine(unittest.TestCase):
                                                 password=self.password,
                                                 host=self.host,
                                                 loop=self.loop,
+                                                minsize=10,
                                                 **kwargs))
         else:
             return (yield from sa.create_engine(db=self.db,
                                                 user=self.user,
                                                 password=self.password,
                                                 host=self.host,
+                                                minsize=10,
                                                 **kwargs))
 
     @asyncio.coroutine

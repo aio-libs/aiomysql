@@ -18,7 +18,7 @@ _dialect = MySQLDialect_pymysql(paramstyle='pyformat')
 _dialect.default_paramstyle = 'pyformat'
 
 
-def create_engine(minsize=10, maxsize=10, loop=None,
+def create_engine(minsize=1, maxsize=10, loop=None,
                   dialect=_dialect, **kwargs):
     """A coroutine for Engine creation.
 
@@ -32,7 +32,7 @@ def create_engine(minsize=10, maxsize=10, loop=None,
 
 
 @asyncio.coroutine
-def _create_engine(minsize=10, maxsize=10, loop=None,
+def _create_engine(minsize=1, maxsize=10, loop=None,
                    dialect=_dialect, **kwargs):
 
     if loop is None:
