@@ -68,7 +68,7 @@ Also we provide SQL transactions support. Please take a look on
 Engine
 ------
 
-.. function:: create_engine(*, minsize=10, maxsize=10, loop=None, \
+.. function:: create_engine(*, minsize=1, maxsize=10, loop=None, \
                             dialect=dialect, **kwargs)
 
     A :ref:`coroutine <coroutine>` for :class:`Engine` creation.
@@ -116,7 +116,7 @@ Engine
 
     .. attribute:: minsize
 
-        A minimal size of the pool (*read-only*), ``10`` by default.
+        A minimal size of the pool (*read-only*), ``1`` by default.
 
     .. attribute:: maxsize
 
