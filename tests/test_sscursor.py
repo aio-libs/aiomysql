@@ -4,7 +4,7 @@ from aiomysql.cursors import SSCursor
 from tests import base
 from tests._testutils import run_until_complete
 
-from aiomysql import ProgrammingError
+from aiomysql import ProgrammingError, InterfaceError
 
 
 class TestSSCursor(base.AIOPyMySQLTestCase):
@@ -142,3 +142,45 @@ class TestSSCursor(base.AIOPyMySQLTestCase):
             yield from cursor.scroll(1, mode='absolute')
         with self.assertRaises(ProgrammingError):
             yield from cursor.scroll(2, mode='not_valid_mode')
+
+    @run_until_complete
+    def test_sscursor_cancel(self):
+        conn = self.connections[0]
+        cur = yield from conn.cursor(SSCursor)
+        # Prepare ALOT of data
+
+        yield from cur.execute('DROP TABLE IF EXISTS long_seq;')
+        yield from cur.execute(
+            """ CREATE TABLE long_seq (
+                  id int(11)
+                )
+            """)
+
+        ids = [(x) for x in range(100000)]
+        yield from cur.executemany('INSERT INTO long_seq VALUES (%s)', ids)
+
+        # Will return several results. All we need at this point
+        big_str = "x" * 10000
+        yield from cur.execute(
+            """SELECT '{}' as id FROM long_seq;
+            """.format(big_str))
+        first = yield from cur.fetchone()
+        self.assertEqual(first, (big_str,))
+
+        @asyncio.coroutine
+        def read_cursor():
+            while True:
+                res = yield from cur.fetchone()
+                if res is None:
+                    break
+        task = self.loop.create_task(read_cursor())
+        yield from asyncio.sleep(0, loop=self.loop)
+        assert not task.done(), "Test failed to produce needed condition."
+        task.cancel()
+        try:
+            yield from task
+        except asyncio.CancelledError:
+            pass
+
+        with self.assertRaises(InterfaceError):
+            yield from conn.cursor(SSCursor)

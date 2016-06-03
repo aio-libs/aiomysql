@@ -579,11 +579,7 @@ class Connection:
                 warnings.warn("Previous unbuffered result was left incomplete")
                 self._result._finish_unbuffered_query()
             while self._result.has_next:
-                try:
-                    yield from self.next_result()
-                except asyncio.CancelledError:
-                    self._close_on_cancel()
-                    raise
+                yield from self.next_result()
             self._result = None
 
         if isinstance(sql, str):
