@@ -32,7 +32,7 @@ The basic usage is::
     loop.run_until_complete(go())
 
 
-.. function:: create_pool(minsize=10, maxsize=10, loop=None, **kwargs)
+.. function:: create_pool(minsize=1, maxsize=10, loop=None, **kwargs)
 
     A :ref:`coroutine <coroutine>` that creates a pool of connections to
     :term:`MySQL` database.
@@ -76,7 +76,7 @@ The basic usage is::
 
     .. attribute:: minsize
 
-        A minimal size of the pool (*read-only*), ``10`` by default.
+        A minimal size of the pool (*read-only*), ``1`` by default.
 
     .. attribute:: maxsize
 
