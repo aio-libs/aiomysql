@@ -362,7 +362,10 @@ class Connection:
         if cursor is not None and not issubclass(cursor, Cursor):
             raise TypeError('Custom cursor must be subclass of Cursor')
 
-        cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
+        if cursor:
+            cur = cursor(self, self._echo)
+        else:
+            cur = self.cursorclass(self, self._echo)
         fut = asyncio.Future(loop=self._loop)
         fut.set_result(cur)
         return _ContextManager(fut)
