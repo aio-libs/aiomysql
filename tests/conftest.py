@@ -72,15 +72,16 @@ def mysql_params():
     return params
 
 
+# TODO: fix this workaround
+@asyncio.coroutine
+def _cursor_wrapper(conn):
+    cur = yield from conn.cursor()
+    return cur
+
+
 @pytest.yield_fixture
 def cursor(connection, loop):
-    # TODO: fix this workaround
-    @asyncio.coroutine
-    def f():
-        cur = yield from connection.cursor()
-        return cur
-
-    cur = loop.run_until_complete(f())
+    cur = loop.run_until_complete(_cursor_wrapper(connection))
     yield cur
     loop.run_until_complete(cur.close())
 
