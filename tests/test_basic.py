@@ -86,46 +86,40 @@ def test_dict_escaping(cursor):
 
 
 @pytest.mark.run_loop
-def test_string(cursor):
-    yield from cursor.execute("DROP TABLE IF EXISTS test_dict;")
-    yield from cursor.execute("create table test_dict (a text)")
+def test_string(cursor, table_cleanup):
+    yield from cursor.execute("DROP TABLE IF EXISTS test_string;")
+    yield from cursor.execute("CREATE TABLE test_string (a text)")
     test_value = "I am a test string"
-    try:
-        yield from cursor.execute("insert into test_dict (a) values (%s)",
-                                  test_value)
-        yield from cursor.execute("select a from test_dict")
-        r = yield from cursor.fetchone()
-        assert (test_value,) == r
-    finally:
-        yield from cursor.execute("drop table test_dict")
+    table_cleanup('test_string')
+    yield from cursor.execute("INSERT INTO test_string (a) VALUES (%s)",
+                              test_value)
+    yield from cursor.execute("SELECT a FROM test_string")
+    r = yield from cursor.fetchone()
+    assert (test_value,) == r
 
 
 @pytest.mark.run_loop
-def test_integer(cursor):
-    yield from cursor.execute("create table test_dict (a integer)")
+def test_integer(cursor, table_cleanup):
+    yield from cursor.execute("CREATE TABLE test_integer (a INTEGER)")
+    table_cleanup('test_integer')
     test_value = 12345
-    try:
-        yield from cursor.execute("insert into test_dict (a) values (%s)",
-                                  test_value)
-        yield from cursor.execute("select a from test_dict")
-        r = yield from cursor.fetchone()
-        assert (test_value,) == r
-    finally:
-        yield from cursor.execute("drop table test_dict")
+    yield from cursor.execute("INSERT INTO test_integer (a) VALUES (%s)",
+                              test_value)
+    yield from cursor.execute("SELECT a FROM test_dict")
+    r = yield from cursor.fetchone()
+    assert (test_value,) == r
 
 
 @pytest.mark.run_loop
-def test_binary_data(cursor):
+def test_binary_data(cursor, table_cleanup):
     data = bytes(bytearray(range(256)) * 4)
-    try:
-        yield from cursor.execute("create table test_blob (b blob)")
-        yield from cursor.execute("insert into test_blob (b) values (%s)",
-                                  (data,))
-        yield from cursor.execute("select b from test_blob")
-        (r,) = yield from cursor.fetchone()
-        assert data == r
-    finally:
-        yield from cursor.execute("drop table test_blob")
+    yield from cursor.execute("CREATE TABLE test_blob (b blob)")
+    table_cleanup('test_blob')
+    yield from cursor.execute("INSERT INTO test_blob (b) VALUES (%s)",
+                              (data,))
+    yield from cursor.execute("SELECT b FROM test_blob")
+    (r,) = yield from cursor.fetchone()
+    assert data == r
 
 
 @pytest.mark.run_loop
@@ -155,24 +149,21 @@ def test_timedelta_conversion(cursor):
 
 
 @pytest.mark.run_loop
-def test_datetime_conversion(cursor):
-    c = cursor
+def test_datetime_conversion(cursor, table_cleanup):
     dt = datetime.datetime(2013, 11, 12, 9, 9, 9, 123450)
     try:
-        yield from c.execute(
-            "create table test_datetime (id int, ts datetime(6))")
-        yield from c.execute(
-            "insert into test_datetime values "
-            "(1,'2013-11-12 09:09:09.12345')")
-        yield from c.execute("select ts from test_datetime")
-        r = yield from c.fetchone()
+        yield from cursor.execute("CREATE TABLE test_datetime"
+                                  "(id INT, ts DATETIME(6))")
+        table_cleanup('test_datetime')
+        yield from cursor.execute("INSERT INTO test_datetime VALUES "
+                                  "(1,'2013-11-12 09:09:09.12345')")
+        yield from cursor.execute("SELECT ts FROM test_datetime")
+        r = yield from cursor.fetchone()
         assert (dt,) == r
     except ProgrammingError:
         # User is running a version of MySQL that doesn't support
         # msecs within datetime
         pass
-    finally:
-        yield from c.execute("drop table if exists test_datetime")
 
 
 @pytest.mark.run_loop
