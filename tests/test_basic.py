@@ -106,7 +106,7 @@ def test_integer(cursor):
     test_value = 12345
     try:
         yield from cursor.execute("insert into test_dict (a) values (%s)",
-                             test_value)
+                                  test_value)
         yield from cursor.execute("select a from test_dict")
         r = yield from cursor.fetchone()
         assert (test_value,) == r
