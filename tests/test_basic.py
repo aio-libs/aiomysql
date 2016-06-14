@@ -64,8 +64,6 @@ def test_datatypes_nulls(cursor, datatype_table):
     r = yield from cursor.fetchone()
     assert tuple([None] * 12) == r
 
-    yield from cursor.execute("delete from test_datatypes")
-
 
 @pytest.mark.run_loop
 def test_datatypes_sequence_types(cursor, datatype_table):
