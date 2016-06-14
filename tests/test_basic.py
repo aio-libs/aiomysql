@@ -81,6 +81,18 @@ def test_datatypes_sequence_types(cursor, datatype_table):
 
 
 @pytest.mark.run_loop
+def test_dict_escaping(cursor, table_cleanup):
+    sql = "CREATE TABLE test_dict (a INTEGER, b INTEGER, c INTEGER)"
+    yield from cursor.execute(sql)
+    table_cleanup('test_dict')
+    sql = "INSERT INTO test_dict (a,b,c) VALUES (%(a)s, %(b)s, %(c)s)"
+    yield from cursor.execute(sql, {"a": 1, "b": 2, "c": 3})
+    yield from cursor.execute("SELECT a,b,c FROM test_dict")
+    r = yield from cursor.fetchone()
+    assert (1, 2, 3) == r
+
+
+@pytest.mark.run_loop
 def test_string(cursor, table_cleanup):
     yield from cursor.execute("DROP TABLE IF EXISTS test_string;")
     yield from cursor.execute("CREATE TABLE test_string (a text)")
