@@ -1,3 +1,4 @@
+import asyncio
 import time
 import datetime
 
@@ -6,83 +7,77 @@ from pymysql import util
 from pymysql.err import ProgrammingError
 
 
-@pytest.mark.run_loop
-def test_datatypes(connection, cursor):
-    """ test every data type """
-    yield from cursor.execute(
-        "create table test_datatypes (b bit, i int, l bigint, f real, s "
-        "varchar(32), u varchar(32), bb blob, d date, dt datetime, "
-        "ts timestamp, td time, t time, st datetime)")
-    try:
-        # insert values
-        v = (
-            True, -3, 123456789012, 5.7, "hello'\" world",
-            u"Espa\xc3\xb1ol",
-            "binary\x00data".encode(connection.charset),
-            datetime.date(1988, 2, 2),
-            datetime.datetime.now().replace(microsecond=0),
-            datetime.timedelta(5, 6), datetime.time(16, 32),
-            time.localtime())
+@pytest.fixture
+def datatype_table(loop, cursor, table_cleanup):
+    @asyncio.coroutine
+    def f():
         yield from cursor.execute(
-            "insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) "
-            "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            v)
-        yield from cursor.execute(
-            "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
-        r = yield from cursor.fetchone()
-        assert util.int2byte(1) == r[0]
-        # assert v[1:8] == r[1:8])
-        assert v[1:9] == r[1:9]
-        # mysql throws away microseconds so we need to check datetimes
-        # specially. additionally times are turned into timedeltas.
-        # self.assertEqual(datetime.datetime(*v[8].timetuple()[:6]), r[8])
-
-        # TODO: figure out why this assert fails
-        # assert [9] == r[9]  # just timedeltas
-        expected = datetime.timedelta(0, 60 * (v[10].hour * 60 + v[10].minute))
-        assert expected == r[10]
-        assert datetime.datetime(*v[-1][:6]) == r[-1]
-
-        yield from cursor.execute("delete from test_datatypes")
-
-        # check nulls
-        yield from cursor.execute(
-            "insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) "
-            "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            [None] * 12)
-        yield from cursor.execute(
-            "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
-        r = yield from cursor.fetchone()
-        assert tuple([None] * 12) == r
-
-        yield from cursor.execute("delete from test_datatypes")
-
-        # check sequence type
-        yield from cursor.execute(
-            "insert into test_datatypes (i, l) values (2,4), (6,8), "
-            "(10,12)")
-        yield from cursor.execute(
-            "select l from test_datatypes where i in %s order by i",
-            ((2, 6),))
-        r = yield from cursor.fetchall()
-        assert ((4,), (8,)) == r
-    finally:
-        yield from cursor.execute("drop table test_datatypes")
+            "CREATE TABLE test_datatypes (b bit, i int, l bigint, f real, s "
+            "varchar(32), u varchar(32), bb blob, d date, dt datetime, "
+            "ts timestamp, td time, t time, st datetime)")
+        table_cleanup('test_datatypes')
+    loop.run_until_complete(f())
+    table_cleanup('test_datatypes')
 
 
 @pytest.mark.run_loop
-def test_dict_escaping(cursor):
+def test_datatypes(connection, cursor, datatype_table):
+    # insert values
+    v = (
+        True, -3, 123456789012, 5.7, "hello'\" world",
+        u"Espa\xc3\xb1ol",
+        "binary\x00data".encode(connection.charset),
+        datetime.date(1988, 2, 2),
+        datetime.datetime.now().replace(microsecond=0),
+        datetime.timedelta(5, 6), datetime.time(16, 32),
+        time.localtime())
     yield from cursor.execute(
-        "create table test_dict (a integer, b integer, c integer)")
-    try:
-        yield from cursor.execute(
-            "insert into test_dict (a,b,c) values (%(a)s, %(b)s, %(c)s)",
-            {"a": 1, "b": 2, "c": 3})
-        yield from cursor.execute("select a,b,c from test_dict")
-        r = yield from cursor.fetchone()
-        assert (1, 2, 3) == r
-    finally:
-        yield from cursor.execute("drop table test_dict")
+        "INSERT INTO test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) "
+        "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        v)
+    yield from cursor.execute(
+        "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
+    r = yield from cursor.fetchone()
+    assert util.int2byte(1) == r[0]
+    # assert v[1:8] == r[1:8])
+    assert v[1:9] == r[1:9]
+    # mysql throws away microseconds so we need to check datetimes
+    # specially. additionally times are turned into timedeltas.
+    # self.assertEqual(datetime.datetime(*v[8].timetuple()[:6]), r[8])
+
+    # TODO: figure out why this assert fails
+    # assert [9] == r[9]  # just timedeltas
+    expected = datetime.timedelta(0, 60 * (v[10].hour * 60 + v[10].minute))
+    assert expected == r[10]
+    assert datetime.datetime(*v[-1][:6]) == r[-1]
+
+
+@pytest.mark.run_loop
+def test_datatypes_nulls(cursor, datatype_table):
+    # check nulls
+    yield from cursor.execute(
+        "insert into test_datatypes (b,i,l,f,s,u,bb,d,dt,td,t,st) "
+        "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+        [None] * 12)
+    yield from cursor.execute(
+        "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
+    r = yield from cursor.fetchone()
+    assert tuple([None] * 12) == r
+
+    yield from cursor.execute("delete from test_datatypes")
+
+
+@pytest.mark.run_loop
+def test_datatypes_sequence_types(cursor, datatype_table):
+    # check sequence type
+    yield from cursor.execute(
+        "INSERT INTO test_datatypes (i, l) VALUES (2,4), (6,8), "
+        "(10,12)")
+    yield from cursor.execute(
+        "select l from test_datatypes where i in %s order by i",
+        ((2, 6),))
+    r = yield from cursor.fetchall()
+    assert ((4,), (8,)) == r
 
 
 @pytest.mark.run_loop
