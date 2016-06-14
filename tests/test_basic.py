@@ -105,7 +105,7 @@ def test_integer(cursor, table_cleanup):
     test_value = 12345
     yield from cursor.execute("INSERT INTO test_integer (a) VALUES (%s)",
                               test_value)
-    yield from cursor.execute("SELECT a FROM test_dict")
+    yield from cursor.execute("SELECT a FROM test_integer")
     r = yield from cursor.fetchone()
     assert (test_value,) == r
 
