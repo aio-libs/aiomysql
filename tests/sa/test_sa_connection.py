@@ -12,8 +12,7 @@ from sqlalchemy.schema import DropTable, CreateTable
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
-            Column('id', Integer, nullable=False,
-                   primary_key=True),
+            Column('id', Integer, nullable=False, primary_key=True),
             Column('name', String(255)))
 
 
@@ -36,9 +35,9 @@ class TestSAConnection(unittest.TestCase):
                                   user=self.user,
                                   password=self.password,
                                   host=self.host,
+                                  autocommit=True,
                                   loop=self.loop,
                                   **kwargs)
-        yield from conn.autocommit(True)
         cur = yield from conn.cursor()
         yield from cur.execute("DROP TABLE IF EXISTS sa_tbl")
         yield from cur.execute("CREATE TABLE sa_tbl "
@@ -46,7 +45,6 @@ class TestSAConnection(unittest.TestCase):
         yield from cur.execute("INSERT INTO sa_tbl (name)"
                                "VALUES ('first')")
 
-        yield from cur._connection.commit()
         # yield from cur.close()
         engine = mock.Mock()
         engine.dialect = sa.engine._dialect

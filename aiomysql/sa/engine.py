@@ -26,8 +26,10 @@ def create_engine(minsize=1, maxsize=10, loop=None,
 
     The pool has *minsize* opened connections to PostgreSQL server.
     """
+    _kwargs = kwargs.copy()
+    _kwargs.setdefault("autocommit", True)
     coro = _create_engine(minsize=minsize, maxsize=maxsize, loop=loop,
-                          dialect=dialect, **kwargs)
+                          dialect=dialect, **_kwargs)
     return _EngineContextManager(coro)
 
 

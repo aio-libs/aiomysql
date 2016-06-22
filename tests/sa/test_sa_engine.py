@@ -180,6 +180,7 @@ class TestEngine(unittest.TestCase):
         def go():
             engine = yield from self.make_engine()
             conn = yield from engine.acquire()
+            assert conn.connection.get_autocommit()
             engine.terminate()
             yield from engine.wait_closed()
 
