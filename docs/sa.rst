@@ -78,8 +78,10 @@ Engine
     The pool has *minsize* opened connections to :term:`MySQL` server.
 
     At *kwargs* function accepts all parameters that
-    :func:`aiomysql.connect` does.
-
+    :func:`aiomysql.connect` does. `aiomysql` like `PyMySQL` has autocommit
+    moded disabled by default, but but this is not true for sqlalchemy
+    integration. All connection created by this function has enabled
+    autocommit.
 
 .. data:: dialect
 
