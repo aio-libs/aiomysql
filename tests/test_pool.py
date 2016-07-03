@@ -3,9 +3,73 @@ import json
 import os
 import unittest
 
+import pytest
 import aiomysql
 from aiomysql.connection import Connection
 from aiomysql.pool import Pool
+
+
+@pytest.mark.run_loop
+def test_create_pool(pool_creator):
+    pool = yield from pool_creator()
+    assert isinstance(pool, Pool)
+    assert 1 == pool.minsize
+    assert 10 == pool.maxsize
+    assert 1 == pool.size
+    assert 1 == pool.freesize
+    assert not pool.echo
+
+
+@pytest.mark.run_loop
+def test_create_pool2(pool_creator):
+    pool = yield from pool_creator(minsize=10, maxsize=20)
+    assert isinstance(pool, Pool)
+    assert 10 == pool.minsize
+    assert 20 == pool.maxsize
+    assert 10 == pool.size
+    assert 10 == pool.freesize
+
+
+@pytest.mark.run_loop
+def test_acquire(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    assert isinstance(conn, Connection)
+    assert not conn.closed
+    cursor = yield from conn.cursor()
+    yield from cursor.execute('SELECT 1')
+    val = yield from cursor.fetchone()
+    yield from cursor.close()
+    assert (1,) == val
+    pool.release(conn)
+
+
+@pytest.mark.run_loop
+def test_release(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    assert 0 == pool.freesize
+    assert {conn} == pool._used
+    pool.release(conn)
+    assert 1 == pool.freesize
+    assert not pool._used
+
+
+@pytest.mark.run_loop
+def test_release_closed(pool_creator):
+    pool = yield from pool_creator(minsize=10, maxsize=10)
+    conn = yield from pool.acquire()
+    assert 9 == pool.freesize
+    yield from conn.ensure_closed()
+    pool.release(conn)
+    assert 9 == pool.freesize
+    assert not pool._used
+    assert 9 == pool.size
+
+    conn2 = yield from pool.acquire()
+    assert 9 == pool.freesize
+    assert 10 == pool.size
+    pool.release(conn2)
 
 
 class TestPool(unittest.TestCase):
@@ -71,81 +135,6 @@ class TestPool(unittest.TestCase):
                                                **kwargs)
         self.pool = pool
         return pool
-
-    def test_create_pool(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            self.assertIsInstance(pool, Pool)
-            self.assertEqual(10, pool.minsize)
-            self.assertEqual(10, pool.maxsize)
-            self.assertEqual(10, pool.size)
-            self.assertEqual(10, pool.freesize)
-            self.assertFalse(pool.echo)
-
-        self.loop.run_until_complete(go())
-
-    def test_create_pool2(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(minsize=10, maxsize=20)
-            self.assertIsInstance(pool, Pool)
-            self.assertEqual(10, pool.minsize)
-            self.assertEqual(20, pool.maxsize)
-            self.assertEqual(10, pool.size)
-            self.assertEqual(10, pool.freesize)
-
-        self.loop.run_until_complete(go())
-
-    def test_acquire(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            self.assertIsInstance(conn, Connection)
-            self.assertFalse(conn.closed)
-            cur = yield from conn.cursor()
-            yield from cur.execute('SELECT 1')
-            val = yield from cur.fetchone()
-            self.assertEqual((1,), val)
-            pool.release(conn)
-
-        self.loop.run_until_complete(go())
-
-    def test_release(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            self.assertEqual(9, pool.freesize)
-            self.assertEqual({conn}, pool._used)
-            pool.release(conn)
-            self.assertEqual(10, pool.freesize)
-            self.assertFalse(pool._used)
-
-        self.loop.run_until_complete(go())
-
-    def test_release_closed(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            self.assertEqual(9, pool.freesize)
-            yield from conn.ensure_closed()
-            pool.release(conn)
-            self.assertEqual(9, pool.freesize)
-            self.assertFalse(pool._used)
-            self.assertEqual(9, pool.size)
-
-            conn2 = yield from pool.acquire()
-            self.assertEqual(9, pool.freesize)
-            self.assertEqual(10, pool.size)
-            pool.release(conn2)
-
-        self.loop.run_until_complete(go())
 
     def test_bad_context_manager_usage(self):
         @asyncio.coroutine
