@@ -99,11 +99,11 @@ def pool_creator(mysql_params, loop):
     pool = None
 
     @asyncio.coroutine
-    def f(*kw):
+    def f(**kw):
         nonlocal pool
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
-        pool = yield from aiomysql.create_pool(**conn_kw)
+        pool = yield from aiomysql.create_pool(**conn_kw, loop=loop)
         return pool
 
     yield f
