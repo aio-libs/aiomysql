@@ -103,7 +103,8 @@ def pool_creator(mysql_params, loop):
         nonlocal pool
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
-        pool = yield from aiomysql.create_pool(loop=loop, **conn_kw)
+        _loop = conn_kw.pop('loop', loop)
+        pool = yield from aiomysql.create_pool(loop=_loop, **conn_kw)
         return pool
 
     yield f
