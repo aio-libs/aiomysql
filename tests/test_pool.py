@@ -206,6 +206,69 @@ def test_default_event_loop(pool_creator, loop):
     assert pool._loop is loop
 
 
+@pytest.mark.run_loop
+def test_release_with_invalid_status(pool_creator):
+    pool = yield from pool_creator(minsize=10, maxsize=10)
+    conn = yield from pool.acquire()
+    assert 9 == pool.freesize
+    assert {conn} == pool._used
+    cur = yield from conn.cursor()
+    yield from cur.execute('BEGIN')
+    yield from cur.close()
+
+    pool.release(conn)
+    assert 9 == pool.freesize
+    assert not pool._used
+    assert conn.closed
+
+
+@pytest.mark.run_loop
+def test_release_with_invalid_status_wait_release(pool_creator):
+    pool = yield from pool_creator(minsize=10, maxsize=10)
+    conn = yield from pool.acquire()
+    assert 9 == pool.freesize
+    assert {conn} == pool._used
+    cur = yield from conn.cursor()
+    yield from cur.execute('BEGIN')
+    yield from cur.close()
+
+    yield from pool.release(conn)
+    assert 9 == pool.freesize
+    assert not pool._used
+    assert conn.closed
+
+
+@pytest.mark.run_loop
+def test__fill_free(pool_creator, loop):
+    pool = yield from pool_creator(minsize=1)
+    with (yield from pool):
+        assert 0 == pool.freesize
+        assert 1 == pool.size
+
+        conn = yield from asyncio.wait_for(pool.acquire(),
+                                           timeout=0.5,
+                                           loop=loop)
+        assert 0 == pool.freesize
+        assert 2 == pool.size
+        pool.release(conn)
+        assert 1 == pool.freesize
+        assert 2 == pool.size
+    assert 2 == pool.freesize
+    assert 2 == pool.size
+
+
+@pytest.mark.run_loop
+def test_connect_from_acquire(pool_creator):
+    pool = yield from pool_creator(minsize=0)
+    assert 0 == pool.freesize
+    assert 0 == pool.size
+    with (yield from pool):
+        assert 1 == pool.size
+        assert 0 == pool.freesize
+    assert 1 == pool.size
+    assert 1 == pool.freesize
+
+
 class TestPool(unittest.TestCase):
 
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -269,77 +332,6 @@ class TestPool(unittest.TestCase):
                                                **kwargs)
         self.pool = pool
         return pool
-
-    # @mock.patch("aiopg.pool.logger")
-    def test_release_with_invalid_status(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            self.assertEqual(9, pool.freesize)
-            self.assertEqual({conn}, pool._used)
-            cur = yield from conn.cursor()
-            yield from cur.execute('BEGIN')
-            yield from cur.close()
-
-            pool.release(conn)
-            self.assertEqual(9, pool.freesize)
-            self.assertFalse(pool._used)
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
-    def test_release_with_invalid_status_wait_release(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            self.assertEqual(9, pool.freesize)
-            self.assertEqual({conn}, pool._used)
-            cur = yield from conn.cursor()
-            yield from cur.execute('BEGIN')
-            yield from cur.close()
-
-            yield from pool.release(conn)
-            self.assertEqual(9, pool.freesize)
-            self.assertFalse(pool._used)
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
-    def test__fill_free(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(minsize=1)
-            with (yield from pool):
-                self.assertEqual(0, pool.freesize)
-                self.assertEqual(1, pool.size)
-
-                conn = yield from asyncio.wait_for(pool.acquire(),
-                                                   timeout=0.5,
-                                                   loop=self.loop)
-                self.assertEqual(0, pool.freesize)
-                self.assertEqual(2, pool.size)
-                pool.release(conn)
-                self.assertEqual(1, pool.freesize)
-                self.assertEqual(2, pool.size)
-            self.assertEqual(2, pool.freesize)
-            self.assertEqual(2, pool.size)
-
-        self.loop.run_until_complete(go())
-
-    def test_connect_from_acquire(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(minsize=0)
-            self.assertEqual(0, pool.freesize)
-            self.assertEqual(0, pool.size)
-            with (yield from pool):
-                self.assertEqual(1, pool.size)
-                self.assertEqual(0, pool.freesize)
-            self.assertEqual(1, pool.size)
-            self.assertEqual(1, pool.freesize)
-        self.loop.run_until_complete(go())
 
     @unittest.skip('Not implemented')
     def test_create_pool_with_timeout(self):
