@@ -269,6 +269,56 @@ def test_connect_from_acquire(pool_creator):
     assert 1 == pool.freesize
 
 
+@pytest.mark.run_loop
+def test_concurrency(pool_creator):
+    pool = yield from pool_creator(minsize=2, maxsize=4)
+    c1 = yield from pool.acquire()
+    c2 = yield from pool.acquire()
+    assert 0 == pool.freesize
+    assert 2 == pool.size
+    pool.release(c1)
+    pool.release(c2)
+
+
+@pytest.mark.run_loop
+def test_invalid_minsize_and_maxsize(pool_creator):
+    with pytest.raises(ValueError):
+        yield from pool_creator(minsize=-1)
+
+    with pytest.raises(ValueError):
+        yield from pool_creator(minsize=5, maxsize=2)
+
+
+@pytest.mark.run_loop
+def test_true_parallel_tasks(pool_creator, loop):
+    pool = yield from pool_creator(minsize=0, maxsize=1)
+    assert 1 == pool.maxsize
+    assert 0 == pool.minsize
+    assert 0 == pool.size
+    assert 0 == pool.freesize
+
+    maxsize = 0
+    minfreesize = 100
+
+    @asyncio.coroutine
+    def inner():
+        nonlocal maxsize, minfreesize
+        maxsize = max(maxsize, pool.size)
+        minfreesize = min(minfreesize, pool.freesize)
+        conn = yield from pool.acquire()
+        maxsize = max(maxsize, pool.size)
+        minfreesize = min(minfreesize, pool.freesize)
+        yield from asyncio.sleep(0.01, loop=loop)
+        pool.release(conn)
+        maxsize = max(maxsize, pool.size)
+        minfreesize = min(minfreesize, pool.freesize)
+
+    yield from asyncio.gather(inner(), inner(), loop=loop)
+
+    assert 1 == maxsize
+    assert 0 == minfreesize
+
+
 class TestPool(unittest.TestCase):
 
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -344,63 +394,6 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertEqual(timeout, conn.timeout)
             pool.release(conn)
-
-        self.loop.run_until_complete(go())
-
-    def test_concurrency(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(minsize=2, maxsize=4)
-            c1 = yield from pool.acquire()
-            c2 = yield from pool.acquire()
-            self.assertEqual(0, pool.freesize)
-            self.assertEqual(2, pool.size)
-            pool.release(c1)
-            pool.release(c2)
-
-        self.loop.run_until_complete(go())
-
-    def test_invalid_minsize_and_maxsize(self):
-
-        @asyncio.coroutine
-        def go():
-            with self.assertRaises(ValueError):
-                yield from self.create_pool(minsize=-1)
-
-            with self.assertRaises(ValueError):
-                yield from self.create_pool(minsize=5, maxsize=2)
-
-        self.loop.run_until_complete(go())
-
-    def test_true_parallel_tasks(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(minsize=0, maxsize=1)
-            self.assertEqual(1, pool.maxsize)
-            self.assertEqual(0, pool.minsize)
-            self.assertEqual(0, pool.size)
-            self.assertEqual(0, pool.freesize)
-
-            maxsize = 0
-            minfreesize = 100
-
-            def inner():
-                nonlocal maxsize, minfreesize
-                maxsize = max(maxsize, pool.size)
-                minfreesize = min(minfreesize, pool.freesize)
-                conn = yield from pool.acquire()
-                maxsize = max(maxsize, pool.size)
-                minfreesize = min(minfreesize, pool.freesize)
-                yield from asyncio.sleep(0.01, loop=self.loop)
-                pool.release(conn)
-                maxsize = max(maxsize, pool.size)
-                minfreesize = min(minfreesize, pool.freesize)
-
-            yield from asyncio.gather(inner(), inner(),
-                                      loop=self.loop)
-
-            self.assertEqual(1, maxsize)
-            self.assertEqual(0, minfreesize)
 
         self.loop.run_until_complete(go())
 
