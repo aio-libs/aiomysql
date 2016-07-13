@@ -319,6 +319,55 @@ def test_true_parallel_tasks(pool_creator, loop):
     assert 0 == minfreesize
 
 
+@pytest.mark.run_loop
+def test_cannot_acquire_after_closing(pool_creator):
+    pool = yield from pool_creator()
+    pool.close()
+
+    with pytest.raises(RuntimeError):
+        yield from pool.acquire()
+
+
+@pytest.mark.run_loop
+def test_wait_closed(pool_creator, loop):
+    pool = yield from pool_creator(minsize=10, maxsize=10)
+
+    c1 = yield from pool.acquire()
+    c2 = yield from pool.acquire()
+    assert 10 == pool.size
+    assert 8 == pool.freesize
+
+    ops = []
+
+    @asyncio.coroutine
+    def do_release(conn):
+        yield from asyncio.sleep(0, loop=loop)
+        pool.release(conn)
+        ops.append('release')
+
+    @asyncio.coroutine
+    def wait_closed():
+        yield from pool.wait_closed()
+        ops.append('wait_closed')
+
+    pool.close()
+    yield from asyncio.gather(wait_closed(),
+                              do_release(c1),
+                              do_release(c2),
+                              loop=loop)
+    assert ['release', 'release', 'wait_closed'] == ops
+    assert 0 == pool.freesize
+
+
+@pytest.mark.run_loop
+def test_echo(pool_creator):
+    pool = yield from pool_creator(echo=True)
+    assert pool.echo
+
+    with (yield from pool) as conn:
+        assert conn.echo
+
+
 class TestPool(unittest.TestCase):
 
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -394,61 +443,6 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertEqual(timeout, conn.timeout)
             pool.release(conn)
-
-        self.loop.run_until_complete(go())
-
-    def test_cannot_acquire_after_closing(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            pool.close()
-
-            with self.assertRaises(RuntimeError):
-                yield from pool.acquire()
-
-        self.loop.run_until_complete(go())
-
-    def test_wait_closed(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-
-            c1 = yield from pool.acquire()
-            c2 = yield from pool.acquire()
-            self.assertEqual(10, pool.size)
-            self.assertEqual(8, pool.freesize)
-
-            ops = []
-
-            @asyncio.coroutine
-            def do_release(conn):
-                yield from asyncio.sleep(0, loop=self.loop)
-                pool.release(conn)
-                ops.append('release')
-
-            @asyncio.coroutine
-            def wait_closed():
-                yield from pool.wait_closed()
-                ops.append('wait_closed')
-
-            pool.close()
-            yield from asyncio.gather(wait_closed(),
-                                      do_release(c1),
-                                      do_release(c2),
-                                      loop=self.loop)
-            self.assertEqual(['release', 'release', 'wait_closed'], ops)
-            self.assertEqual(0, pool.freesize)
-
-        self.loop.run_until_complete(go())
-
-    def test_echo(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool(echo=True)
-            self.assertTrue(pool.echo)
-
-            with (yield from pool) as conn:
-                self.assertTrue(conn.echo)
 
         self.loop.run_until_complete(go())
 
