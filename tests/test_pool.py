@@ -1,10 +1,6 @@
 import asyncio
-import json
-import os
-import unittest
 
 import pytest
-import aiomysql
 from aiomysql.connection import Connection
 from aiomysql.pool import Pool
 
@@ -427,6 +423,7 @@ def test_close_with_acquired_connections(pool_creator, loop):
     with pytest.raises(asyncio.TimeoutError):
         yield from asyncio.wait_for(pool.wait_closed(), 0.1, loop=loop)
     pool.release(conn)
+
 
 @asyncio.coroutine
 def _set_global_conn_timeout(conn, t):
