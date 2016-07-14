@@ -368,6 +368,34 @@ def test_echo(pool_creator):
         assert conn.echo
 
 
+@pytest.mark.run_loop
+def test_terminate_with_acquired_connections(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    pool.terminate()
+    yield from pool.wait_closed()
+    assert conn.closed
+
+
+@pytest.mark.run_loop
+def test_release_closed_connection(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    conn.close()
+
+    pool.release(conn)
+    pool.close()
+
+
+@pytest.mark.run_loop
+def test_wait_closing_on_not_closed(pool_creator):
+    pool = yield from pool_creator()
+
+    with pytest.raises(RuntimeError):
+        yield from pool.wait_closed()
+    pool.close()
+
+
 class TestPool(unittest.TestCase):
 
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -444,42 +472,6 @@ class TestPool(unittest.TestCase):
             self.assertEqual(timeout, conn.timeout)
             pool.release(conn)
 
-        self.loop.run_until_complete(go())
-
-    def test_terminate_with_acquired_connections(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            pool.terminate()
-            yield from pool.wait_closed()
-
-            self.assertTrue(conn.closed)
-
-        self.loop.run_until_complete(go())
-
-    def test_release_closed_connection(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            conn.close()
-
-            pool.release(conn)
-            pool.close()
-
-        self.loop.run_until_complete(go())
-
-    def test_wait_closing_on_not_closed(self):
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-
-            with self.assertRaises(RuntimeError):
-                yield from pool.wait_closed()
-            pool.close()
         self.loop.run_until_complete(go())
 
     def test_release_terminated_pool(self):
