@@ -96,20 +96,20 @@ def connection(mysql_params, loop):
 
 @pytest.yield_fixture
 def pool_creator(mysql_params, loop):
-    pool = None
+    pools = []
 
     @asyncio.coroutine
     def f(**kw):
-        nonlocal pool
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
         _loop = conn_kw.pop('loop', loop)
         pool = yield from aiomysql.create_pool(loop=_loop, **conn_kw)
+        pools.append(pool)
         return pool
 
     yield f
 
-    if pool is not None:
+    for pool in pools:
         pool.close()
         loop.run_until_complete(pool.wait_closed())
 
