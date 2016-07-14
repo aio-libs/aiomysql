@@ -95,6 +95,25 @@ def connection(mysql_params, loop):
 
 
 @pytest.yield_fixture
+def connection_creator(mysql_params, loop):
+    connections = []
+
+    @asyncio.coroutine
+    def f(**kw):
+        conn_kw = mysql_params.copy()
+        conn_kw.update(kw)
+        _loop = conn_kw.pop('loop', loop)
+        conn = yield from aiomysql.connect(**conn_kw, loop=_loop)
+        connections.append(conn)
+        return conn
+
+    yield f
+
+    for conn in connections:
+        loop.run_until_complete(conn.ensure_closed())
+
+
+@pytest.yield_fixture
 def pool_creator(mysql_params, loop):
     pools = []
 
