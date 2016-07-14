@@ -396,6 +396,38 @@ def test_wait_closing_on_not_closed(pool_creator):
     pool.close()
 
 
+@pytest.mark.run_loop
+def test_release_terminated_pool(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    pool.terminate()
+    yield from pool.wait_closed()
+
+    pool.release(conn)
+    pool.close()
+
+
+@pytest.mark.run_loop
+def test_release_terminated_pool_wait_release(pool_creator):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    pool.terminate()
+    yield from pool.wait_closed()
+
+    yield from pool.release(conn)
+    pool.close()
+
+
+@pytest.mark.run_loop
+def test_close_with_acquired_connections(pool_creator, loop):
+    pool = yield from pool_creator()
+    conn = yield from pool.acquire()
+    pool.close()
+
+    with pytest.raises(asyncio.TimeoutError):
+        yield from asyncio.wait_for(pool.wait_closed(), 0.1, loop=loop)
+    pool.release(conn)
+
 class TestPool(unittest.TestCase):
 
     fname = os.path.join(os.path.dirname(__file__), "databases.json")
@@ -471,48 +503,6 @@ class TestPool(unittest.TestCase):
             conn = yield from pool.acquire()
             self.assertEqual(timeout, conn.timeout)
             pool.release(conn)
-
-        self.loop.run_until_complete(go())
-
-    def test_release_terminated_pool(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            pool.terminate()
-            yield from pool.wait_closed()
-
-            pool.release(conn)
-            pool.close()
-
-        self.loop.run_until_complete(go())
-
-    def test_release_terminated_pool_wait_release(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            conn = yield from pool.acquire()
-            pool.terminate()
-            yield from pool.wait_closed()
-
-            yield from pool.release(conn)
-            pool.close()
-
-        self.loop.run_until_complete(go())
-
-    def test_close_with_acquired_connections(self):
-
-        @asyncio.coroutine
-        def go():
-            pool = yield from self.create_pool()
-            yield from pool.acquire()
-            pool.close()
-
-            with self.assertRaises(asyncio.TimeoutError):
-                yield from asyncio.wait_for(pool.wait_closed(),
-                                            0.1, loop=self.loop)
 
         self.loop.run_until_complete(go())
 
