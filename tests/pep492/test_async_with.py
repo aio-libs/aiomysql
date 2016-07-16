@@ -1,333 +1,268 @@
+import warnings
+
 import aiomysql
+import pytest
+
 from aiomysql import sa, create_pool
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
-import pytest
-import warnings
-from tests.base import AIOPyMySQLTestCase
 
 meta = MetaData()
 tbl = Table('tbl', meta,
-            Column('id', Integer, nullable=False,
-                   primary_key=True),
+            Column('id', Integer, nullable=False, primary_key=True),
             Column('name', String(255)))
 
 
-class TestAsyncWith(AIOPyMySQLTestCase):
-
-    def _conn_kw(self):
-        kw = dict(host=self.host, port=self.port, user=self.user,
-                  db=self.db, password=self.password, use_unicode=True,
-                  loop=self.loop)
-        return kw
-
-    async def _prepare(self, conn):
-        cur = await conn.cursor()
-        await cur.execute("DROP TABLE IF EXISTS tbl;")
-
-        await cur.execute("""CREATE TABLE tbl (
+@pytest.fixture
+def table(loop, connection_creator, table_cleanup):
+    async def f():
+        connection = await connection_creator()
+        cursor = await connection.cursor()
+        await cursor.execute("DROP TABLE IF EXISTS tbl;")
+        await cursor.execute("""CREATE TABLE tbl (
                  id MEDIUMINT NOT NULL AUTO_INCREMENT,
                  name VARCHAR(255) NOT NULL,
                  PRIMARY KEY (id));""")
 
         for i in [(1, 'a'), (2, 'b'), (3, 'c')]:
-            await cur.execute("INSERT INTO tbl VALUES(%s, %s)", i)
-        await conn.commit()
+            await cursor.execute("INSERT INTO tbl VALUES(%s, %s)", i)
 
-    def test_cursor(self):
+        await cursor.execute("commit;")
+        await cursor.close()
 
-        async def go():
+    table_cleanup('tbl')
+    loop.run_until_complete(f())
+
+
+@pytest.mark.run_loop
+async def test_cursor(table, cursor):
+    ret = []
+    await cursor.execute('SELECT * from tbl;')
+
+    assert not cursor.closed
+    async with cursor:
+        async for i in cursor:
+            ret.append(i)
+
+    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+    assert cursor.closed
+
+
+@pytest.mark.run_loop
+async def test_cursor_lightweight(table, cursor):
+    await cursor.execute('SELECT * from tbl;')
+
+    assert not cursor.closed
+    async with cursor:
+        pass
+
+    assert cursor.closed
+
+
+@pytest.mark.run_loop
+async def test_cursor_method(connection):
+    async with connection.cursor() as cursor:
+        await cursor.execute('SELECT 42;')
+        value = await cursor.fetchone()
+        assert value == (42,)
+
+    assert cursor.closed
+
+
+@pytest.mark.run_loop
+async def test_connection(connection):
+    assert not connection.closed
+    async with connection:
+        assert not connection.closed
+
+    assert connection.closed
+
+
+@pytest.mark.run_loop
+async def test_connection_exception(connection):
+    assert not connection.closed
+    with pytest.raises(RuntimeError) as ctx:
+        async with connection:
+            assert not connection.closed
+            raise RuntimeError('boom')
+    assert str(ctx.value) == 'boom'
+    assert connection.closed
+
+
+@pytest.mark.run_loop
+async def test_connect_method(mysql_params, loop):
+    async with aiomysql.connect(loop=loop, **mysql_params) as connection:
+        async with connection.cursor() as cursor:
+            await cursor.execute("SELECT 42")
+            value = await cursor.fetchone()
+            assert value, (42,)
+
+    assert cursor.closed
+    assert connection.closed
+
+
+@pytest.mark.run_loop
+async def test_connect_method_exception(mysql_params, loop):
+    with pytest.raises(RuntimeError) as ctx:
+        async with aiomysql.connect(loop=loop, **mysql_params) as connection:
+            assert not connection.closed
+            raise RuntimeError('boom')
+
+    assert str(ctx.value) == 'boom'
+    assert connection.closed
+
+
+@pytest.mark.run_loop
+async def test_pool(table, pool_creator, loop):
+    pool = await pool_creator()
+    async with pool.acquire() as conn:
+        async with (await conn.cursor()) as cur:
+            await cur.execute("SELECT * from tbl")
             ret = []
-            conn = self.connections[0]
-            await self._prepare(conn)
-
-            cur = await conn.cursor()
-            await cur.execute('SELECT * from tbl;')
-
-            assert not cur.closed
-            async with cur:
-                async for i in cur:
-                    ret.append(i)
-
+            async for i in cur:
+                ret.append(i)
             assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-            assert cur.closed
 
-        self.loop.run_until_complete(go())
 
-    def test_cursor_lightweight(self):
-
-        async def go():
-            conn = self.connections[0]
-            await self._prepare(conn)
-
-            cur = await conn.cursor()
-            await cur.execute('SELECT * from tbl;')
-
-            assert not cur.closed
-            async with cur:
+@pytest.mark.run_loop
+async def test_create_pool_deprecations(mysql_params, loop):
+    async with create_pool(loop=loop, **mysql_params) as pool:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            async with pool.get() as conn:
                 pass
+    assert issubclass(w[-1].category, DeprecationWarning)
+    assert conn.closed
 
-            assert cur.closed
+    async with create_pool(loop=loop, **mysql_params) as pool:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with await pool as conn:
+                pass
+    assert issubclass(w[-1].category, DeprecationWarning)
+    assert conn.closed
 
-        self.loop.run_until_complete(go())
 
-    def test_cursor_method(self):
+@pytest.mark.run_loop
+async def test_sa_connection(table, mysql_params, loop):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        connection = await engine.acquire()
+        assert not connection.closed
+        async with connection:
+            ret = []
+            async for i in connection.execute(tbl.select()):
+                ret.append(i)
+            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+        assert connection.closed
 
-        async def go():
-            conn = self.connections[0]
-            async with conn.cursor() as cur:
-                await cur.execute('SELECT 42;')
-                value = await cur.fetchone()
-                assert value == (42,)
 
-            assert cur.closed
+@pytest.mark.run_loop
+async def test_sa_transaction(table, mysql_params, loop):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as connection:
+            cnt = await connection.scalar(tbl.count())
+            assert 3 == cnt
 
-        self.loop.run_until_complete(go())
+            async with (await connection.begin()) as tr:
+                assert tr.is_active
+                await connection.execute(tbl.delete())
 
-    def test_connection(self):
+            assert not tr.is_active
+            cnt = await connection.scalar(tbl.count())
+            assert 0 == cnt
 
-        async def go():
-            conn = self.connections[0]
 
-            assert not conn.closed
-            async with conn:
-                assert not conn.closed
+@pytest.mark.run_loop
+async def test_sa_transaction_rollback(loop, mysql_params, table):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as conn:
+            cnt = await conn.scalar(tbl.count())
+            assert 3 == cnt
 
-            assert conn.closed
-
-        self.loop.run_until_complete(go())
-
-    def test_connection_exception(self):
-
-        async def go():
-            conn = self.connections[0]
-
-            assert not conn.closed
             with pytest.raises(RuntimeError) as ctx:
-                async with conn:
-                    assert not conn.closed
+                async with (await conn.begin()) as tr:
+                    assert tr.is_active
+                    await conn.execute(tbl.delete())
+                    raise RuntimeError("Exit")
+            assert str(ctx.value) == "Exit"
+            assert not tr.is_active
+            cnt = await conn.scalar(tbl.count())
+            assert 3 == cnt
+
+
+@pytest.mark.run_loop
+async def test_create_engine(loop, mysql_params, table):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as conn:
+            ret = []
+            async for i in conn.execute(tbl.select()):
+                ret.append(i)
+            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+
+
+@pytest.mark.run_loop
+async def test_engine(loop, mysql_params, table):
+    engine = await sa.create_engine(loop=loop, **mysql_params)
+    async with engine:
+        async with engine.acquire() as conn:
+            ret = []
+            async for i in conn.execute(tbl.select()):
+                ret.append(i)
+            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+
+
+@pytest.mark.run_loop
+async def test_transaction_context_manager(loop, mysql_params, table):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as conn:
+            async with conn.begin() as tr:
+                async with conn.execute(tbl.select()) as cursor:
+                    ret = []
+                    async for i in conn.execute(tbl.select()):
+                        ret.append(i)
+                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+                assert cursor.closed
+            assert not tr.is_active
+
+            tr2 = await conn.begin()
+            async with tr2:
+                assert tr2.is_active
+                async with conn.execute('SELECT 1;') as cursor:
+                    rec = await cursor.scalar()
+                    assert rec == 1
+                    await cursor.close()
+            assert not tr2.is_active
+
+
+@pytest.mark.run_loop
+async def test_transaction_context_manager_error(loop, mysql_params, table):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as conn:
+            with pytest.raises(RuntimeError) as ctx:
+                async with conn.begin() as tr:
+                    assert tr.is_active
                     raise RuntimeError('boom')
             assert str(ctx.value) == 'boom'
-            assert conn.closed
+            assert not tr.is_active
+        assert conn.closed
 
-        self.loop.run_until_complete(go())
 
-    def test_connect_method(self):
-        async def go():
-            async with aiomysql.connect(loop=self.loop, host=self.host,
-                                        port=self.port, user=self.user,
-                                        db=self.db, password=self.password,
-                                        use_unicode=True, echo=True) as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute("SELECT 42")
-                    value = await cur.fetchone()
-                    assert value, (42,)
+@pytest.mark.run_loop
+async def test_transaction_context_manager_commit_once(loop, mysql_params,
+                                                       table):
+    async with sa.create_engine(loop=loop, **mysql_params) as engine:
+        async with engine.acquire() as conn:
+            async with conn.begin() as tr:
+                # check that in context manager we do not execute
+                # commit for second time. Two commits in row causes
+                # InvalidRequestError exception
+                await tr.commit()
+            assert not tr.is_active
 
-            assert cur.closed
-            assert conn.closed
-
-        self.loop.run_until_complete(go())
-
-    def test_connect_method_exception(self):
-        kw = dict(loop=self.loop, host=self.host, port=self.port,
-                  user=self.user, db=self.db, password=self.password,
-                  use_unicode=True, echo=True)
-        async def go():
-            with pytest.raises(RuntimeError) as ctx:
-                async with aiomysql.connect(**kw) as conn:
-                    assert not conn.closed
-                    raise RuntimeError('boom')
-
-            assert str(ctx.value) == 'boom'
-            assert conn.closed
-
-        self.loop.run_until_complete(go())
-
-    def test_pool(self):
-        kw = self._conn_kw()
-        async def go():
-            pool = await create_pool(**kw)
-            async with pool.acquire() as conn:
-                await self._prepare(conn)
-
-                async with (await conn.cursor()) as cur:
-                    await cur.execute("SELECT * from tbl")
-                    ret = []
-                    async for i in cur:
-                        ret.append(i)
-                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-
-        self.loop.run_until_complete(go())
-
-    def test_create_pool_deprecations(self):
-
-        kw = self._conn_kw()
-        async def go():
-            async with create_pool(**kw) as pool:
-                with warnings.catch_warnings(record=True) as w:
-                    warnings.simplefilter("always")
-                    async with pool.get() as conn:
-                        pass
-            assert issubclass(w[-1].category, DeprecationWarning)
-            assert conn.closed
-
-            async with create_pool(**kw) as pool:
-                with warnings.catch_warnings(record=True) as w:
-                    warnings.simplefilter("always")
-                    with await pool as conn:
-                        pass
-            assert issubclass(w[-1].category, DeprecationWarning)
-            assert conn.closed
-
-        self.loop.run_until_complete(go())
-
-    def test_sa_connection(self):
-
-        kw = self._conn_kw()
-        async def go():
-            async with sa.create_engine(**kw) as engine:
-                conn = await engine.acquire()
-                assert not conn.closed
-                async with conn:
-                    await self._prepare(conn.connection)
-                    ret = []
-                    async for i in conn.execute(tbl.select()):
-                        ret.append(i)
-                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-                assert conn.closed
-
-        self.loop.run_until_complete(go())
-
-    def test_sa_transaction(self):
-
-        kw = self._conn_kw()
-        async def go():
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    await self._prepare(conn.connection)
-
-                    cnt = await conn.scalar(tbl.count())
-                    assert 3 == cnt
-
-                    async with (await conn.begin()) as tr:
-                        assert tr.is_active
-                        await conn.execute(tbl.delete())
-
-                    assert not tr.is_active
-                    cnt = await conn.scalar(tbl.count())
-                    assert 0 == cnt
-
-        self.loop.run_until_complete(go())
-
-    def test_sa_transaction_rollback(self):
-        kw = self._conn_kw()
-        async def go():
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    await self._prepare(conn.connection)
-
-                    cnt = await conn.scalar(tbl.count())
-                    assert 3 == cnt
-
-                    with pytest.raises(RuntimeError) as ctx:
-                        async with (await conn.begin()) as tr:
-                            assert tr.is_active
-                            await conn.execute(tbl.delete())
-                            raise RuntimeError("Exit")
-                    assert str(ctx.value) == "Exit"
-                    assert not tr.is_active
-                    cnt = await conn.scalar(tbl.count())
-                    assert 3 == cnt
-
-        self.loop.run_until_complete(go())
-
-    def test_create_engine(self):
-        kw = self._conn_kw()
-        async def go():
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    await self._prepare(conn.connection)
-
-                    ret = []
-                    async for i in conn.execute(tbl.select()):
-                        ret.append(i)
-                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-
-        self.loop.run_until_complete(go())
-
-    def test_engine(self):
-        kw = self._conn_kw()
-        async def go():
-            engine = await sa.create_engine(**kw)
-            async with engine:
-                async with engine.acquire() as conn:
-                    await self._prepare(conn.connection)
-
-                    ret = []
-                    async for i in conn.execute(tbl.select()):
-                        ret.append(i)
-                    assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-
-        self.loop.run_until_complete(go())
-
-    def test_transaction_context_manager(self):
-        async def go():
-            kw = self._conn_kw()
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    await self._prepare(conn.connection)
-                    async with conn.begin() as tr:
-                        async with conn.execute(tbl.select()) as cursor:
-                            ret = []
-                            async for i in conn.execute(tbl.select()):
-                                ret.append(i)
-                            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
-                        assert cursor.closed
-                    assert not tr.is_active
-
-                    tr2 = await conn.begin()
-                    async with tr2:
-                        assert tr2.is_active
-                        async with conn.execute('SELECT 1;') as cursor:
-                            rec = await cursor.scalar()
-                            assert rec == 1
-                            await cursor.close()
-                    assert not tr2.is_active
-
-            assert conn.closed
-        self.loop.run_until_complete(go())
-
-    def test_transaction_context_manager_error(self):
-        async def go():
-            kw = self._conn_kw()
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    with pytest.raises(RuntimeError) as ctx:
-                        async with conn.begin() as tr:
-                            assert tr.is_active
-                            raise RuntimeError('boom')
-                    assert str(ctx.value) == 'boom'
-                    assert not tr.is_active
-            assert conn.closed
-        self.loop.run_until_complete(go())
-
-    def test_transaction_context_manager_commit_once(self):
-        async def go():
-            kw = self._conn_kw()
-            async with sa.create_engine(**kw) as engine:
-                async with engine.acquire() as conn:
-                    async with conn.begin() as tr:
-                        # check that in context manager we do not execute
-                        # commit for second time. Two commits in row causes
-                        # InvalidRequestError exception
-                        await tr.commit()
-                    assert not tr.is_active
-
-                    tr2 = await conn.begin()
-                    async with tr2:
-                        assert tr2.is_active
-                        # check for double commit one more time
-                        await tr2.commit()
-                    assert not tr2.is_active
-            assert conn.closed
-        self.loop.run_until_complete(go())
+            tr2 = await conn.begin()
+            async with tr2:
+                assert tr2.is_active
+                # check for double commit one more time
+                await tr2.commit()
+            assert not tr2.is_active
+        assert conn.closed
