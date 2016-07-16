@@ -103,7 +103,7 @@ def connection_creator(mysql_params, loop):
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
         _loop = conn_kw.pop('loop', loop)
-        conn = yield from aiomysql.connect(**conn_kw, loop=_loop)
+        conn = yield from aiomysql.connect(loop=_loop, **conn_kw)
         connections.append(conn)
         return conn
 
