@@ -244,7 +244,7 @@ async def test_transaction_context_manager_error(loop, mysql_params, table):
                     raise RuntimeError('boom')
             assert str(ctx.value) == 'boom'
             assert not tr.is_active
-        assert conn.closed
+    assert conn.closed
 
 
 @pytest.mark.run_loop
@@ -265,4 +265,4 @@ async def test_transaction_context_manager_commit_once(loop, mysql_params,
                 # check for double commit one more time
                 await tr2.commit()
             assert not tr2.is_active
-        assert conn.closed
+    assert conn.closed
