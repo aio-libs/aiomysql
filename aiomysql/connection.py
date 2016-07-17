@@ -922,17 +922,18 @@ class LoadLocalFile(object):
         self.connection = connection
         self._loop = connection.loop
         self._file_object = None
+        self._executor = None  # means use default executor
 
     def _open_file(self):
 
         def opener(filename):
             try:
                 self._file_object = open(filename, 'rb')
-            except IOError:
-                raise OperationalError(1017, "Can't find file"
-                                       " '{0}'".format(filename))
+            except IOError as e:
+                msg = "Can't find file '{0}'".format(filename)
+                raise OperationalError(1017,msg) from e
 
-        fut = self._loop.run_in_executor(None, opener, self.filename)
+        fut = self._loop.run_in_executor(self._executor, opener, self.filename)
         return fut
 
     def _file_read(self, chunk_size):
@@ -948,11 +949,11 @@ class LoadLocalFile(object):
             except Exception as e:
                 self._file_object.close()
                 self._file_object = None
-                raise OperationalError(
-                    1024, "Error reading file {}".format(self.filename)) from e
+                msg = "Error reading file {}".format(self.filename)
+                raise OperationalError(1024, msg) from e
             return chunk
 
-        fut = self._loop.run_in_executor(None, freader, chunk_size)
+        fut = self._loop.run_in_executor(self._executor, freader, chunk_size)
         return fut
 
     @asyncio.coroutine
@@ -970,6 +971,7 @@ class LoadLocalFile(object):
                     chunk = yield from self._file_read(chunk_size)
                     if not chunk:
                         break
+                    # TODO: consider drain data
                     conn.write_packet(chunk)
         finally:
             # send the empty packet to signify we are done sending data
