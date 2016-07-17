@@ -334,6 +334,14 @@ class Connection:
         yield from self._execute_command(COMMAND.COM_INIT_DB, db)
         yield from self._read_ok_packet()
 
+    @asyncio.coroutine
+    def show_warnings(self):
+        """SHOW WARNINGS"""
+        yield from self._execute_command(COMMAND.COM_QUERY, "SHOW WARNINGS")
+        result = MySQLResult(self)
+        yield from result.read()
+        return result.rows
+
     def escape(self, obj):
         """ Escape whatever value you pass to it"""
         if isinstance(obj, str):
