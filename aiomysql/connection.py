@@ -628,12 +628,8 @@ class Connection:
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
 
-        data_init = struct.pack('<iIB23s', self.client_flag, 1, charset_id, b'')
-
-        #if self.ssl and self.server_capabilities & CLIENT.SSL:
-            # self.write_packet(data_init)
-            # self._sock = self.ctx.wrap_socket(self._sock, server_hostname=self.host)
-            # self._rfile = _makefile(self._sock, 'rb')
+        data_init = struct.pack('<iIB23s', self.client_flag, 1,
+                                charset_id, b'')
 
         data = data_init + _user + b'\0'
 
@@ -645,7 +641,8 @@ class Connection:
             data += lenenc_int(len(authresp)) + authresp
         elif self.server_capabilities & CLIENT.SECURE_CONNECTION:
             data += struct.pack('B', len(authresp)) + authresp
-        else:  # pragma: no cover - not testing against servers without secure auth (>=5.0)
+        else:  # pragma: no cover
+            # not testing against servers without secure auth (>=5.0)
             data += authresp + b'\0'
 
         if self._db and self.server_capabilities & CLIENT.CONNECT_WITH_DB:
@@ -670,13 +667,15 @@ class Connection:
         if auth_packet.is_auth_switch_request():
             # https://dev.mysql.com/doc/internals/en/
             # connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
-            auth_packet.read_uint8() # 0xfe packet identifier
+            auth_packet.read_uint8()  # 0xfe packet identifier
             plugin_name = auth_packet.read_string()
-            if self.server_capabilities & CLIENT.PLUGIN_AUTH and plugin_name is not None:
+            if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
+                    plugin_name is not None):
                 auth_packet = self._process_auth(plugin_name, auth_packet)
             else:
                 # send legacy handshake
-                data = _scramble_323(self.password.encode('latin1'), self.salt) + b'\0'
+                data = _scramble_323(self.password.encode('latin1'),
+                                     self.salt) + b'\0'
                 self.write_packet(data)
                 auth_packet = yield from self._read_packet()
 
@@ -735,16 +734,17 @@ class Connection:
             self.salt += data[i:i + salt_len]
             i += salt_len
 
-        i+=1
+        i += 1
         # AUTH PLUGIN NAME may appear here.
         if self.server_capabilities & CLIENT.PLUGIN_AUTH and len(data) >= i:
             # Due to Bug#59453 the auth-plugin-name is missing the terminating
             # NUL-char in versions prior to 5.5.10 and 5.6.2.
-            # ref: https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
+            # ref: https://dev.mysql.com/doc/internals/en/
+            # connection-phase-packets.html#packet-Protocol::Handshake
             # didn't use version checks as mariadb is corrected and reports
             # earlier than those two.
             server_end = data.find(b'\0', i)
-            if server_end < 0: # pragma: no cover - very specific upstream bug
+            if server_end < 0:  # pragma: no cover - very specific upstream bug
                 # not found \0 and last field so take it all
                 self._auth_plugin_name = data[i:].decode('latin1')
             else:
@@ -980,7 +980,7 @@ class LoadLocalFile(object):
                 self._file_object = open(filename, 'rb')
             except IOError as e:
                 msg = "Can't find file '{0}'".format(filename)
-                raise OperationalError(1017,msg) from e
+                raise OperationalError(1017, msg) from e
 
         fut = self._loop.run_in_executor(self._executor, opener, self.filename)
         return fut
