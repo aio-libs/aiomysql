@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['PyMySQL<=0.6.7']
+install_requires = ['PyMySQL>=0.7.5']
 
 PY_VER = sys.version_info
 
