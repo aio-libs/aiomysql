@@ -53,7 +53,6 @@ __all__ = [
     'escape_dict',
     'escape_sequence',
     'escape_string',
-    '__version__',
 
     'Connection',
     'Pool'
