@@ -6,6 +6,8 @@ Changes
 
 * Default min pool size reduced to 1 #80 (Thanks @Drizzt1991)
 
+* Update to PyMySQL 0.7.5 #89
+
 
 0.0.7 (2016-01-27)
 ^^^^^^^^^^^^^^^^^^
