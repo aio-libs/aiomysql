@@ -204,6 +204,9 @@ class Connection:
         # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None
+        # If connection was closed for specific reason, we should show that to
+        # user
+        self._close_reason = None
 
     @property
     def host(self):
@@ -369,6 +372,7 @@ class Connection:
         :returns: instance of cursor, by default :class:`Cursor`
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
+        self._ensure_alive()
         if cursor is not None and not issubclass(cursor, Cursor):
             raise TypeError('Custom cursor must be subclass of Cursor')
 
@@ -508,7 +512,11 @@ class Connection:
         """
         buff = b''
         while True:
-            packet_header = yield from self._read_bytes(4)
+            try:
+                packet_header = yield from self._read_bytes(4)
+            except asyncio.CancelledError:
+                self._close_on_cancel()
+                raise
 
             btrl, btrh, packet_number = struct.unpack(
                 '<HBB', packet_header)
@@ -523,7 +531,12 @@ class Connection:
                     (packet_number, self._next_seq_id))
             self._next_seq_id = (self._next_seq_id + 1) % 256
 
-            recv_data = yield from self._read_bytes(bytes_to_read)
+            try:
+                recv_data = yield from self._read_bytes(bytes_to_read)
+            except asyncio.CancelledError:
+                self._close_on_cancel()
+                raise
+
             buff += recv_data
             # https://dev.mysql.com/doc/internals/en/sending-more-than-16mbyte.html
             if bytes_to_read == 0xffffff:
@@ -589,8 +602,7 @@ class Connection:
 
     @asyncio.coroutine
     def _execute_command(self, command, sql):
-        if not self._writer:
-            raise InterfaceError("(0, 'Not connected')")
+        self._ensure_alive()
 
         # If the last query was unbuffered, make sure it finishes before
         # sending new commands
@@ -763,6 +775,19 @@ class Connection:
 
     def get_server_info(self):
         return self.server_version
+
+    # Just to always have consistent errors 2 helpers
+
+    def _close_on_cancel(self):
+        self.close()
+        self._close_reason = "Cancelled during execution"
+
+    def _ensure_alive(self):
+        if not self._writer:
+            if self._close_reason is None:
+                raise InterfaceError("(0, 'Not connected')")
+            else:
+                raise InterfaceError(self._close_reason)
 
     if PY_341:  # pragma: no branch
         def __del__(self):
@@ -1016,8 +1041,7 @@ class LoadLocalFile(object):
     @asyncio.coroutine
     def send_data(self):
         """Send data packets from the local file to the server"""
-        if not self.connection._writer:
-            raise InterfaceError("(0, '')")
+        self.connection._ensure_alive()
         conn = self.connection
 
         try:
@@ -1030,6 +1054,9 @@ class LoadLocalFile(object):
                         break
                     # TODO: consider drain data
                     conn.write_packet(chunk)
+        except asyncio.CancelledError:
+            self.connection._close_on_cancel()
+            raise
         finally:
             # send the empty packet to signify we are done sending data
             conn.write_packet(b"")
