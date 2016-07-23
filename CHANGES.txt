@@ -8,6 +8,8 @@ Changes
 
 * Update to PyMySQL 0.7.5 #89
 
+* Fixed connection cancellation in process of executing a query #79 (Thanks @Drizzt1991)
+
 
 0.0.7 (2016-01-27)
 ^^^^^^^^^^^^^^^^^^
