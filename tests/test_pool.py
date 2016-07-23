@@ -468,3 +468,32 @@ def test_create_pool_with_timeout(pool_creator):
     conn = yield from pool.acquire()
     assert timeout == conn.timeout
     pool.release(conn)
+
+
+@pytest.mark.run_loop
+def test_cancelled_connection(pool_creator, loop):
+    pool = yield from pool_creator(minsize=0, maxsize=1)
+
+    try:
+        with (yield from pool) as conn:
+            curs = yield from conn.cursor()
+            # Cancel a cursor in the middle of execution, before it
+            # could read even the first packet (SLEEP assures the
+            # timings)
+            task = loop.create_task(curs.execute(
+                "SELECT 1 as id, SLEEP(0.1) as xxx"))
+            yield from asyncio.sleep(0.05, loop=loop)
+            task.cancel()
+            yield from task
+    except asyncio.CancelledError:
+        pass
+
+    with (yield from pool) as conn:
+        cur2 = yield from conn.cursor()
+        res = yield from cur2.execute("SELECT 2 as value, 0 as xxx")
+        names = [x[0] for x in cur2.description]
+        # If we receive ["id", "xxx"] - we corrupted the connection
+        assert names == ["value", "xxx"]
+        res = yield from cur2.fetchall()
+        # If we receive [(1, 0)] - we retrieved old cursor's values
+        assert list(res) ==  [(2, 0)]
