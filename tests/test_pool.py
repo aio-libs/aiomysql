@@ -496,4 +496,4 @@ def test_cancelled_connection(pool_creator, loop):
         assert names == ["value", "xxx"]
         res = yield from cur2.fetchall()
         # If we receive [(1, 0)] - we retrieved old cursor's values
-        assert list(res) ==  [(2, 0)]
+        assert list(res) == [(2, 0)]
