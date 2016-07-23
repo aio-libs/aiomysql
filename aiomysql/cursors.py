@@ -1,5 +1,6 @@
 import asyncio
 import re
+import warnings
 
 from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
@@ -187,7 +188,7 @@ class Cursor:
         if not current_result.has_next:
             return
         yield from conn.next_result()
-        self._do_get_result()
+        yield from self._do_get_result()
         return True
 
     def _escape_args(self, args, conn):
@@ -457,8 +458,9 @@ class Cursor:
         conn = self._get_db()
         self._last_executed = q
         yield from conn.query(q)
-        self._do_get_result()
+        yield from self._do_get_result()
 
+    @asyncio.coroutine
     def _do_get_result(self):
         conn = self._get_db()
         self._rownumber = 0
@@ -467,6 +469,20 @@ class Cursor:
         self._description = result.description
         self._lastrowid = result.insert_id
         self._rows = result.rows
+
+        if result.warning_count > 0:
+            yield from self._show_warnings(conn)
+
+    @asyncio.coroutine
+    def _show_warnings(self, conn):
+        if self._result and self._result.has_next:
+            return
+        ws = yield from conn.show_warnings()
+        if ws is None:
+            return
+        for w in ws:
+            msg = w[-1]
+            warnings.warn(str(msg), Warning, 4)
 
     Warning = Warning
     Error = Error
@@ -506,8 +522,9 @@ class _DictCursorMixin:
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
 
+    @asyncio.coroutine
     def _do_get_result(self):
-        super()._do_get_result()
+        yield from super()._do_get_result()
         fields = []
         if self._description:
             for f in self._result.fields:
@@ -565,7 +582,7 @@ class SSCursor(Cursor):
         conn = self._get_db()
         self._last_executed = q
         yield from conn.query(q, unbuffered=True)
-        self._do_get_result()
+        yield from self._do_get_result()
         return self._rowcount
 
     @asyncio.coroutine
