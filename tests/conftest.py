@@ -61,11 +61,11 @@ def pytest_ignore_collect(path, config):
 
 @pytest.fixture
 def mysql_params():
-    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
+    params = {"host": os.environ.get('MYSQL_HOST', '127.0.0.1'),
               "port": os.environ.get('MYSQL_PORT', 3306),
               "user": os.environ.get('MYSQL_USER', 'root'),
               "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
+              "password": os.environ.get('MYSQL_PASSWORD', 'mypass'),
               "local_infile": True,
               "use_unicode": True,
               }
