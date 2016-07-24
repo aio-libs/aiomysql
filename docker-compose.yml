@@ -7,3 +7,5 @@ mysql:
         - MYSQL_ROOT_PASSWORD=mypass
     ports:
         - 3306:3306
+    volumes:
+        - /tmp/aiomysql:/var/run/mysqld/
