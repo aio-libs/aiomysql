@@ -138,10 +138,8 @@ def table_cleanup(loop, connection):
     table_list = []
     cursor = loop.run_until_complete(_cursor_wrapper(connection))
 
-    def _register_table(table_name):
-        table_list.append(table_name)
+    yield table_list.append
 
-    yield _register_table
     for t in table_list:
         # TODO: probably this is not safe code
         sql = "DROP TABLE IF EXISTS {};".format(t)
