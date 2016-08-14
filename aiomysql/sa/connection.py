@@ -69,7 +69,7 @@ class SAConnection:
         cursor = yield from self._connection.cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
-            raise exc.ArgumentError("aiopg doesn't support executemany")
+            raise exc.ArgumentError("aiomysql doesn't support executemany")
         elif dp:
             dp = dp[0]
 
