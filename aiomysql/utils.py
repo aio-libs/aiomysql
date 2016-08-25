@@ -3,20 +3,11 @@ import sys
 
 
 PY_35 = sys.version_info >= (3, 5)
-PY_352 = sys.version_info >= (3, 5, 2)
-
 if PY_35:
     from collections.abc import Coroutine
     base = Coroutine
 else:
     base = object
-
-
-def _decorate_aiter(coro):  # pragma: no cover
-    if PY_352:
-        return coro
-    else:
-        return asyncio.coroutine(coro)
 
 
 class _ContextManager(base):
@@ -102,7 +93,7 @@ class _PoolContextManager(_ContextManager):
 class _SAConnectionContextManager(_ContextManager):
 
     if PY_35:  # pragma: no branch
-        @_decorate_aiter
+        @asyncio.coroutine
         def __aiter__(self):
             result = yield from self._coro
             return result

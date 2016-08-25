@@ -8,7 +8,7 @@ from pymysql.err import (
     NotSupportedError, ProgrammingError)
 
 from .log import logger
-from .utils import PY_35, _decorate_aiter
+from .utils import PY_35
 
 
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L15
@@ -496,7 +496,7 @@ class Cursor:
     NotSupportedError = NotSupportedError
 
     if PY_35:  # pragma: no branch
-        @_decorate_aiter
+        @asyncio.coroutine
         def __aiter__(self):
             return self
 
