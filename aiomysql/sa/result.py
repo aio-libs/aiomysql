@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
-from ..utils import PY_35
+from ..utils import PY_35, _decorate_aiter
 
 
 @asyncio.coroutine
@@ -441,7 +441,7 @@ class ResultProxy:
             return None
 
     if PY_35:  # pragma: no branch
-        @asyncio.coroutine
+        @_decorate_aiter
         def __aiter__(self):
             return self
 
