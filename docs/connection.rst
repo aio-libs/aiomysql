@@ -18,19 +18,26 @@ connection to the database, consider connection pool for multiple connections.
 
 Example::
 
-  import asyncio
-  import aiomysql
+    import asyncio
+    import aiomysql
 
+    loop = asyncio.get_event_loop()
 
-  @asyncio.coroutine
-  def go():
-      conn = yield from aiomysql.connect(database='aiomysql',
-                                      user='root',
-                                      password='secret',
-                                      host='127.0.0.1')
-      cur = yield from conn.cursor()
-      yield from cur.execute("SELECT * FROM tbl")
-      ret = yield from cur.fetchall()
+    @asyncio.coroutine
+    def test_example():
+        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                           user='root', password='', db='mysql',
+                                           loop=loop)
+
+        cur = yield from conn.cursor()
+        yield from cur.execute("SELECT Host,User FROM user")
+        print(cur.description)
+        r = yield from cur.fetchall()
+        print(r)
+        yield from cur.close()
+        conn.close()
+
+    loop.run_until_complete(test_example())
 
 
 .. function:: connect(host="localhost", user=None, password="",
