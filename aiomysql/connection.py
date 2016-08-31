@@ -41,7 +41,8 @@ from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import PY_35, _ConnectionContextManager, _ContextManager
+from .utils import (PY_35, _ConnectionContextManager, _ContextManager,
+                    create_future)
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
@@ -380,7 +381,7 @@ class Connection:
             cur = cursor(self, self._echo)
         else:
             cur = self.cursorclass(self, self._echo)
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(cur)
         return _ContextManager(fut)
 
