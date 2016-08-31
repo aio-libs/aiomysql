@@ -191,7 +191,7 @@ class Pool(asyncio.AbstractServer):
 
         This is **NOT** a coroutine.
         """
-        fut = create_future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(None)
 
         if conn in self._terminated:
