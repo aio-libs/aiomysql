@@ -7,7 +7,7 @@ import warnings
 
 from .connection import connect
 from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
-                    _PoolAcquireContextManager)
+                    _PoolAcquireContextManager, create_future)
 
 
 def create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
@@ -191,7 +191,7 @@ class Pool(asyncio.AbstractServer):
 
         This is **NOT** a coroutine.
         """
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(None)
 
         if conn in self._terminated:

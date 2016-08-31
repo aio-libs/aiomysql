@@ -8,7 +8,7 @@ from pymysql.err import (
     NotSupportedError, ProgrammingError)
 
 from .log import logger
-from .utils import PY_35
+from .utils import PY_35, create_future
 
 
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L15
@@ -368,7 +368,7 @@ class Cursor:
     def fetchone(self):
         """Fetch the next row """
         self._check_executed()
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
 
         if self._rows is None or self._rownumber >= len(self._rows):
             fut.set_result(None)
@@ -376,7 +376,7 @@ class Cursor:
         result = self._rows[self._rownumber]
         self._rownumber += 1
 
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(result)
         return fut
 
@@ -392,7 +392,7 @@ class Cursor:
         :returns: ``list`` of fetched rows
         """
         self._check_executed()
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         if self._rows is None:
             fut.set_result([])
             return fut
@@ -409,7 +409,7 @@ class Cursor:
         :returns: ``list`` of fetched rows
         """
         self._check_executed()
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         if self._rows is None:
             fut.set_result([])
             return fut
@@ -449,7 +449,7 @@ class Cursor:
             raise IndexError("out of range")
         self._rownumber = r
 
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(None)
         return fut
 
