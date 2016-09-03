@@ -209,6 +209,8 @@ class Connection:
         # user
         self._close_reason = None
 
+        self._auth_plugin_name = ""
+
     @property
     def host(self):
         """MySQL server IP address or name"""
@@ -756,6 +758,7 @@ class Connection:
             i += salt_len
 
         i += 1
+
         # AUTH PLUGIN NAME may appear here.
         if self.server_capabilities & CLIENT.PLUGIN_AUTH and len(data) >= i:
             # Due to Bug#59453 the auth-plugin-name is missing the terminating
