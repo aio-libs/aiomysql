@@ -697,7 +697,7 @@ class Connection:
                 auth_packet = self._process_auth(plugin_name, auth_packet)
             else:
                 # send legacy handshake
-                data = _scramble_323(self.password.encode('latin1'),
+                data = _scramble_323(self._password.encode('latin1'),
                                      self.salt) + b'\0'
                 self.write_packet(data)
                 auth_packet = yield from self._read_packet()
