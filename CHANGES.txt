@@ -1,6 +1,14 @@
 Changes
 -------
 
+0.0.9 (XXXX-XX-XX)
+^^^^^^^^^^^^^^^^^^
+
+* Fixed AttributeError in  _request_authentication function #104 (Thanks @ttlttl)
+
+* Fixed legacy auth #105
+
+
 0.0.8 (2016-08-24)
 ^^^^^^^^^^^^^^^^^^
 
