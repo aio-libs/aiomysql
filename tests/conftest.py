@@ -7,10 +7,28 @@ import aiomysql
 import pytest
 
 
+PY_35 = sys.version_info >= (3, 5)
+if PY_35:
+    import uvloop
+else:
+    uvloop = None
+
+
+def pytest_generate_tests(metafunc):
+    if 'loop_type' in metafunc.fixturenames:
+        loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
+        metafunc.parametrize("loop_type", loop_type)
+
+
 @pytest.yield_fixture
-def loop(request):
+def loop(request, loop_type):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None)
+
+    if uvloop and loop_type == 'uvloop':
+        loop = uvloop.new_event_loop()
+    else:
+        loop = asyncio.new_event_loop()
 
     yield loop
 
