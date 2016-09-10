@@ -8,6 +8,8 @@ Changes
 
 * Fixed legacy auth #105
 
+* uvloop added to test suite #106
+
 
 0.0.8 (2016-08-24)
 ^^^^^^^^^^^^^^^^^^
