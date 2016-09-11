@@ -10,6 +10,8 @@ Changes
 
 * uvloop added to test suite #106
 
+* Fixed bug with unicode in json field #107 (Thanks @methane)
+
 
 0.0.8 (2016-08-24)
 ^^^^^^^^^^^^^^^^^^
