@@ -31,6 +31,9 @@ before_script:
     - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql2; create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
 
 install:
+    - if python -c "import sys; sys.exit(sys.version_info < (3,5))"; then
+          pip install uvloop;
+      fi
     - pip install -Ur requirements-dev.txt
     - pip install .
     - pip install coveralls
