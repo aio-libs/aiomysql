@@ -7,4 +7,4 @@ pytest-cov
 pytest-sugar
 sphinx
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy
+sqlalchemy==1.0.15
