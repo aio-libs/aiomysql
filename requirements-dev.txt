@@ -1,5 +1,5 @@
 coverage==4.2
-flake8
+flake8==3.0.4
 ipdb
 ipython
 pytest
