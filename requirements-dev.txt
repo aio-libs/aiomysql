@@ -1,7 +1,7 @@
 coverage==4.2
 flake8==3.0.4
 ipdb
-ipython
+ipython==5.1.0
 pytest==3.0.2
 pytest-cov==2.3.1
 pytest-sugar==0.7.1
