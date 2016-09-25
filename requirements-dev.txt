@@ -2,7 +2,7 @@ coverage==4.2
 flake8==3.0.4
 ipdb
 ipython
-pytest
+pytest==3.0.2
 pytest-cov
 pytest-sugar==0.7.1
 sphinx
