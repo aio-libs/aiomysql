@@ -4,7 +4,7 @@ ipdb
 ipython
 pytest
 pytest-cov
-pytest-sugar
+pytest-sugar==0.7.1
 sphinx
 sphinxcontrib-asyncio==0.2.0
 sqlalchemy==1.0.15
