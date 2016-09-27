@@ -16,6 +16,7 @@ from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
+from pymysql.constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, through)
@@ -41,7 +42,8 @@ from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import PY_35, _ConnectionContextManager, _ContextManager
+from .utils import (PY_35, _ConnectionContextManager, _ContextManager,
+                    create_future)
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
@@ -207,6 +209,8 @@ class Connection:
         # If connection was closed for specific reason, we should show that to
         # user
         self._close_reason = None
+
+        self._auth_plugin_name = ""
 
     @property
     def host(self):
@@ -380,7 +384,7 @@ class Connection:
             cur = cursor(self, self._echo)
         else:
             cur = self.cursorclass(self, self._echo)
-        fut = asyncio.Future(loop=self._loop)
+        fut = create_future(self._loop)
         fut.set_result(cur)
         return _ContextManager(fut)
 
@@ -694,7 +698,7 @@ class Connection:
                 auth_packet = self._process_auth(plugin_name, auth_packet)
             else:
                 # send legacy handshake
-                data = _scramble_323(self.password.encode('latin1'),
+                data = _scramble_323(self._password.encode('latin1'),
                                      self.salt) + b'\0'
                 self.write_packet(data)
                 auth_packet = yield from self._read_packet()
@@ -755,6 +759,7 @@ class Connection:
             i += salt_len
 
         i += 1
+
         # AUTH PLUGIN NAME may appear here.
         if self.server_capabilities & CLIENT.PLUGIN_AUTH and len(data) >= i:
             # Due to Bug#59453 the auth-plugin-name is missing the terminating
@@ -969,6 +974,7 @@ class MySQLResult:
         self.fields = []
         self.converters = []
         use_unicode = self.connection.use_unicode
+        conn_encoding = self.connection.encoding
         description = []
         for i in range(self.field_count):
             field = yield from self.connection._read_packet(
@@ -977,14 +983,24 @@ class MySQLResult:
             description.append(field.description())
             field_type = field.type_code
             if use_unicode:
-                if field_type in TEXT_TYPES:
-                    charset = charset_by_id(field.charsetnr)
-                    if charset.is_binary:
+                if field_type == FIELD_TYPE.JSON:
+                    # When SELECT from JSON column: charset = binary
+                    # When SELECT CAST(... AS JSON): charset = connection
+                    # encoding
+                    # This behavior is different from TEXT / BLOB.
+                    # We should decode result by connection encoding
+                    # regardless charsetnr.
+                    # See https://github.com/PyMySQL/PyMySQL/issues/488
+                    encoding = conn_encoding  # SELECT CAST(... AS JSON)
+                elif field_type in TEXT_TYPES:
+                    if field.charsetnr == 63:  # binary
                         # TEXTs with charset=binary means BINARY types.
                         encoding = None
                     else:
-                        encoding = charset.encoding
+                        encoding = conn_encoding
                 else:
+                    # Integers, Dates and Times, and other basic data
+                    # is encoded in ascii
                     encoding = 'ascii'
             else:
                 encoding = None

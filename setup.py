@@ -40,6 +40,7 @@ classifiers = [
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
     'Operating System :: POSIX',
     'Environment :: Web Environment',
     'Development Status :: 3 - Alpha',

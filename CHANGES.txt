@@ -1,6 +1,18 @@
 Changes
 -------
 
+0.0.9 (2016-09-14)
+^^^^^^^^^^^^^^^^^^
+
+* Fixed AttributeError in  _request_authentication function #104 (Thanks @ttlttl)
+
+* Fixed legacy auth #105
+
+* uvloop added to test suite #106
+
+* Fixed bug with unicode in json field #107 (Thanks @methane)
+
+
 0.0.8 (2016-08-24)
 ^^^^^^^^^^^^^^^^^^
 

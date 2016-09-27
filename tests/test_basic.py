@@ -1,6 +1,8 @@
 import asyncio
-import time
 import datetime
+import json
+import re
+import time
 
 import pytest
 from pymysql import util
@@ -215,3 +217,47 @@ def test_rollback(connection, cursor):
 
     # should not return any rows since no inserts was commited
     assert len(data) == 0
+
+
+def mysql_server_is(server_version, version_tuple):
+    """Return True if the given connection is on the version given or
+    greater.
+    e.g.::
+        if self.mysql_server_is(conn, (5, 6, 4)):
+            # do something for MySQL 5.6.4 and above
+    """
+    server_version_tuple = tuple(
+        (int(dig) if dig is not None else 0)
+        for dig in
+        re.match(r'(\d+)\.(\d+)\.(\d+)', server_version).group(1, 2, 3)
+    )
+    return server_version_tuple >= version_tuple
+
+
+@pytest.mark.run_loop
+def test_json(connection_creator, table_cleanup):
+    connection = yield from connection_creator(
+        charset="utf8mb4", autocommit=True)
+    server_info = connection.get_server_info()
+    if not mysql_server_is(server_info, (5, 7, 0)):
+        raise pytest.skip("JSON type is not supported on MySQL <= 5.6")
+
+    cursor = yield from connection.cursor()
+    yield from cursor.execute("""\
+    CREATE TABLE test_json (
+        id INT NOT NULL,
+        json JSON NOT NULL,
+        PRIMARY KEY (id)
+    );""")
+    table_cleanup("test_json")
+    json_str = '{"hello": "こんにちは"}'
+    yield from cursor.execute(
+        "INSERT INTO test_json (id, `json`) values (42, %s)", (json_str,))
+    yield from cursor.execute("SELECT `json` from `test_json` WHERE `id`=42")
+
+    r = yield from cursor.fetchone()
+    assert json.loads(r[0]) == json.loads(json_str)
+
+    yield from cursor.execute("SELECT CAST(%s AS JSON) AS x", (json_str,))
+    r = yield from cursor.fetchone()
+    assert json.loads(r[0]) == json.loads(json_str)

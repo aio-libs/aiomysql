@@ -10,6 +10,15 @@ else:
     base = object
 
 
+def create_future(loop):
+    """Compatibility wrapper for the loop.create_future() call introduced in
+    3.5.2."""
+    if hasattr(loop, 'create_future'):
+        return loop.create_future()
+    else:
+        return asyncio.Future(loop=loop)
+
+
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')
