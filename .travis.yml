@@ -33,10 +33,10 @@ before_script:
 install:
     - pip install -Ur requirements-dev.txt
     - pip install .
-    - pip install coveralls
+    - pip install codecov
 
 script:
     - make cov
 
 after_success:
-    - coveralls
+    - codecov
