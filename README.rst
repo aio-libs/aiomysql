@@ -2,8 +2,9 @@ aiomysql
 ========
 .. image:: https://travis-ci.org/aio-libs/aiomysql.svg?branch=master
     :target: https://travis-ci.org/aio-libs/aiomysql
-.. image:: https://coveralls.io/repos/aio-libs/aiomysql/badge.svg
-    :target: https://coveralls.io/r/aio-libs/aiomysql
+.. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/aio-libs/aiomysql
+    :alt: Code coverage
 .. image:: https://badge.fury.io/py/aiomysql.svg
     :target: https://badge.fury.io/py/aiomysql
     :alt: Latest Version
