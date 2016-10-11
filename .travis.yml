@@ -3,7 +3,7 @@ language: python
 python:
     - 3.4
     - 3.5
-    - nightly
+    - 3.6-dev
 
 env:
     matrix:
