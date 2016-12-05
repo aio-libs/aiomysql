@@ -5,6 +5,6 @@ ipython==5.1.0
 pytest==3.0.4
 pytest-cov==2.4.0
 pytest-sugar==0.7.1
-sphinx==1.4.9
+sphinx==1.5
 sphinxcontrib-asyncio==0.2.0
 sqlalchemy==1.1.4
