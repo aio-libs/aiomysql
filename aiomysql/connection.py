@@ -4,7 +4,6 @@
 import asyncio
 import os
 import socket
-import hashlib
 import struct
 import sys
 import warnings
@@ -48,7 +47,6 @@ from .utils import (PY_35, _ConnectionContextManager, _ContextManager,
 
 DEFAULT_USER = getpass.getuser()
 PY_341 = sys.version_info >= (3, 4, 1)
-sha_new = partial(hashlib.new, 'sha1')
 
 
 def connect(host="localhost", user=None, password="",
