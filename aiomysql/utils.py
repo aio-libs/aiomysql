@@ -19,6 +19,15 @@ def create_future(loop):
         return asyncio.Future(loop=loop)
 
 
+def create_task(coro, loop):
+    """Compatibility wrapper for the loop.create_task() call introduced in
+    3.4.2."""
+    if hasattr(loop, 'create_task'):
+        return loop.create_task(coro)
+    else:
+        return asyncio.Task(coro, loop=loop)
+
+
 class _ContextManager(base):
 
     __slots__ = ('_coro', '_obj')

@@ -7,7 +7,7 @@ import warnings
 
 from .connection import connect
 from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
-                    _PoolAcquireContextManager, create_future)
+                    _PoolAcquireContextManager, create_future, create_task)
 
 
 def create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
@@ -209,7 +209,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            fut = asyncio.Task(self._wakeup(), loop=self._loop)
+            fut = create_task(self._wakeup(), self._loop)
         return fut
 
     def get(self):

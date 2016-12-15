@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
-from ..utils import PY_35
+from ..utils import PY_35, create_task
 
 
 @asyncio.coroutine
@@ -237,7 +237,7 @@ class ResultProxy:
             self._metadata = ResultMetaData(self, cursor.description)
 
             def callback(wr):
-                asyncio.Task(cursor.close(), loop=loop)
+                create_task(cursor.close(), loop)
             self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
