@@ -9,6 +9,7 @@ import sys
 import warnings
 import configparser
 import getpass
+import ssl
 from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
@@ -55,7 +56,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=None, autocommit=False, echo=False,
+            no_delay=None, autocommit=False, echo=False, sslcontext=None,
             local_infile=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
@@ -68,7 +69,7 @@ def connect(host="localhost", user=None, password="",
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
-                    local_infile=local_infile, loop=loop)
+                    sslcontext=sslcontext, local_infile=local_infile, loop=loop)
     return _ConnectionContextManager(coro)
 
 
@@ -92,7 +93,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,
+                 no_delay=None, autocommit=False, echo=False,sslcontext=None,
                  local_infile=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
@@ -163,6 +164,7 @@ class Connection:
         self._db = db
         self._no_delay = no_delay
         self._echo = echo
+        self._sslcontext = sslcontext
 
         self._unix_socket = unix_socket
         if charset:
@@ -455,7 +457,7 @@ class Connection:
             else:
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(self._host, self._port,
-                                            loop=self._loop)
+                                            loop=self._loop, ssl=self._sslcontext)
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
             # do not set no delay in case of unix_socket
