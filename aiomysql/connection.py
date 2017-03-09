@@ -502,7 +502,7 @@ class Connection:
                 self.write_packet(packet)
                 # upgrade connection to ssl
                 # close recent reader and write and keep socket connected
-                sock = self._writer._transport._sock
+                sock = self._writer.transport.get_extra_info('socket', default=None)
                 # patch asyncion
                 self._writer._transport._call_connection_lost = \
                     types.MethodType(
@@ -510,7 +510,8 @@ class Connection:
                 self._writer._transport._force_close(None)
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(sock=sock, ssl=self._sslcontext,
-                                            server_hostname=self._host)
+                                            server_hostname=self._host,
+                                            loop=self._loop)
             yield from self._request_authentication()
 
             self.connected_time = self._loop.time()
