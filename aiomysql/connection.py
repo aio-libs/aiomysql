@@ -9,7 +9,6 @@ import sys
 import warnings
 import configparser
 import getpass
-import ssl
 import types
 from functools import partial
 
@@ -70,7 +69,8 @@ def connect(host="localhost", user=None, password="",
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
-                    sslcontext=sslcontext, local_infile=local_infile, loop=loop)
+                    sslcontext=sslcontext, local_infile=local_infile,
+                    loop=loop)
     return _ConnectionContextManager(coro)
 
 
@@ -94,7 +94,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,sslcontext=None,
+                 no_delay=None, autocommit=False, echo=False, sslcontext=None,
                  local_infile=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
@@ -451,13 +451,13 @@ class Connection:
 
         # asyncio patch to get ability upgrade
         # existing connection to ssl
-        def _call_connection_lost(self,exc):
+        def _call_connection_lost(self, exc):
             try:
                 if self._protocol_connected:
                     self._protocol.connection_lost(exc)
             finally:
                 # don't close socket
-                #self._sock.close() 
+                # self._sock.close()
                 self._sock = None
                 self._protocol = None
                 self._loop = None
@@ -468,9 +468,9 @@ class Connection:
 
         def make_auth_ssl(charset=33, client_flags=0,
                           max_allowed_packet=1073741824):
-            return bytearray(struct.pack('<I', client_flags))  + \
-                   bytearray(struct.pack('<I', max_allowed_packet))  + \
-                    bytearray(struct.pack('<B', charset))  + \
+            return bytearray(struct.pack('<I', client_flags)) + \
+                   bytearray(struct.pack('<I', max_allowed_packet)) + \
+                   bytearray(struct.pack('<B', charset)) + \
                    b'\x00' * 23
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
@@ -500,10 +500,12 @@ class Connection:
                 # close recent reader and write and keep socket connected
                 sock = self._writer._transport._sock
                 # patch asyncion 
-                self._writer._transport._call_connection_lost = types.MethodType(_call_connection_lost, self._writer._transport)
+                self._writer._transport._call_connection_lost = \
+                        types.MethodType(_call_connection_lost, self._writer._transport)
                 self._writer._transport._force_close(None)
                 self._reader, self._writer = yield from \
-                    asyncio.open_connection(sock = sock, ssl=self._sslcontext, server_hostname=self._host)
+                        asyncio.open_connection(sock = sock, ssl=self._sslcontext, \
+                        server_hostname=self._host)
             yield from self._request_authentication()
 
             self.connected_time = self._loop.time()
