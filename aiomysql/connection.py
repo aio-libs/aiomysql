@@ -57,7 +57,7 @@ def connect(host="localhost", user=None, password="",
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
             no_delay=None, autocommit=False, echo=False, sslcontext=None,
-            local_infile=False, suppress_warnings = False, loop=None):
+            local_infile=False, suppress_warnings=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -70,7 +70,7 @@ def connect(host="localhost", user=None, password="",
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
                     sslcontext=sslcontext, local_infile=local_infile,
-                    suppress_warnings = suppress_warnings, loop=loop)
+                    suppress_warnings=suppress_warnings, loop=loop)
     return _ConnectionContextManager(coro)
 
 
@@ -96,7 +96,7 @@ class Connection:
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
                  no_delay=None, autocommit=False, echo=False, sslcontext=None,
-                 local_infile=False, suppress_warnings = False, loop=None):
+                 local_infile=False, suppress_warnings=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -158,7 +158,6 @@ class Connection:
             no_delay = bool(no_delay)
         else:
             no_delay = True
-        
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
@@ -502,7 +501,8 @@ class Connection:
                 self.write_packet(packet)
                 # upgrade connection to ssl
                 # close recent reader and write and keep socket connected
-                sock = self._writer.transport.get_extra_info('socket', default=None)
+                sock = self._writer.transport.get_extra_info(
+                        'socket', default=None)
                 # patch asyncion
                 self._writer._transport._call_connection_lost = \
                     types.MethodType(
