@@ -10,6 +10,7 @@ import warnings
 import configparser
 import getpass
 import ssl
+import types
 from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
@@ -447,6 +448,31 @@ class Connection:
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
+
+        # asyncio patch to get ability upgrade
+        # existing connection to ssl
+        def _call_connection_lost(self,exc):
+            try:
+                print('cl>>')
+                if self._protocol_connected:
+                    self._protocol.connection_lost(exc)
+            finally:
+                # don't close socket
+                #self._sock.close() 
+                self._sock = None
+                self._protocol = None
+                self._loop = None
+                server = self._server
+                if server is not None:
+                    server._detach()
+                    self._server = None
+
+        def make_auth_ssl(charset=33, client_flags=0,
+                          max_allowed_packet=1073741824):
+            return bytearray(struct.pack('<I', client_flags))  + \
+                   bytearray(struct.pack('<I', max_allowed_packet))  + \
+                    bytearray(struct.pack('<B', charset))  + \
+                   b'\x00' * 23
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
@@ -457,7 +483,7 @@ class Connection:
             else:
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(self._host, self._port,
-                                            loop=self._loop, ssl=self._sslcontext)
+                                            loop=self._loop)
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
             # do not set no delay in case of unix_socket
@@ -467,6 +493,18 @@ class Connection:
             self._next_seq_id = 0
 
             yield from self._get_server_information()
+            if self._sslcontext and not self._unix_socket:
+                packet = make_auth_ssl(charset=charset_by_name(self._charset).id,
+                        client_flags=(self.client_flag ^ 2048))
+                self.write_packet(packet)
+                # upgrade connection to ssl
+                # close recent reader and write and keep socket connected
+                sock = self._writer._transport._sock
+                # patch asyncion 
+                self._writer._transport._call_connection_lost = types.MethodType(_call_connection_lost, self._writer._transport)
+                self._writer._transport._force_close(None)
+                self._reader, self._writer = yield from \
+                    asyncio.open_connection(sock = sock, ssl=self._sslcontext, server_hostname=self._host)
             yield from self._request_authentication()
 
             self.connected_time = self._loop.time()
