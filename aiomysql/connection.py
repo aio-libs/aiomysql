@@ -457,7 +457,7 @@ class Connection:
                 if self._protocol_connected:
                     self._protocol.connection_lost(exc)
             finally:
-                # don't close socket
+                # don't close socket comment this line
                 # self._sock.close()
                 self._sock = None
                 self._protocol = None
