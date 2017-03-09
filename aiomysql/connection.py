@@ -82,6 +82,7 @@ def _connect(*args, **kwargs):
 
 
 class Connection:
+
     """Representation of a socket with a mysql server.
 
     The proper way to get an instance of this class is to call
@@ -469,9 +470,9 @@ class Connection:
         def make_auth_ssl(charset=33, client_flags=0,
                           max_allowed_packet=1073741824):
             return bytearray(struct.pack('<I', client_flags)) + \
-                   bytearray(struct.pack('<I', max_allowed_packet)) + \
-                   bytearray(struct.pack('<B', charset)) + \
-                   b'\x00' * 23
+                bytearray(struct.pack('<I', max_allowed_packet)) + \
+                bytearray(struct.pack('<B', charset)) + \
+                b'\x00' * 23
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
@@ -493,19 +494,21 @@ class Connection:
 
             yield from self._get_server_information()
             if self._sslcontext and not self._unix_socket:
-                packet = make_auth_ssl(charset=charset_by_name(self._charset).id,
+                packet = make_auth_ssl(\
+                        charset=charset_by_name(self._charset).id,
                         client_flags=(self.client_flag ^ 2048))
                 self.write_packet(packet)
                 # upgrade connection to ssl
                 # close recent reader and write and keep socket connected
                 sock = self._writer._transport._sock
-                # patch asyncion 
+                # patch asyncion
                 self._writer._transport._call_connection_lost = \
-                        types.MethodType(_call_connection_lost, self._writer._transport)
+                    types.MethodType(
+                        _call_connection_lost, self._writer._transport)
                 self._writer._transport._force_close(None)
                 self._reader, self._writer = yield from \
-                        asyncio.open_connection(sock = sock, ssl=self._sslcontext, \
-                        server_hostname=self._host)
+                    asyncio.open_connection(sock=sock, ssl=self._sslcontext,
+                                            server_hostname=self._host)
             yield from self._request_authentication()
 
             self.connected_time = self._loop.time()
@@ -1054,6 +1057,7 @@ class MySQLResult:
 
 
 class LoadLocalFile(object):
+
     def __init__(self, filename, connection):
         self.filename = filename
         self.connection = connection
