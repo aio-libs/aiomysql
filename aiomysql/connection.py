@@ -453,7 +453,6 @@ class Connection:
         # existing connection to ssl
         def _call_connection_lost(self,exc):
             try:
-                print('cl>>')
                 if self._protocol_connected:
                     self._protocol.connection_lost(exc)
             finally:
