@@ -494,7 +494,7 @@ class Connection:
 
             yield from self._get_server_information()
             if self._sslcontext and not self._unix_socket:
-                packet = make_auth_ssl(\
+                packet = make_auth_ssl(
                         charset=charset_by_name(self._charset).id,
                         client_flags=(self.client_flag ^ 2048))
                 self.write_packet(packet)
