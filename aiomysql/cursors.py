@@ -26,7 +26,7 @@ RE_INSERT_VALUES = re.compile(
 class Cursor:
     """Cursor is used to interact with the database."""
 
-    #: Max stetement size which :meth:`executemany` generates.
+    #: Max statement size which :meth:`executemany` generates.
     #:
     #: Max size of allowed statement is max_allowed_packet -
     # packet_header_size.
