@@ -11,14 +11,15 @@ from .log import logger
 from .utils import PY_35, create_future
 
 
-# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L15
+# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
 #: Regular expression for :meth:`Cursor.executemany`.
 #: executemany only suports simple bulk insert.
 #: You can use it to load large dataset.
 RE_INSERT_VALUES = re.compile(
-    r"""(INSERT\s.+\sVALUES\s+)(\(\s*%s\s*(?:,\s*%s\s*)*\))""" +
-    """(\s*(?:ON DUPLICATE.*)?)\Z""",
+    r"\s*((?:INSERT|REPLACE)\s.+\sVALUES?\s+)" +
+    r"(\(\s*(?:%s|%\(.+\)s)\s*(?:,\s*(?:%s|%\(.+\)s)\s*)*\))" +
+    r"(\s*(?:ON DUPLICATE.*)?);?\s*\Z",
     re.IGNORECASE | re.DOTALL)
 
 
@@ -260,8 +261,8 @@ class Cursor:
             stmt = "INSERT INTO employees (name, phone) VALUES ('%s','%s')"
             yield from cursor.executemany(stmt, data)
 
-        INSERT statements are optimized by batching the data, that is
-        using the MySQL multiple rows syntax.
+        INSERT or REPLACE statements are optimized by batching the data,
+        that is using the MySQL multiple rows syntax.
 
         :param query: `str`, sql statement
         :param args: ``tuple`` or ``list`` of arguments for sql query
