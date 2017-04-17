@@ -445,6 +445,10 @@ class Connection:
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
+
+        # Close the previous transport if any:
+        self.close()
+
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
