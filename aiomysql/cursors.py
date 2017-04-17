@@ -351,6 +351,10 @@ class Cursor:
         :returns: the original args.
         """
         conn = self._get_db()
+
+        while (yield from self.nextset()):
+            pass
+
         if self._echo:
             logger.info("CALL %s", procname)
             logger.info("%r", args)
