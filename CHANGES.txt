@@ -1,5 +1,10 @@
 Changes
 -------
+0.0.10 (YYYY-MM-DD)
+^^^^^^^^^^^^^^^^^^
+
+* Updated regular expressions to be compatible with pymysql #167 (Thanks @AlexLisovoy)
+
 
 0.0.9 (2016-09-14)
 ^^^^^^^^^^^^^^^^^^
