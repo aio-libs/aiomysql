@@ -46,6 +46,7 @@ classifiers = [
     'Development Status :: 3 - Alpha',
     'Topic :: Database',
     'Topic :: Database :: Front-Ends',
+    'Framework :: AsyncIO',
 ]
 
 
