@@ -456,6 +456,7 @@ class Connection:
                 self._reader, self._writer = yield from \
                     asyncio.open_connection(self._host, self._port,
                                             loop=self._loop)
+                self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
             # do not set no delay in case of unix_socket
@@ -486,6 +487,15 @@ class Connection:
             raise OperationalError(2003,
                                    "Can't connect to MySQL server on %r" %
                                    self._host) from e
+
+    def _set_keep_alive(self):
+        transport = self._writer.transport
+        transport.pause_reading()
+        raw_sock = transport.get_extra_info('socket', default=None)
+        if raw_sock is None:
+            raise RuntimeError("Transport does not expose socket instance")
+        raw_sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        transport.resume_reading()
 
     def _set_nodelay(self, value):
         flag = int(bool(value))
