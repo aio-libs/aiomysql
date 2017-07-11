@@ -11,6 +11,9 @@ aiomysql
 .. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
     :target: https://aiomysql.readthedocs.io/
     :alt: Documentation Status
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/aio-libs/Lobby
+    :alt: Chat on Gitter
 
 **aiomysql** is a "driver" for accessing a `MySQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It depends on and reuses most
