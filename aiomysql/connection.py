@@ -163,6 +163,7 @@ class Connection:
         self._db = db
         self._no_delay = no_delay
         self._echo = echo
+        self._last_usage = self._loop.time()
 
         self._unix_socket = unix_socket
         if charset:
@@ -239,6 +240,11 @@ class Connection:
     def echo(self):
         """Return echo mode status."""
         return self._echo
+
+    @property
+    def last_usage(self):
+        """Return time() when connection was used."""
+        return self._last_usage
 
     @property
     def loop(self):
@@ -375,6 +381,7 @@ class Connection:
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
         self._ensure_alive()
+        self._last_usage = self._loop.time()
         if cursor is not None and not issubclass(cursor, Cursor):
             raise TypeError('Custom cursor must be subclass of Cursor')
 
