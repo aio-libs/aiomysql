@@ -157,7 +157,7 @@ class Pool(asyncio.AbstractServer):
                 self._free.pop()
                 conn.close()
 
-            elif (self._recycle == -1 and
+            elif (self._recycle > -1 and
                   self._loop.time() - conn.last_usage > self._recycle):
                 self._free.pop()
                 conn.close()
