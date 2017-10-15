@@ -19,7 +19,7 @@ _dialect.default_paramstyle = 'pyformat'
 
 
 def create_engine(minsize=1, maxsize=10, loop=None,
-                  dialect=_dialect, **kwargs):
+                  dialect=_dialect, pool_recycle=-1,  **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -27,18 +27,19 @@ def create_engine(minsize=1, maxsize=10, loop=None,
     The pool has *minsize* opened connections to PostgreSQL server.
     """
     coro = _create_engine(minsize=minsize, maxsize=maxsize, loop=loop,
-                          dialect=dialect, **kwargs)
+                          dialect=dialect, pool_recycle=pool_recycle, **kwargs)
     return _EngineContextManager(coro)
 
 
 @asyncio.coroutine
 def _create_engine(minsize=1, maxsize=10, loop=None,
-                   dialect=_dialect, **kwargs):
+                   dialect=_dialect, pool_recycle=-1, **kwargs):
 
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = yield from aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
-                                           loop=loop, **kwargs)
+                                           loop=loop,
+                                           pool_recycle=pool_recycle, **kwargs)
     conn = yield from pool.acquire()
     try:
         return Engine(dialect, pool, **kwargs)

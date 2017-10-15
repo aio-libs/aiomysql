@@ -10,19 +10,21 @@ from .utils import (PY_35, _PoolContextManager, _PoolConnectionContextManager,
                     _PoolAcquireContextManager, create_future, create_task)
 
 
-def create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
+def create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
+                loop=None, **kwargs):
     coro = _create_pool(minsize=minsize, maxsize=maxsize, echo=echo,
-                        loop=loop, **kwargs)
+                        pool_recycle=pool_recycle, loop=loop, **kwargs)
     return _PoolContextManager(coro)
 
 
 @asyncio.coroutine
-def _create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
+def _create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
+                 loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo, loop=loop,
-                **kwargs)
+    pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo,
+                pool_recycle=pool_recycle, loop=loop, **kwargs)
     if minsize > 0:
         with (yield from pool._cond):
             yield from pool._fill_free_pool(False)
@@ -32,7 +34,7 @@ def _create_pool(minsize=1, maxsize=10, echo=False, loop=None, **kwargs):
 class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
-    def __init__(self, minsize, maxsize, echo, loop, **kwargs):
+    def __init__(self, minsize, maxsize, echo, pool_recycle, loop, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize:
@@ -48,6 +50,7 @@ class Pool(asyncio.AbstractServer):
         self._closing = False
         self._closed = False
         self._echo = echo
+        self._recycle = pool_recycle
 
     @property
     def echo(self):
@@ -153,6 +156,12 @@ class Pool(asyncio.AbstractServer):
             if conn._reader.at_eof():
                 self._free.pop()
                 conn.close()
+
+            elif (self._recycle == -1 and
+                  self._loop.time() - conn.last_usage > self._recycle):
+                self._free.pop()
+                conn.close()
+
             else:
                 self._free.rotate()
             n += 1
