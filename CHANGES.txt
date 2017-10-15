@@ -4,6 +4,7 @@ Changes
 ^^^^^^^^^^^^^^^^^^
 
 * Updated regular expressions to be compatible with pymysql #167 (Thanks @AlexLisovoy)
+* Added connection recycling in the pool #216
 
 
 0.0.9 (2016-09-14)
