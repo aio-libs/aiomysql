@@ -497,3 +497,24 @@ def test_cancelled_connection(pool_creator, loop):
         res = yield from cur2.fetchall()
         # If we receive [(1, 0)] - we retrieved old cursor's values
         assert list(res) == [(2, 0)]
+
+
+@asyncio.coroutine
+def test_pool_with_connection_recycling(pool_creator, loop):
+    pool = yield from pool_creator(minsize=1,
+                                   maxsize=1,
+                                   pool_recycle=3)
+    with (yield from pool) as conn:
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 1;')
+        val = yield from cur.fetchone()
+        assert (1,) == val
+
+    yield from asyncio.sleep(5, loop=loop)
+
+    assert 1 == pool.freesize
+    with (yield from pool) as conn:
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 1;')
+        val = yield from cur.fetchone()
+        assert (1,) == val
