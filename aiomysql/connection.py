@@ -9,6 +9,7 @@ import sys
 import warnings
 import configparser
 import getpass
+import types
 from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
@@ -55,8 +56,8 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=None, autocommit=False, echo=False,
-            local_infile=False, loop=None):
+            no_delay=None, autocommit=False, echo=False, sslcontext=None,
+            local_infile=False, suppress_warnings=False, loop=None):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -68,7 +69,8 @@ def connect(host="localhost", user=None, password="",
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
-                    local_infile=local_infile, loop=loop)
+                    sslcontext=sslcontext, local_infile=local_infile,
+                    suppress_warnings=suppress_warnings, loop=loop)
     return _ConnectionContextManager(coro)
 
 
@@ -80,6 +82,7 @@ def _connect(*args, **kwargs):
 
 
 class Connection:
+
     """Representation of a socket with a mysql server.
 
     The proper way to get an instance of this class is to call
@@ -92,8 +95,8 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,
-                 local_infile=False, loop=None):
+                 no_delay=None, autocommit=False, echo=False, sslcontext=None,
+                 local_infile=False, suppress_warnings=False, loop=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -155,7 +158,6 @@ class Connection:
             no_delay = bool(no_delay)
         else:
             no_delay = True
-
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
@@ -163,7 +165,8 @@ class Connection:
         self._db = db
         self._no_delay = no_delay
         self._echo = echo
-
+        self._sslcontext = sslcontext
+        self._suppress_warnings = suppress_warnings
         self._unix_socket = unix_socket
         if charset:
             self._charset = charset
@@ -342,6 +345,8 @@ class Connection:
     @asyncio.coroutine
     def show_warnings(self):
         """SHOW WARNINGS"""
+        if self._suppress_warnings:
+            return None
         yield from self._execute_command(COMMAND.COM_QUERY, "SHOW WARNINGS")
         result = MySQLResult(self)
         yield from result.read()
@@ -445,6 +450,30 @@ class Connection:
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
+
+        # asyncio patch to get ability upgrade
+        # existing connection to ssl
+        def _call_connection_lost(self, exc):
+            try:
+                if self._protocol_connected:
+                    self._protocol.connection_lost(exc)
+            finally:
+                # don't close socket comment this line
+                # self._sock.close()
+                self._sock = None
+                self._protocol = None
+                self._loop = None
+                server = self._server
+                if server is not None:
+                    server._detach()
+                    self._server = None
+
+        def make_auth_ssl(charset=33, client_flags=0,
+                          max_allowed_packet=1073741824):
+            return bytearray(struct.pack('<I', client_flags)) + \
+                bytearray(struct.pack('<I', max_allowed_packet)) + \
+                bytearray(struct.pack('<B', charset)) + \
+                b'\x00' * 23
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = yield from \
@@ -466,6 +495,24 @@ class Connection:
             self._next_seq_id = 0
 
             yield from self._get_server_information()
+            if self._sslcontext and not self._unix_socket:
+                packet = make_auth_ssl(
+                        charset=charset_by_name(self._charset).id,
+                        client_flags=(self.client_flag ^ 2048))
+                self.write_packet(packet)
+                # upgrade connection to ssl
+                # close recent reader and write and keep socket connected
+                sock = self._writer.transport.get_extra_info(
+                        'socket', default=None)
+                # patch asyncion
+                self._writer._transport._call_connection_lost = \
+                    types.MethodType(
+                        _call_connection_lost, self._writer._transport)
+                self._writer._transport._force_close(None)
+                self._reader, self._writer = yield from \
+                    asyncio.open_connection(sock=sock, ssl=self._sslcontext,
+                                            server_hostname=self._host,
+                                            loop=self._loop)
             yield from self._request_authentication()
 
             self.connected_time = self._loop.time()
@@ -1023,6 +1070,7 @@ class MySQLResult:
 
 
 class LoadLocalFile(object):
+
     def __init__(self, filename, connection):
         self.filename = filename
         self.connection = connection
