@@ -81,3 +81,67 @@ server.
 Inserting Data
 --------------
 
+Let's take basic example of :meth:`Cursor.execute` method::
+
+   import asyncio
+   import aiomysql
+
+
+   async def test_example_execute(loop):
+       conn = await aiomysql.connect(host='127.0.0.1', port=3306,
+                                          user='root', password='',
+                                          db='test_pymysql', loop=loop)
+
+       cur = await conn.cursor()
+       async with conn.cursor() as cur:
+           await cur.execute("DROP TABLE IF EXISTS music_style;")
+           await cur.execute("""CREATE TABLE music_style
+                                     (id INT,
+                                     name VARCHAR(255),
+                                     PRIMARY KEY (id));""")
+           await conn.commit()
+
+           # insert 3 rows one by one
+           await cur.execute("INSERT INTO music_style VALUES(1,'heavy metal')")
+           await cur.execute("INSERT INTO music_style VALUES(2,'death metal');")
+           await cur.execute("INSERT INTO music_style VALUES(3,'power metal');")
+           await conn.commit()
+
+       conn.close()
+
+
+   loop = asyncio.get_event_loop()
+   loop.run_until_complete(test_example_execute(loop))
+   
+Please note that you need to manually call :func:`commit()` bound to your :term:`Connection` object, because by default it's set to ``False`` or in :meth:`aiomysql.connect()` you can transfer addition keyword argument ``autocommit=True``.
+
+Example with ``autocommit=False``::
+
+   import asyncio
+   import aiomysql
+
+
+   async def test_example_execute(loop):
+       conn = await aiomysql.connect(host='127.0.0.1', port=3306,
+                                          user='root', password='',
+                                          db='test_pymysql', loop=loop,
+                                          autocommit=True)
+
+       cur = await conn.cursor()
+       async with conn.cursor() as cur:
+           await cur.execute("DROP TABLE IF EXISTS music_style;")
+           await cur.execute("""CREATE TABLE music_style
+                                     (id INT,
+                                     name VARCHAR(255),
+                                     PRIMARY KEY (id));""")
+
+           # insert 3 rows one by one
+           await cur.execute("INSERT INTO music_style VALUES(1,'heavy metal')")
+           await cur.execute("INSERT INTO music_style VALUES(2,'death metal');")
+           await cur.execute("INSERT INTO music_style VALUES(3,'power metal');")
+
+       conn.close()
+
+
+   loop = asyncio.get_event_loop()
+   loop.run_until_complete(test_example_execute(loop))
