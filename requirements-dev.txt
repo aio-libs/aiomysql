@@ -1,4 +1,4 @@
-coverage==4.3.4
+coverage==4.4.1
 flake8==3.4.1
 ipdb==0.10.2
 ipython==6.1.0
