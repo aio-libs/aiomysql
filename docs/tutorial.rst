@@ -115,7 +115,7 @@ Let's take basic example of :meth:`Cursor.execute` method::
    
 Please note that you need to manually call :func:`commit()` bound to your :term:`Connection` object, because by default it's set to ``False`` or in :meth:`aiomysql.connect()` you can transfer addition keyword argument ``autocommit=True``.
 
-Example with ``autocommit=False``::
+Example with ``autocommit=True``::
 
    import asyncio
    import aiomysql
