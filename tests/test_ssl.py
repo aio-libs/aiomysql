@@ -1,5 +1,6 @@
 import asyncio
 import ssl
+
 from aiomysql import create_pool
 
 
@@ -8,8 +9,11 @@ async def main():
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
-    async with create_pool(host='127.0.0.2', port=3306, user='root', password='test1234',  db='mysql', loop=loop, ssl=ctx) as pool:
-    # async with create_pool(host='127.0.0.2', port=3306, user='root', password='test1234', db='mysql', loop=loop) as pool:
+    # mysql_clear_password for connecting to rds
+    async with create_pool(host='127.0.0.1', port=3308, user='root',
+                           password='test1234',
+                           db='testdb', loop=loop, ssl=ctx,
+                           auth_plugin='mysql_clear_password') as pool:
         async with pool.get() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SHOW TABLES;")
