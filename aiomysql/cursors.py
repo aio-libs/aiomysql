@@ -465,7 +465,7 @@ class Cursor:
     def _do_get_result(self):
         conn = self._get_db()
         self._rownumber = 0
-        self._result = result = conn._result
+        self._result = result = conn._protocol.result
         self._rowcount = result.affected_rows
         self._description = result.description
         self._lastrowid = result.insert_id
