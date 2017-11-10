@@ -651,6 +651,15 @@ class MySQLProtocol(asyncio.StreamReaderProtocol):
             super().connection_made(transport)
             self.transport = transport
 
+    def eof_received(self):
+        self._reader.feed_eof()
+        if self.transport is not None and self._original_transport is not None:
+            # Prevent a warning in SSLProtocol.eof_received:
+            # "returning true from eof_received()
+            # has no effect when using ssl"
+            return False
+        return True
+
     async def query(self, sql, unbuffered=False):
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
@@ -828,7 +837,7 @@ class MySQLProtocol(asyncio.StreamReaderProtocol):
             self._tls_protocol.connection_made(self._original_transport)
 
             # Wait for handshake, #ProperHacky
-            for _ in range(0, 5):
+            for _ in range(0, 20):
                 if self._tls_ok:
                     break
                 await asyncio.sleep(0.05, loop=self.loop)
@@ -847,8 +856,6 @@ class MySQLProtocol(asyncio.StreamReaderProtocol):
         data += b'\x00' * (32 - len(data))
 
         data += _user + b'\0'
-
-        print()
 
         authresp = b''
 
