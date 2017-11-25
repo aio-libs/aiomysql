@@ -1,5 +1,5 @@
 coverage==4.4.1
-flake8==3.4.1
+flake8==3.5.0
 ipdb==0.10.2
 ipython==6.1.0
 pytest==3.2.4
