@@ -1,9 +1,10 @@
 Changes
 -------
-0.0.10 (YYYY-MM-DD)
+0.0.10 (2017-12-06)
 ^^^^^^^^^^^^^^^^^^
 
 * Updated regular expressions to be compatible with pymysql #167 (Thanks @AlexLisovoy)
+
 * Added connection recycling in the pool #216
 
 
