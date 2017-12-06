@@ -33,7 +33,7 @@ from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
 
-__version__ = '0.0.10'
+__version__ = '0.0.11'
 
 __all__ = [
 

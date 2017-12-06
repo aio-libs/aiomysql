@@ -1,7 +1,14 @@
 Changes
 -------
+
+0.0.11 (2017-12-06)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed README formatting on pypi
+
+
 0.0.10 (2017-12-06)
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 * Updated regular expressions to be compatible with pymysql #167 (Thanks @AlexLisovoy)
 
