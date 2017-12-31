@@ -74,7 +74,7 @@ class SAConnection:
             dp = dp[0]
 
         if isinstance(query, str):
-            yield from cursor.execute(query, dp)
+            yield from cursor.execute(query, dp or None)
         elif isinstance(query, ClauseElement):
             compiled = query.compile(dialect=self._dialect)
             # parameters = compiled.params
