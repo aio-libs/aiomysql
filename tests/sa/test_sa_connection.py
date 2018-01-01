@@ -290,6 +290,13 @@ class TestSAConnection(unittest.TestCase):
                     [(2, 'third'), (3, 'forth')])
         self.loop.run_until_complete(go())
 
+    def test_raw_select_with_wildcard(self):
+        @asyncio.coroutine
+        def go():
+            conn = yield from self.connect()
+            yield from conn.execute('SELECT * FROM sa_tbl WHERE name LIKE "%test%"')
+        self.loop.run_until_complete(go())
+
     def test_delete(self):
         @asyncio.coroutine
         def go():
