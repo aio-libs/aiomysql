@@ -294,7 +294,8 @@ class TestSAConnection(unittest.TestCase):
         @asyncio.coroutine
         def go():
             conn = yield from self.connect()
-            yield from conn.execute('SELECT * FROM sa_tbl WHERE name LIKE "%test%"')
+            yield from conn.execute(
+                'SELECT * FROM sa_tbl WHERE name LIKE "%test%"')
         self.loop.run_until_complete(go())
 
     def test_delete(self):
