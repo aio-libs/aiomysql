@@ -1,6 +1,14 @@
 Changes
 -------
 
+0.0.12 (2018-01-18)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed support for SQLAlchemy 1.2.0
+
+* Fixed argument for cursor.execute in sa engine #239 (Thanks @NotSoSuper)
+
+
 0.0.11 (2017-12-06)
 ^^^^^^^^^^^^^^^^^^^
 
