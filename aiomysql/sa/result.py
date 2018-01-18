@@ -104,7 +104,12 @@ class ResultMetaData:
         self._keymap = keymap = {}
         self.keys = []
         dialect = result_proxy.dialect
-        typemap = dialect.dbapi_type_map
+
+        # `dbapi_type_map` property removed in SQLAlchemy 1.2+.
+        # Usage of `getattr` only needed for backward compatibility with
+        # older versions of SQLAlchemy.
+        typemap = getattr(dialect, 'dbapi_type_map', {})
+
         assert dialect.case_sensitive, \
             "Doesn't support case insensitive database connection"
 
