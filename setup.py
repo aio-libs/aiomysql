@@ -61,7 +61,7 @@ setup(name='aiomysql',
       url='https://github.com/aio-libs/aiomysql',
       download_url='https://pypi.python.org/pypi/aiomysql',
       license='MIT',
-      packages=find_packages(),
+      packages=find_packages(exclude=['tests', 'tests.*']),
       install_requires=install_requires,
       extras_require=extras_require,
-      include_package_data = True)
+      include_package_data=True)
