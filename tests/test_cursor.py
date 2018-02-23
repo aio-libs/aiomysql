@@ -304,3 +304,14 @@ class TestCursor(base.AIOPyMySQLTestCase):
 
         with self.assertRaises(InterfaceError):
             yield from conn.cursor()
+
+    @run_until_complete
+    def test_fetchone_stepping_by_for_cycle(self):
+        """Tests fetching iteration by `for` cycle"""
+        expected_rows = [(1, 'a'), (2, 'b'), (3, 'c')]
+        conn = self.connections[0]
+        yield from self._prepare(conn)
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT * FROM tbl;')
+        for actual_row, expected_row in zip(cur, expected_rows):
+            self.assertEqual(actual_row, expected_row)

@@ -485,6 +485,9 @@ class Cursor:
             msg = w[-1]
             warnings.warn(str(msg), Warning, 4)
 
+    def __iter__(self):
+        yield from self.fetchone()
+
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
