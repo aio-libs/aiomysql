@@ -588,7 +588,7 @@ class Connection:
             try:
                 result = MySQLResult(self)
                 yield from result.init_unbuffered_query()
-            except:
+            except BaseException:
                 result.unbuffered_active = False
                 result.connection = None
                 raise
