@@ -19,6 +19,7 @@ else:
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
+
 extras_require = {'sa': ['sqlalchemy>=0.9'], }
 
 
@@ -33,6 +34,7 @@ def read_version():
                 return match.group(1)
         else:
             raise RuntimeError('Cannot find version in aiomysql/__init__.py')
+
 
 classifiers = [
     'License :: OSI Approved :: MIT License',
