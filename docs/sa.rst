@@ -49,6 +49,8 @@ Example::
             for row in res:
                 print(row.id, row.val)
 
+            await conn.commit()
+
     asyncio.get_event_loop().run_until_complete(go())
 
 
