@@ -942,6 +942,9 @@ class MySQLProtocol(asyncio.StreamReaderProtocol):
         return data
 
     async def _read_packet(self, packet_type=MysqlPacket):
+        """Read an entire "mysql packet" in its entirety from the network
+        and return a MysqlPacket type that represents the results.
+        """
         buff = b''
         while True:
             try:

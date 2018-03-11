@@ -104,7 +104,12 @@ class ResultMetaData:
         self._keymap = keymap = {}
         self.keys = []
         dialect = result_proxy.dialect
-        typemap = dialect.dbapi_type_map
+
+        # `dbapi_type_map` property removed in SQLAlchemy 1.2+.
+        # Usage of `getattr` only needed for backward compatibility with
+        # older versions of SQLAlchemy.
+        typemap = getattr(dialect, 'dbapi_type_map', {})
+
         assert dialect.case_sensitive, \
             "Doesn't support case insensitive database connection"
 
@@ -372,9 +377,9 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
+            ret = self._process_rows(rows)
             yield from self.close()
-            return l
+            return ret
 
     @asyncio.coroutine
     def fetchone(self):
@@ -410,10 +415,10 @@ class ResultProxy:
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
-            if len(l) == 0:
+            ret = self._process_rows(rows)
+            if len(ret) == 0:
                 yield from self.close()
-            return l
+            return ret
 
     @asyncio.coroutine
     def first(self):
