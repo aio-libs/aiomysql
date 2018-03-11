@@ -35,6 +35,8 @@ def go():
         for row in res:
             print(row.id, row.val)
 
+        yield from conn.commit()
+
     engine.close()
     yield from engine.wait_closed()
 

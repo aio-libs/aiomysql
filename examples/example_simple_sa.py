@@ -30,6 +30,8 @@ async def go(loop):
         async for row in conn.execute(tbl.select()):
             print(row.id, row.val)
 
+        await conn.commit()
+
     engine.close()
     await engine.wait_closed()
 

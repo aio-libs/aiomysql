@@ -207,5 +207,5 @@ if not PY_35:
     try:
         from asyncio import coroutines
         coroutines._COROUTINE_TYPES += (_ContextManager,)
-    except:
+    except Exception:
         pass
