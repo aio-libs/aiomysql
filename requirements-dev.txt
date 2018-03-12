@@ -7,4 +7,4 @@ pytest-cov==2.5.1
 pytest-sugar==0.9.1
 sphinx==1.7.1
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy==1.2.4
+sqlalchemy==1.2.5
