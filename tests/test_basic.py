@@ -1,12 +1,13 @@
 import asyncio
 import datetime
 import json
-import re
 import time
 
 import pytest
 from pymysql import util
 from pymysql.err import ProgrammingError
+
+from ._testutils import mysql_server_is
 
 
 @pytest.fixture
@@ -217,21 +218,6 @@ def test_rollback(connection, cursor):
 
     # should not return any rows since no inserts was commited
     assert len(data) == 0
-
-
-def mysql_server_is(server_version, version_tuple):
-    """Return True if the given connection is on the version given or
-    greater.
-    e.g.::
-        if self.mysql_server_is(conn, (5, 6, 4)):
-            # do something for MySQL 5.6.4 and above
-    """
-    server_version_tuple = tuple(
-        (int(dig) if dig is not None else 0)
-        for dig in
-        re.match(r'(\d+)\.(\d+)\.(\d+)', server_version).group(1, 2, 3)
-    )
-    return server_version_tuple >= version_tuple
 
 
 @pytest.mark.run_loop
