@@ -55,7 +55,7 @@ __all__ = [
     'escape_string',
 
     'Connection',
-    'Pool'
+    'Pool',
     'connect',
     'create_pool',
     'Cursor',
