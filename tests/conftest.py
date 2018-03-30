@@ -231,9 +231,11 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
     host_port = unused_port()
 
     # As TLS is optional, might as well always configure it
-    ssl_directory = os.path.join(os.path.dirname(__file__), 'ssl_resources', 'ssl')
+    ssl_directory = os.path.join(os.path.dirname(__file__),
+                                 'ssl_resources', 'ssl')
     ca_file = os.path.join(ssl_directory, 'ca.pem')
-    tls_cnf = os.path.join(os.path.dirname(__file__), 'ssl_resources', 'tls.cnf')
+    tls_cnf = os.path.join(os.path.dirname(__file__),
+                           'ssl_resources', 'tls.cnf')
 
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
     ctx.check_hostname = False
@@ -283,15 +285,18 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
                     cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
 
                     result = cursor.fetchall()
-                    result = {item['Variable_name']: item['Value'] for item in result}
+                    result = {item['Variable_name']:
+                              item['Value'] for item in result}
 
-                    assert result['have_ssl'] == "YES", "SSL Not Enabled on docker'd MySQL"
+                    assert result['have_ssl'] == "YES", \
+                        "SSL Not Enabled on docker'd MySQL"
 
                     cursor.execute("SHOW STATUS LIKE '%Ssl_version%'")
 
                     result = cursor.fetchone()
                     # As we connected with TLS, it should start with that :D
-                    assert result['Value'].startswith('TLS'), "Not connected to the database with TLS"
+                    assert result['Value'].startswith('TLS'), \
+                        "Not connected to the database with TLS"
 
                 break
             except Exception as err:
