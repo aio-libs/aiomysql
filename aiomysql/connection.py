@@ -729,7 +729,7 @@ class MySQLProtocol(asyncio.StreamReaderProtocol):
             try:
                 result = MySQLResult(self)
                 yield from result.init_unbuffered_query()
-            except:
+            except:  # noqa: E722
                 result.unbuffered_active = False
                 result.connection = None
                 raise
