@@ -30,7 +30,7 @@ class AIOPyMySQLTestCase(BaseTest):
     def setUp(self):
         super(AIOPyMySQLTestCase, self).setUp()
         self.host = os.environ.get('MYSQL_HOST', 'localhost')
-        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.port = int(os.environ.get('MYSQL_PORT', 3306))
         self.user = os.environ.get('MYSQL_USER', 'root')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
         self.other_db = os.environ.get('OTHER_MYSQL_DB', 'test_pymysql2')
@@ -47,7 +47,7 @@ class AIOPyMySQLTestCase(BaseTest):
 
     @asyncio.coroutine
     def connect(self, host=None, user=None, password=None,
-                db=None, use_unicode=True, no_delay=None, **kwargs):
+                db=None, use_unicode=True, no_delay=None, port=None, **kwargs):
         if host is None:
             host = self.host
         if user is None:
@@ -56,16 +56,20 @@ class AIOPyMySQLTestCase(BaseTest):
             password = self.password
         if db is None:
             db = self.db
+        if port is None:
+            port = self.port
         conn = yield from aiomysql.connect(loop=self.loop, host=host,
                                            user=user, password=password,
                                            db=db, use_unicode=use_unicode,
-                                           no_delay=no_delay, **kwargs)
+                                           no_delay=no_delay, port=port,
+                                           **kwargs)
         self.addCleanup(conn.close)
         return conn
 
     @asyncio.coroutine
     def create_pool(self, host=None, user=None, password=None,
-                    db=None, use_unicode=True, no_delay=None, **kwargs):
+                    db=None, use_unicode=True, no_delay=None,
+                    port=None, **kwargs):
         if host is None:
             host = self.host
         if user is None:
@@ -74,9 +78,12 @@ class AIOPyMySQLTestCase(BaseTest):
             password = self.password
         if db is None:
             db = self.db
+        if port is None:
+            port = self.port
         pool = yield from aiomysql.create_pool(loop=self.loop, host=host,
                                                user=user, password=password,
                                                db=db, use_unicode=use_unicode,
-                                               no_delay=no_delay, **kwargs)
+                                               no_delay=no_delay, port=port,
+                                               **kwargs)
         self.addCleanup(pool.close)
         return pool
