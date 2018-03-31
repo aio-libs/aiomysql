@@ -121,16 +121,25 @@ def pytest_addoption(parser):
                      help="Don't perform docker images pulling")
 
 
-@pytest.fixture
-def mysql_params():
-    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
-              "port": os.environ.get('MYSQL_PORT', 3306),
-              "user": os.environ.get('MYSQL_USER', 'root'),
-              "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
-              "local_infile": True,
-              "use_unicode": True,
-              }
+@pytest.fixture(scope="session", params=["nonssl", "ssl"])
+def mysql_mode(request):
+    return request.param
+
+
+@pytest.fixture(scope="session")
+def mysql_params(mysql_mode, request):
+    if mysql_mode == "default":
+        params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
+                  "port": os.environ.get('MYSQL_PORT', 3306),
+                  "user": os.environ.get('MYSQL_USER', 'root'),
+                  "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
+                  "password": os.environ.get('MYSQL_PASSWORD', ''),
+                  "local_infile": True,
+                  "use_unicode": True,
+                  }
+    else:
+        mysql_server = request.getfuncargvalue("mysql_server")
+        params = mysql_server['conn_params']
     return params
 
 
