@@ -1,9 +1,16 @@
 import asyncio
 import gc
 import os
+import ssl
+import socket
 import sys
+import time
+import uuid
+
+from docker import APIClient
 
 import aiomysql
+import pymysql
 import pytest
 
 
@@ -14,10 +21,38 @@ else:
     uvloop = None
 
 
+@pytest.fixture(scope='session')
+def unused_port():
+    def f():
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
+    return f
+
+
 def pytest_generate_tests(metafunc):
     if 'loop_type' in metafunc.fixturenames:
-        loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
+        if 'mysql_server' in metafunc.fixturenames:
+            loop_type = ['asyncio']
+        else:
+            loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
+
+    # if 'mysql_tag' in metafunc.fixturenames:
+    #     tags = set(metafunc.config.option.mysql_tag)
+    #     if not tags:
+    #         tags = ['5.7']
+    #     elif 'all' in tags:
+    #         tags = ['5.6', '5.7', '8.0']
+    #     else:
+    #         tags = list(tags)
+    #     metafunc.parametrize("mysql_tag", tags, scope='session')
+
+
+# This is here unless someone fixes the generate_tests bit
+@pytest.yield_fixture(scope='session')
+def mysql_tag():
+    return '5.6'
 
 
 @pytest.yield_fixture
@@ -77,16 +112,34 @@ def pytest_ignore_collect(path, config):
             return True
 
 
-@pytest.fixture
-def mysql_params():
-    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
-              "port": os.environ.get('MYSQL_PORT', 3306),
-              "user": os.environ.get('MYSQL_USER', 'root'),
-              "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
-              "local_infile": True,
-              "use_unicode": True,
-              }
+def pytest_addoption(parser):
+    parser.addoption("--mysql_tag", action="append", default=[],
+                     help=("MySQL server versions. "
+                           "May be used several times. "
+                           "Available values: 5.6, 5.7, 8.0, all"))
+    parser.addoption("--no-pull", action="store_true", default=False,
+                     help="Don't perform docker images pulling")
+
+
+@pytest.fixture(scope="session", params=["nonssl", "ssl"])
+def mysql_mode(request):
+    return request.param
+
+
+@pytest.fixture(scope="session")
+def mysql_params(mysql_mode, request):
+    if mysql_mode == "default":
+        params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
+                  "port": os.environ.get('MYSQL_PORT', 3306),
+                  "user": os.environ.get('MYSQL_USER', 'root'),
+                  "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
+                  "password": os.environ.get('MYSQL_PASSWORD', ''),
+                  "local_infile": True,
+                  "use_unicode": True,
+                  }
+    else:
+        mysql_server = request.getfuncargvalue("mysql_server")
+        params = mysql_server['conn_params']
     return params
 
 
@@ -164,3 +217,113 @@ def table_cleanup(loop, connection):
         # TODO: probably this is not safe code
         sql = "DROP TABLE IF EXISTS {};".format(t)
         loop.run_until_complete(cursor.execute(sql))
+
+
+@pytest.fixture(scope='session')
+def session_id():
+    """Unique session identifier, random string."""
+    return str(uuid.uuid4())
+
+
+@pytest.fixture(scope='session')
+def docker():
+    return APIClient(version='auto')
+
+
+@pytest.fixture(scope='session')
+def mysql_server(unused_port, docker, session_id, mysql_tag, request):
+    if not request.config.option.no_pull:
+        docker.pull('mysql:{}'.format(mysql_tag))
+
+    # bound IPs do not work on OSX
+    host = "127.0.0.1"
+    host_port = unused_port()
+
+    # As TLS is optional, might as well always configure it
+    ssl_directory = os.path.join(os.path.dirname(__file__),
+                                 'ssl_resources', 'ssl')
+    ca_file = os.path.join(ssl_directory, 'ca.pem')
+    tls_cnf = os.path.join(os.path.dirname(__file__),
+                           'ssl_resources', 'tls.cnf')
+
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    ctx.check_hostname = False
+    ctx.load_verify_locations(cafile=ca_file)
+    # ctx.verify_mode = ssl.CERT_NONE
+
+    container_args = dict(
+        image='mysql:{}'.format(mysql_tag),
+        name='aiomysql-test-server-{}-{}'.format(mysql_tag, session_id),
+        ports=[3306],
+        detach=True,
+        host_config=docker.create_host_config(
+            port_bindings={3306: (host, host_port)},
+            binds={
+                ssl_directory: {'bind': '/etc/mysql/ssl', 'mode': 'ro'},
+                tls_cnf: {'bind': '/etc/mysql/conf.d/tls.cnf', 'mode': 'ro'},
+            }
+        ),
+        environment={'MYSQL_ROOT_PASSWORD': 'rootpw'}
+    )
+
+    container = docker.create_container(**container_args)
+
+    try:
+        docker.start(container=container['Id'])
+
+        # MySQL restarts at least 4 times in the container before its ready
+        time.sleep(10)
+
+        server_params = {
+            'host': host,
+            'port': host_port,
+            'user': 'root',
+            'password': 'rootpw',
+            'ssl': ctx
+        }
+        delay = 0.001
+        for i in range(100):
+            try:
+                connection = pymysql.connect(
+                    db='mysql',
+                    charset='utf8mb4',
+                    cursorclass=pymysql.cursors.DictCursor,
+                    **server_params)
+
+                with connection.cursor() as cursor:
+                    cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
+
+                    result = cursor.fetchall()
+                    result = {item['Variable_name']:
+                              item['Value'] for item in result}
+
+                    assert result['have_ssl'] == "YES", \
+                        "SSL Not Enabled on docker'd MySQL"
+
+                    cursor.execute("SHOW STATUS LIKE '%Ssl_version%'")
+
+                    result = cursor.fetchone()
+                    # As we connected with TLS, it should start with that :D
+                    assert result['Value'].startswith('TLS'), \
+                        "Not connected to the database with TLS"
+
+                break
+            except Exception as err:
+                time.sleep(delay)
+                delay *= 2
+        else:
+            pytest.fail("Cannot start MySQL server")
+
+        container['host'] = host
+        container['port'] = host_port
+        container['conn_params'] = server_params
+
+        yield container
+    finally:
+        docker.kill(container=container['Id'])
+        docker.remove_container(container['Id'])
+
+
+# @pytest.fixture
+# def mysql_params(mysql_server):
+#     return dict(**mysql_server['mysql_params'])

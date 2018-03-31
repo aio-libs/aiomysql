@@ -74,7 +74,7 @@ class TestOldIssues(base.AIOPyMySQLTestCase):
         yield from c.execute("drop table if exists test")
         yield from c.execute("""CREATE TABLE `test` (`station` int(10) NOT
             NULL DEFAULT '0', `dh`
-            datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+            datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
             `echeance` int(1) NOT NULL DEFAULT '0', `me` double DEFAULT NULL,
             `mo` double DEFAULT NULL, PRIMARY
             KEY (`station`,`dh`,`echeance`)) ENGINE=MyISAM DEFAULT
@@ -184,7 +184,7 @@ class TestNewIssues(base.AIOPyMySQLTestCase):
             self.fail()
         except aiomysql.OperationalError as e:
             self.assertEqual(2003, e.args[0])
-        except Exception:
+        except Exception as err:
             self.fail()
 
     @run_until_complete

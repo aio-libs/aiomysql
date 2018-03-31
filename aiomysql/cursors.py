@@ -184,11 +184,12 @@ class Cursor:
         """Get the next query set"""
         conn = self._get_db()
         current_result = self._result
-        if current_result is None or current_result is not conn._result:
+        if current_result is None or \
+                current_result is not conn._protocol.result:
             return
         if not current_result.has_next:
             return
-        yield from conn.next_result()
+        yield from conn._protocol.next_result()
         yield from self._do_get_result()
         return True
 
@@ -465,7 +466,7 @@ class Cursor:
     def _do_get_result(self):
         conn = self._get_db()
         self._rownumber = 0
-        self._result = result = conn._result
+        self._result = result = conn._protocol.result
         self._rowcount = result.affected_rows
         self._description = result.description
         self._lastrowid = result.insert_id
@@ -569,7 +570,7 @@ class SSCursor(Cursor):
         if conn is None:
             return
 
-        if self._result is not None and self._result is conn._result:
+        if self._result is not None and self._result is conn._protocol.result:
             yield from self._result._finish_unbuffered_query()
 
         try:
