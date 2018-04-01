@@ -19,7 +19,7 @@ class TestEngine(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         self.host = os.environ.get('MYSQL_HOST', 'localhost')
-        self.port = os.environ.get('MYSQL_PORT', 3306)
+        self.port = int(os.environ.get('MYSQL_PORT', 3306))
         self.user = os.environ.get('MYSQL_USER', 'root')
         self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
         self.password = os.environ.get('MYSQL_PASSWORD', '')
@@ -38,6 +38,7 @@ class TestEngine(unittest.TestCase):
                                                 user=self.user,
                                                 password=self.password,
                                                 host=self.host,
+                                                port=self.port,
                                                 loop=self.loop,
                                                 minsize=10,
                                                 **kwargs))
@@ -46,6 +47,7 @@ class TestEngine(unittest.TestCase):
                                                 user=self.user,
                                                 password=self.password,
                                                 host=self.host,
+                                                port=self.port,
                                                 minsize=10,
                                                 **kwargs))
 
