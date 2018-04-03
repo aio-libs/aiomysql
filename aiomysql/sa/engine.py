@@ -32,7 +32,8 @@ def create_engine(minsize=1, maxsize=10, loop=None,
     compatible_cursor_classes = [Cursor]
     # Without provided kwarg, default is default cursor from Connection class
     if kwargs.get('cursorclass', Cursor) not in compatible_cursor_classes:
-        raise ArgumentError('SQLAlchemy engine does not support this cursor class')
+        raise ArgumentError('SQLAlchemy engine does not support '
+                            'this cursor class')
     return _EngineContextManager(coro)
 
 
