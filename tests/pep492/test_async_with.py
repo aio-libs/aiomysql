@@ -3,7 +3,7 @@ import warnings
 import aiomysql
 import pytest
 
-from aiomysql import sa, create_pool
+from aiomysql import sa, create_pool, DictCursor
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
 
@@ -266,3 +266,13 @@ async def test_transaction_context_manager_commit_once(loop, mysql_params,
                 await tr2.commit()
             assert not tr2.is_active
     assert conn.closed
+
+
+@pytest.mark.run_loop
+async def test_incompatible_cursor_fails(loop, mysql_params):
+    mysql_params['cursorclass'] = DictCursor
+    with pytest.raises(sa.ArgumentError) as ctx:
+        await sa.create_engine(loop=loop, **mysql_params)
+
+    msg = 'SQLAlchemy engine does not support this cursor class'
+    assert str(ctx.value) == msg
