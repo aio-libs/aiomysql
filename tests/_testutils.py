@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+import re
 
 from functools import wraps
 
@@ -27,3 +28,18 @@ class BaseTest(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
         del self.loop
+
+
+def mysql_server_is(server_version, version_tuple):
+    """Return True if the given connection is on the version given or
+    greater.
+    e.g.::
+        if self.mysql_server_is(conn, (5, 6, 4)):
+            # do something for MySQL 5.6.4 and above
+    """
+    server_version_tuple = tuple(
+        (int(dig) if dig is not None else 0)
+        for dig in
+        re.match(r'(\d+)\.(\d+)\.(\d+)', server_version).group(1, 2, 3)
+    )
+    return server_version_tuple >= version_tuple

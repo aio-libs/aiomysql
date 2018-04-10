@@ -53,7 +53,7 @@ class TestConnection(AIOPyMySQLTestCase):
 
         self.assertEqual(conn.charset, 'utf8')
         self.assertEqual(conn.user, 'root')
-        self.assertEqual(conn.unix_socket, '/var/run/mysqld/mysqld.sock')
+        self.assertEqual(conn.unix_socket, self.socket)
 
         # make sure connection is working
         cur = yield from conn.cursor()
@@ -64,7 +64,7 @@ class TestConnection(AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_connect_using_unix_socket(self):
-        sock = '/var/run/mysqld/mysqld.sock'
+        sock = self.socket
         conn = yield from self.connect(unix_socket=sock)
         self.assertEqual(conn.unix_socket, sock)
 
