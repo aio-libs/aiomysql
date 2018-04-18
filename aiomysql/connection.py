@@ -165,7 +165,9 @@ class Connection:
         self._no_delay = no_delay
         self._echo = echo
         self._last_usage = self._loop.time()
-        self._auth_plugin = auth_plugin
+        self._client_auth_plugin = auth_plugin
+        self._server_auth_plugin = ""
+        self._auth_plugin_used = ""
 
         self._unix_socket = unix_socket
         if charset:
@@ -214,8 +216,6 @@ class Connection:
         # If connection was closed for specific reason, we should show that to
         # user
         self._close_reason = None
-
-        self._auth_plugin_name = ""  # TODO remove
 
     @property
     def host(self):
@@ -680,7 +680,8 @@ class Connection:
             self._writer.transport.pause_reading()
 
             # Get the raw socket from the transport
-            raw_sock = self._writer.transport.get_extra_info('socket', default=None)
+            raw_sock = self._writer.transport.get_extra_info('socket',
+                                                             default=None)
             if raw_sock is None:
                 raise RuntimeError("Transport does not expose socket instance")
 
@@ -704,9 +705,10 @@ class Connection:
 
         authresp = b''
 
-        auth_plugin = self._auth_plugin
-        if not self._auth_plugin:
-            auth_plugin = self._auth_plugin_name
+        auth_plugin = self._client_auth_plugin
+        if not self._client_auth_plugin:
+            # Contains the auth plugin from handshake
+            auth_plugin = self._server_auth_plugin
 
         if auth_plugin in ('', 'mysql_native_password'):
             authresp = _scramble(self._password.encode('latin1'), self.salt)
@@ -734,6 +736,8 @@ class Connection:
             if isinstance(name, str):
                 name = name.encode('ascii')
             data += name + b'\0'
+
+        self._auth_plugin_used = auth_plugin
 
         self.write_packet(data)
         auth_packet = yield from self._read_packet()
@@ -781,6 +785,9 @@ class Connection:
         self.write_packet(data)
         pkt = yield from self._read_packet()
         pkt.check_error()
+
+        self._auth_plugin_used = plugin_name
+
         return pkt
 
     # _mysql support
@@ -851,9 +858,9 @@ class Connection:
             server_end = data.find(b'\0', i)
             if server_end < 0:  # pragma: no cover - very specific upstream bug
                 # not found \0 and last field so take it all
-                self._auth_plugin_name = data[i:].decode('latin1')
+                self._server_auth_plugin = data[i:].decode('latin1')
             else:
-                self._auth_plugin_name = data[i:server_end].decode('latin1')
+                self._server_auth_plugin = data[i:server_end].decode('latin1')
 
     def get_transaction_status(self):
         return bool(self.server_status & SERVER_STATUS.SERVER_STATUS_IN_TRANS)

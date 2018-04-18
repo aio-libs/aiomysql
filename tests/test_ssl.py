@@ -5,13 +5,8 @@ import pytest
 
 @pytest.mark.run_loop
 async def test_tls_connect(mysql_server, loop):
-
-    import ssl
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-    ctx.check_hostname = False
-    ctx.load_verify_locations(cafile='/home/terry/VCS/aiomysql/tests/ssl_resources/ssl/ca.pem')
-
-    async with create_pool(**mysql_server['conn_params'], loop=loop) as pool:
+    async with create_pool(**mysql_server['conn_params'],
+                           loop=loop) as pool:
         async with pool.get() as conn:
             async with conn.cursor() as cur:
                 # Run simple command
@@ -21,7 +16,8 @@ async def test_tls_connect(mysql_server, loop):
                 values = [item[0] for item in value]
                 # Spot check the answers, we should at least have mysql
                 # and information_schema
-                assert 'mysql' in values, 'Could not find the "mysql" table'
+                assert 'mysql' in values, \
+                    'Could not find the "mysql" table'
                 assert 'information_schema' in values, \
                     'Could not find the "mysql" table'
 
@@ -32,3 +28,25 @@ async def test_tls_connect(mysql_server, loop):
                 # The context has TLS
                 assert value[1].startswith('TLS'), \
                     'Not connected to the database with TLS'
+
+
+# MySQL will get you to renegotiate if sent a cleartext password
+@pytest.mark.run_loop
+async def test_auth_plugin_renegotiation(mysql_server, loop):
+    async with create_pool(**mysql_server['conn_params'],
+                           auth_plugin='mysql_clear_password',
+                           loop=loop) as pool:
+        async with pool.get() as conn:
+            async with conn.cursor() as cur:
+                # Run simple command
+                await cur.execute("SHOW DATABASES;")
+                value = await cur.fetchall()
+
+                assert len(value), 'No databases found'
+
+                assert conn._client_auth_plugin == 'mysql_clear_password', \
+                    'Client did not try clear password auth'
+                assert conn._server_auth_plugin == 'mysql_native_password', \
+                    'Server did not ask for native auth'
+                assert conn._auth_plugin_used == b'mysql_native_password', \
+                    'Client did not renegotiate with native auth'
