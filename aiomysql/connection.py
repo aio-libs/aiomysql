@@ -56,7 +56,7 @@ def connect(host="localhost", user=None, password="",
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
             no_delay=None, autocommit=False, echo=False,
-            local_infile=False, loop=None):
+            local_infile=False, loop=None, ssl=None, auth_plugin=''):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -68,7 +68,8 @@ def connect(host="localhost", user=None, password="",
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
-                    local_infile=local_infile, loop=loop)
+                    local_infile=local_infile, loop=loop, ssl=ssl,
+                    auth_plugin=auth_plugin)
     return _ConnectionContextManager(coro)
 
 
@@ -93,7 +94,7 @@ class Connection:
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
                  no_delay=None, autocommit=False, echo=False,
-                 local_infile=False, loop=None):
+                 local_infile=False, loop=None, ssl=None, auth_plugin=''):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -164,6 +165,9 @@ class Connection:
         self._no_delay = no_delay
         self._echo = echo
         self._last_usage = self._loop.time()
+        self._client_auth_plugin = auth_plugin
+        self._server_auth_plugin = ""
+        self._auth_plugin_used = ""
 
         self._unix_socket = unix_socket
         if charset:
@@ -175,6 +179,10 @@ class Connection:
 
         if use_unicode is not None:
             self.use_unicode = use_unicode
+
+        self._ssl_context = ssl
+        if ssl:
+            client_flag |= CLIENT.SSL
 
         self._encoding = charset_by_name(self._charset).encoding
 
@@ -208,8 +216,6 @@ class Connection:
         # If connection was closed for specific reason, we should show that to
         # user
         self._close_reason = None
-
-        self._auth_plugin_name = ""
 
     @property
     def host(self):
@@ -663,6 +669,31 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
+        if self._ssl_context:
+            # capablities, max packet, charset
+            data = struct.pack('<IIB', self.client_flag, 16777216, 33)
+            data += b'\x00' * (32 - len(data))
+
+            self.write_packet(data)
+
+            # Stop sending events to data_received
+            self._writer.transport.pause_reading()
+
+            # Get the raw socket from the transport
+            raw_sock = self._writer.transport.get_extra_info('socket',
+                                                             default=None)
+            if raw_sock is None:
+                raise RuntimeError("Transport does not expose socket instance")
+
+            # MySQL expects TLS negotiation to happen in the middle of a
+            # TCP connection not at start. Passing in a socket to
+            # open_connection will cause it to negotiate TLS on an existing
+            # connection not initiate a new one.
+            self._reader, self._writer = yield from asyncio.open_connection(
+                sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
+                server_hostname=self._host
+            )
+
         charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
@@ -673,8 +704,16 @@ class Connection:
         data = data_init + _user + b'\0'
 
         authresp = b''
-        if self._auth_plugin_name in ('', 'mysql_native_password'):
+
+        auth_plugin = self._client_auth_plugin
+        if not self._client_auth_plugin:
+            # Contains the auth plugin from handshake
+            auth_plugin = self._server_auth_plugin
+
+        if auth_plugin in ('', 'mysql_native_password'):
             authresp = _scramble(self._password.encode('latin1'), self.salt)
+        elif auth_plugin in ('', 'mysql_clear_password'):
+            authresp = self._password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
             data += lenenc_int(len(authresp)) + authresp
@@ -693,10 +732,12 @@ class Connection:
             data += db + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH:
-            name = self._auth_plugin_name
+            name = auth_plugin
             if isinstance(name, str):
                 name = name.encode('ascii')
             data += name + b'\0'
+
+        self._auth_plugin_used = auth_plugin
 
         self.write_packet(data)
         auth_packet = yield from self._read_packet()
@@ -710,13 +751,44 @@ class Connection:
             plugin_name = auth_packet.read_string()
             if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
                     plugin_name is not None):
-                auth_packet = self._process_auth(plugin_name, auth_packet)
+                auth_packet = yield from self._process_auth(
+                    plugin_name, auth_packet)
             else:
                 # send legacy handshake
                 data = _scramble_323(self._password.encode('latin1'),
                                      self.salt) + b'\0'
                 self.write_packet(data)
                 auth_packet = yield from self._read_packet()
+
+    @asyncio.coroutine
+    def _process_auth(self, plugin_name, auth_packet):
+        if plugin_name == b"mysql_native_password":
+            # https://dev.mysql.com/doc/internals/en/
+            # secure-password-authentication.html#packet-Authentication::
+            # Native41
+            data = _scramble(self._password.encode('latin1'),
+                             auth_packet.read_all())
+        elif plugin_name == b"mysql_old_password":
+            # https://dev.mysql.com/doc/internals/en/
+            # old-password-authentication.html
+            data = _scramble_323(self._password.encode('latin1'),
+                                 auth_packet.read_all()) + b'\0'
+        elif plugin_name == b"mysql_clear_password":
+            # https://dev.mysql.com/doc/internals/en/
+            # clear-text-authentication.html
+            data = self._password.encode('latin1') + b'\0'
+        else:
+            raise OperationalError(
+                2059, "Authentication plugin '%s' not configured" % plugin_name
+            )
+
+        self.write_packet(data)
+        pkt = yield from self._read_packet()
+        pkt.check_error()
+
+        self._auth_plugin_used = plugin_name
+
+        return pkt
 
     # _mysql support
     def thread_id(self):
@@ -786,9 +858,9 @@ class Connection:
             server_end = data.find(b'\0', i)
             if server_end < 0:  # pragma: no cover - very specific upstream bug
                 # not found \0 and last field so take it all
-                self._auth_plugin_name = data[i:].decode('latin1')
+                self._server_auth_plugin = data[i:].decode('latin1')
             else:
-                self._auth_plugin_name = data[i:server_end].decode('latin1')
+                self._server_auth_plugin = data[i:server_end].decode('latin1')
 
     def get_transaction_status(self):
         return bool(self.server_status & SERVER_STATUS.SERVER_STATUS_IN_TRANS)
