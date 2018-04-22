@@ -5,7 +5,7 @@ import asyncio
 import aiomysql
 from .connection import SAConnection
 from .exc import InvalidRequestError, ArgumentError
-from ..utils import PY_35, _PoolContextManager, _PoolAcquireContextManager
+from ..utils import _PoolContextManager, _PoolAcquireContextManager
 from ..cursors import Cursor
 
 
@@ -37,16 +37,15 @@ def create_engine(minsize=1, maxsize=10, loop=None,
     return _EngineContextManager(coro)
 
 
-@asyncio.coroutine
-def _create_engine(minsize=1, maxsize=10, loop=None,
+async def _create_engine(minsize=1, maxsize=10, loop=None,
                    dialect=_dialect, pool_recycle=-1, **kwargs):
 
     if loop is None:
         loop = asyncio.get_event_loop()
-    pool = yield from aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
+    pool = await aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
                                            loop=loop,
                                            pool_recycle=pool_recycle, **kwargs)
-    conn = yield from pool.acquire()
+    conn = await pool.acquire()
     try:
         return Engine(dialect, pool, **kwargs)
     finally:
@@ -114,19 +113,17 @@ class Engine:
         """
         self._pool.terminate()
 
-    @asyncio.coroutine
-    def wait_closed(self):
+    async def wait_closed(self):
         """Wait for closing all engine's connections."""
-        yield from self._pool.wait_closed()
+        await self._pool.wait_closed()
 
     def acquire(self):
         """Get a connection from pool."""
         coro = self._acquire()
         return _EngineAcquireContextManager(coro, self)
 
-    @asyncio.coroutine
-    def _acquire(self):
-        raw = yield from self._pool.acquire()
+    async def _acquire(self):
+        raw = await self._pool.acquire()
         conn = SAConnection(raw, self)
         return conn
 
@@ -163,15 +160,12 @@ class Engine:
         conn = yield from self.acquire()
         return _ConnectionContextManager(self, conn)
 
-    if PY_35:  # pragma: no branch
-        @asyncio.coroutine
-        def __aenter__(self):
-            return self
+    async def __aenter__(self):
+        return self
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            self.close()
-            yield from self.wait_closed()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        await self.wait_closed()
 
 
 _EngineContextManager = _PoolContextManager
