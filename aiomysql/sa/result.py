@@ -342,13 +342,13 @@ class ResultProxy:
             self._cursor = None
             self._weak = None
 
-    def __iter__(self):
-        while True:
-            row = yield from self.fetchone()
-            if row is None:
-                raise StopIteration
-            else:
-                yield row
+    # def __iter__(self):
+    #     while True:
+    #         row = yield from self.fetchone()
+    #         if row is None:
+    #             raise StopIteration
+    #         else:
+    #             yield row
 
     def _non_result(self):
         if self._metadata is None:

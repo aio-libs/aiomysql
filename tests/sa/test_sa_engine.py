@@ -31,10 +31,9 @@ class TestEngine(unittest.TestCase):
         self.loop.run_until_complete(self.engine.wait_closed())
         self.loop.close()
 
-    @asyncio.coroutine
-    def make_engine(self, use_loop=True, **kwargs):
+    async def make_engine(self, use_loop=True, **kwargs):
         if use_loop:
-            return (yield from sa.create_engine(db=self.db,
+            return (await sa.create_engine(db=self.db,
                                                 user=self.user,
                                                 password=self.password,
                                                 host=self.host,
@@ -43,7 +42,7 @@ class TestEngine(unittest.TestCase):
                                                 minsize=10,
                                                 **kwargs))
         else:
-            return (yield from sa.create_engine(db=self.db,
+            return (await sa.create_engine(db=self.db,
                                                 user=self.user,
                                                 password=self.password,
                                                 host=self.host,
@@ -51,11 +50,10 @@ class TestEngine(unittest.TestCase):
                                                 minsize=10,
                                                 **kwargs))
 
-    @asyncio.coroutine
-    def start(self):
-        with (yield from self.engine) as conn:
-            yield from conn.execute("DROP TABLE IF EXISTS sa_tbl3")
-            yield from conn.execute("CREATE TABLE sa_tbl3 "
+    async def start(self):
+        async with self.engine.acquire() as conn:
+            await conn.execute("DROP TABLE IF EXISTS sa_tbl3")
+            await conn.execute("CREATE TABLE sa_tbl3 "
                                     "(id serial, name varchar(255))")
 
     def test_dialect(self):
@@ -86,11 +84,10 @@ class TestEngine(unittest.TestCase):
 
     def test_make_engine_with_default_loop(self):
 
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine(use_loop=False)
+        async def go():
+            engine = await self.make_engine(use_loop=False)
             engine.close()
-            yield from engine.wait_closed()
+            await engine.wait_closed()
 
         asyncio.set_event_loop(self.loop)
         try:
@@ -99,18 +96,16 @@ class TestEngine(unittest.TestCase):
             asyncio.set_event_loop(None)
 
     def test_not_context_manager(self):
-        @asyncio.coroutine
-        def go():
+        async def go():
             with self.assertRaises(RuntimeError):
                 with self.engine:
                     pass
         self.loop.run_until_complete(go())
 
     def test_release_transacted(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.engine.acquire()
-            tr = yield from conn.begin()
+        async def go():
+            conn = await self.engine.acquire()
+            tr = await conn.begin()
             with self.assertRaises(sa.InvalidRequestError):
                 self.engine.release(conn)
             del tr
@@ -131,59 +126,54 @@ class TestEngine(unittest.TestCase):
     #     self.loop.run_until_complete(go())
 
     def test_cannot_acquire_after_closing(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
+        async def go():
+            engine = await self.make_engine()
             engine.close()
 
             with self.assertRaises(RuntimeError):
-                yield from engine.acquire()
-            yield from engine.wait_closed()
+                await engine.acquire()
+            await engine.wait_closed()
         self.loop.run_until_complete(go())
 
     def test_wait_closed(self):
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
+        async def go():
+            engine = await self.make_engine()
 
-            c1 = yield from engine.acquire()
-            c2 = yield from engine.acquire()
+            c1 = await engine.acquire()
+            c2 = await engine.acquire()
             self.assertEqual(10, engine.size)
             self.assertEqual(8, engine.freesize)
 
             ops = []
 
-            @asyncio.coroutine
-            def do_release(conn):
-                yield from asyncio.sleep(0, loop=self.loop)
+            async def do_release(conn):
+                await asyncio.sleep(0, loop=self.loop)
                 engine.release(conn)
                 ops.append('release')
 
-            @asyncio.coroutine
-            def wait_closed():
-                yield from engine.wait_closed()
+            async def wait_closed():
+                await engine.wait_closed()
                 ops.append('wait_closed')
 
             engine.close()
-            yield from asyncio.gather(wait_closed(),
+            await asyncio.gather(wait_closed(),
                                       do_release(c1),
                                       do_release(c2),
                                       loop=self.loop)
             self.assertEqual(['release', 'release', 'wait_closed'], ops)
             self.assertEqual(0, engine.freesize)
             engine.close()
-            yield from engine.wait_closed()
+            await engine.wait_closed()
 
         self.loop.run_until_complete(go())
 
     def test_terminate_with_acquired_connections(self):
 
-        @asyncio.coroutine
-        def go():
-            engine = yield from self.make_engine()
-            conn = yield from engine.acquire()
+        async def go():
+            engine = await self.make_engine()
+            conn = await engine.acquire()
             engine.terminate()
-            yield from engine.wait_closed()
+            await engine.wait_closed()
 
             self.assertTrue(conn.closed)
 
