@@ -685,6 +685,8 @@ class Connection:
             if raw_sock is None:
                 raise RuntimeError("Transport does not expose socket instance")
 
+            raw_sock = raw_sock.dup()
+            self._writer.transport.close()
             # MySQL expects TLS negotiation to happen in the middle of a
             # TCP connection not at start. Passing in a socket to
             # open_connection will cause it to negotiate TLS on an existing
