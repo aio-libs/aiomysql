@@ -97,7 +97,7 @@ async def test_string(cursor, table_cleanup):
     test_value = "I am a test string"
     table_cleanup('test_string')
     await cursor.execute("INSERT INTO test_string (a) VALUES (%s)",
-                              test_value)
+                         test_value)
     await cursor.execute("SELECT a FROM test_string")
     r = await cursor.fetchone()
     assert (test_value,) == r
@@ -109,7 +109,7 @@ async def test_integer(cursor, table_cleanup):
     table_cleanup('test_integer')
     test_value = 12345
     await cursor.execute("INSERT INTO test_integer (a) VALUES (%s)",
-                              test_value)
+                         test_value)
     await cursor.execute("SELECT a FROM test_integer")
     r = await cursor.fetchone()
     assert (test_value,) == r
@@ -121,7 +121,7 @@ async def test_binary_data(cursor, table_cleanup):
     await cursor.execute("CREATE TABLE test_blob (b blob)")
     table_cleanup('test_blob')
     await cursor.execute("INSERT INTO test_blob (b) VALUES (%s)",
-                              (data,))
+                         (data,))
     await cursor.execute("SELECT b FROM test_blob")
     (r,) = await cursor.fetchone()
     assert data == r
@@ -158,10 +158,10 @@ async def test_datetime_conversion(cursor, table_cleanup):
     dt = datetime.datetime(2013, 11, 12, 9, 9, 9, 123450)
     try:
         await cursor.execute("CREATE TABLE test_datetime"
-                                  "(id INT, ts DATETIME(6))")
+                             "(id INT, ts DATETIME(6))")
         table_cleanup('test_datetime')
         await cursor.execute("INSERT INTO test_datetime VALUES "
-                                  "(1,'2013-11-12 09:09:09.12345')")
+                             "(1,'2013-11-12 09:09:09.12345')")
         await cursor.execute("SELECT ts FROM test_datetime")
         r = await cursor.fetchone()
         assert (dt,) == r
@@ -196,14 +196,14 @@ async def test_get_transaction_status(connection, cursor):
 async def test_rollback(connection, cursor):
     await cursor.execute('DROP TABLE IF EXISTS tz_data;')
     await cursor.execute('CREATE TABLE tz_data ('
-                              'region VARCHAR(64),'
-                              'zone VARCHAR(64),'
-                              'name VARCHAR(64))')
+                         'region VARCHAR(64),'
+                         'zone VARCHAR(64),'
+                         'name VARCHAR(64))')
     await connection.commit()
 
     args = ('America', '', 'America/New_York')
     await cursor.execute('INSERT INTO tz_data VALUES (%s, %s, %s)',
-                              args)
+                         args)
     await cursor.execute('SELECT * FROM tz_data;')
     data = await cursor.fetchall()
     assert len(data) == 1

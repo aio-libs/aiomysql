@@ -18,7 +18,7 @@ def create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
 
 
 async def _create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
-                 loop=None, **kwargs):
+                       loop=None, **kwargs):
     if loop is None:
         loop = asyncio.get_event_loop()
 
@@ -165,7 +165,7 @@ class Pool(asyncio.AbstractServer):
             self._acquiring += 1
             try:
                 conn = await connect(echo=self._echo, loop=self._loop,
-                                          **self._conn_kwargs)
+                                     **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
@@ -178,7 +178,7 @@ class Pool(asyncio.AbstractServer):
             self._acquiring += 1
             try:
                 conn = await connect(echo=self._echo, loop=self._loop,
-                                          **self._conn_kwargs)
+                                     **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()

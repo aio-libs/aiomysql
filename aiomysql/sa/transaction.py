@@ -1,7 +1,5 @@
 # ported from:
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/transaction.py
-import asyncio
-
 from . import exc
 
 

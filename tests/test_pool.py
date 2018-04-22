@@ -165,7 +165,7 @@ async def test_parallel_tasks_more(pool_creator, loop):
     fut3 = pool.acquire()
 
     conn1, conn2, conn3 = await asyncio.gather(fut1, fut2, fut3,
-                                                    loop=loop)
+                                               loop=loop)
     assert 3 == pool.size
     assert 0 == pool.freesize
     assert {conn1, conn2, conn3} == pool._used
@@ -242,8 +242,7 @@ async def test__fill_free(pool_creator, loop):
         assert 1 == pool.size
 
         conn = await asyncio.wait_for(pool.acquire(),
-                                           timeout=0.5,
-                                           loop=loop)
+                                      timeout=0.5, loop=loop)
         assert 0 == pool.freesize
         assert 2 == pool.size
         pool.release(conn)
@@ -344,10 +343,8 @@ async def test_wait_closed(pool_creator, loop):
         ops.append('wait_closed')
 
     pool.close()
-    await asyncio.gather(wait_closed(),
-                              do_release(c1),
-                              do_release(c2),
-                              loop=loop)
+    await asyncio.gather(wait_closed(), do_release(c1), do_release(c2),
+                         loop=loop)
     assert ['release', 'release', 'wait_closed'] == ops
     assert 0 == pool.freesize
 
@@ -433,7 +430,8 @@ async def _set_global_conn_timeout(conn, t):
 
 
 @pytest.mark.run_loop
-async def test_drop_connection_if_timedout(pool_creator, connection_creator, loop):
+async def test_drop_connection_if_timedout(pool_creator,
+                                           connection_creator, loop):
     conn = await connection_creator()
     await _set_global_conn_timeout(conn, 2)
     await conn.ensure_closed()
@@ -496,9 +494,7 @@ async def test_cancelled_connection(pool_creator, loop):
 
 
 async def test_pool_with_connection_recycling(pool_creator, loop):
-    pool = await pool_creator(minsize=1,
-                                   maxsize=1,
-                                   pool_recycle=3)
+    pool = await pool_creator(minsize=1, maxsize=1, pool_recycle=3)
     async with pool.get() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')

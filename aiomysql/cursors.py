@@ -1,4 +1,3 @@
-import asyncio
 import re
 import warnings
 
@@ -287,8 +286,8 @@ class Cursor:
             self._rowcount = rows
         return self._rowcount
 
-    async def _do_execute_many(self, prefix, values, postfix, args, max_stmt_length,
-                         encoding):
+    async def _do_execute_many(self, prefix, values, postfix, args,
+                               max_stmt_length, encoding):
         conn = self._get_db()
         escape = self._escape_args
         if isinstance(prefix, str):

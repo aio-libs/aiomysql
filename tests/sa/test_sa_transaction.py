@@ -46,19 +46,19 @@ class TestTransaction(unittest.TestCase):
         conn = await self.connect(**kwargs)
         await conn.execute("DROP TABLE IF EXISTS sa_tbl2")
         await conn.execute("CREATE TABLE sa_tbl2 "
-                                "(id serial, name varchar(255))")
+                           "(id serial, name varchar(255))")
         await conn.execute("INSERT INTO sa_tbl2 (name)"
-                                "VALUES ('first')")
+                           "VALUES ('first')")
         await conn._connection.commit()
 
     async def connect(self, **kwargs):
         conn = await connect(db=self.db,
-                                  user=self.user,
-                                  password=self.password,
-                                  host=self.host,
-                                  port=self.port,
-                                  loop=self.loop,
-                                  **kwargs)
+                             user=self.user,
+                             password=self.password,
+                             host=self.host,
+                             port=self.port,
+                             loop=self.loop,
+                             **kwargs)
         # TODO: fix this, should autocommit be enabled by default?
         await conn.autocommit(True)
         engine = mock.Mock()

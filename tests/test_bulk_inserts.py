@@ -113,7 +113,8 @@ async def test_insert_on_duplicate_key_update(cursor, table, assert_records):
 
 
 @pytest.mark.run_loop
-async def test_bulk_insert_with_params_as_dict(cursor, table, assert_dict_records):
+async def test_bulk_insert_with_params_as_dict(cursor, table,
+                                               assert_dict_records):
     data = [
         {
             'id': 0,
@@ -146,7 +147,8 @@ async def test_bulk_insert_with_params_as_dict(cursor, table, assert_dict_record
 
 
 @pytest.mark.run_loop
-async def test_bulk_insert_with_precedence_spaces(cursor, table, assert_records):
+async def test_bulk_insert_with_precedence_spaces(cursor, table,
+                                                  assert_records):
     data = [(0, "bob", 21, 123), (1, "jim", 56, 45)]
     await cursor.executemany("""
         INSERT INTO bulkinsert (id, name, age, height)
@@ -175,7 +177,8 @@ async def test_bulk_replace(cursor, table, assert_records):
 
 
 @pytest.mark.run_loop
-async def test_bulk_insert_with_semicolon_at_the_end(cursor, table, assert_records):
+async def test_bulk_insert_with_semicolon_at_the_end(cursor, table,
+                                                     assert_records):
     data = [(0, "bob", 21, 123), (1, "jim", 56, 45)]
     await cursor.executemany(
         "INSERT INTO bulkinsert (id, name, age, height) "

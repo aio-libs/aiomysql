@@ -432,7 +432,7 @@ class Connection:
         # Make sure charset is supported.
         encoding = charset_by_name(charset).encoding
         await self._execute_command(COMMAND.COM_QUERY, "SET NAMES %s"
-                                         % self.escape(charset))
+                                    % self.escape(charset))
         await self._read_packet()
         self._charset = charset
         self._encoding = encoding

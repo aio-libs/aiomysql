@@ -1,4 +1,3 @@
-import asyncio
 import builtins
 import os
 from unittest.mock import patch, MagicMock
@@ -14,7 +13,7 @@ def table_local_file(connection, loop):
         c = await conn.cursor()
         await c.execute("DROP TABLE IF EXISTS test_load_local;")
         await c.execute("CREATE TABLE test_load_local "
-                             "(a INTEGER, b INTEGER)")
+                        "(a INTEGER, b INTEGER)")
         await c.close()
 
     async def drop_table(conn):
@@ -48,8 +47,8 @@ async def test_error_on_file_read(cursor, table_local_file):
 
         with pytest.raises(OperationalError):
             await cursor.execute("LOAD DATA LOCAL INFILE 'some.txt'"
-                                      " INTO TABLE test_load_local fields "
-                                      "terminated by ','")
+                                 " INTO TABLE test_load_local fields "
+                                 "terminated by ','")
 
 
 @pytest.mark.run_loop

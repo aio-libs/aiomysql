@@ -38,13 +38,13 @@ def create_engine(minsize=1, maxsize=10, loop=None,
 
 
 async def _create_engine(minsize=1, maxsize=10, loop=None,
-                   dialect=_dialect, pool_recycle=-1, **kwargs):
+                         dialect=_dialect, pool_recycle=-1, **kwargs):
 
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = await aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
-                                           loop=loop,
-                                           pool_recycle=pool_recycle, **kwargs)
+                                      loop=loop,
+                                      pool_recycle=pool_recycle, **kwargs)
     conn = await pool.acquire()
     try:
         return Engine(dialect, pool, **kwargs)

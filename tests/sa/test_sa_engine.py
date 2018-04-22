@@ -34,27 +34,27 @@ class TestEngine(unittest.TestCase):
     async def make_engine(self, use_loop=True, **kwargs):
         if use_loop:
             return (await sa.create_engine(db=self.db,
-                                                user=self.user,
-                                                password=self.password,
-                                                host=self.host,
-                                                port=self.port,
-                                                loop=self.loop,
-                                                minsize=10,
-                                                **kwargs))
+                                           user=self.user,
+                                           password=self.password,
+                                           host=self.host,
+                                           port=self.port,
+                                           loop=self.loop,
+                                           minsize=10,
+                                           **kwargs))
         else:
             return (await sa.create_engine(db=self.db,
-                                                user=self.user,
-                                                password=self.password,
-                                                host=self.host,
-                                                port=self.port,
-                                                minsize=10,
-                                                **kwargs))
+                                           user=self.user,
+                                           password=self.password,
+                                           host=self.host,
+                                           port=self.port,
+                                           minsize=10,
+                                           **kwargs))
 
     async def start(self):
         async with self.engine.acquire() as conn:
             await conn.execute("DROP TABLE IF EXISTS sa_tbl3")
             await conn.execute("CREATE TABLE sa_tbl3 "
-                                    "(id serial, name varchar(255))")
+                               "(id serial, name varchar(255))")
 
     def test_dialect(self):
         self.assertEqual(sa.engine._dialect, self.engine.dialect)
@@ -156,10 +156,8 @@ class TestEngine(unittest.TestCase):
                 ops.append('wait_closed')
 
             engine.close()
-            await asyncio.gather(wait_closed(),
-                                      do_release(c1),
-                                      do_release(c2),
-                                      loop=self.loop)
+            await asyncio.gather(wait_closed(), do_release(c1),
+                                 do_release(c2), loop=self.loop)
             self.assertEqual(['release', 'release', 'wait_closed'], ops)
             self.assertEqual(0, engine.freesize)
             engine.close()

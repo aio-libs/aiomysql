@@ -32,19 +32,19 @@ class TestSAConnection(unittest.TestCase):
 
     async def connect(self, **kwargs):
         conn = await connect(db=self.db,
-                                  user=self.user,
-                                  password=self.password,
-                                  host=self.host,
-                                  loop=self.loop,
-                                  port=self.port,
-                                  **kwargs)
+                             user=self.user,
+                             password=self.password,
+                             host=self.host,
+                             loop=self.loop,
+                             port=self.port,
+                             **kwargs)
         await conn.autocommit(True)
         cur = await conn.cursor()
         await cur.execute("DROP TABLE IF EXISTS sa_tbl")
         await cur.execute("CREATE TABLE sa_tbl "
-                               "(id serial, name varchar(255))")
+                          "(id serial, name varchar(255))")
         await cur.execute("INSERT INTO sa_tbl (name)"
-                               "VALUES ('first')")
+                          "VALUES ('first')")
 
         await cur._connection.commit()
         # yield from cur.close()
