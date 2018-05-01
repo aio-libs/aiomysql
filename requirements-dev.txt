@@ -2,11 +2,11 @@ coverage==4.5.1
 flake8==3.5.0
 ipdb==0.11
 ipython==6.3.1
-pytest==3.5.0
+pytest==3.5.1
 pytest-cov==2.5.1
 pytest-sugar==0.9.1
 PyMySQL>=0.7.5
-docker==3.2.1
-sphinx==1.7.2
+docker==3.3.0
+sphinx==1.7.4
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy==1.2.6
+sqlalchemy==1.2.7
