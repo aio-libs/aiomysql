@@ -56,4 +56,5 @@ def test_example_transaction():
     yield from cursor.close()
     conn.close()
 
+
 loop.run_until_complete(test_example_transaction())
