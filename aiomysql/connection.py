@@ -41,8 +41,7 @@ from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import (_ConnectionContextManager, _ContextManager,
-                    create_future)
+from .utils import _ConnectionContextManager, _ContextManager
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
@@ -384,7 +383,7 @@ class Connection:
             cur = cursor(self, self._echo)
         else:
             cur = self.cursorclass(self, self._echo)
-        fut = create_future(self._loop)
+        fut = self._loop.create_future()
         fut.set_result(cur)
         return _ContextManager(fut)
 

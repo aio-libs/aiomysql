@@ -19,4 +19,5 @@ def test_example():
         pool.close()
         yield from pool.wait_closed()
 
+
 loop.run_until_complete(test_example())

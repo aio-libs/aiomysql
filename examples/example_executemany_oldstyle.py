@@ -40,4 +40,5 @@ def test_example_executemany():
     yield from cur.close()
     conn.close()
 
+
 loop.run_until_complete(test_example_executemany())

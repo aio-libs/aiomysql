@@ -137,8 +137,7 @@ for aiopg_ user.:
 Requirements
 ------------
 
-* Python_ 3.3+
-* asyncio_ or Python_ 3.4+
+* Python_ 3.5.3+
 * PyMySQL_
 
 

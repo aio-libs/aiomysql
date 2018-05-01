@@ -1,24 +1,4 @@
-import asyncio
-
 from collections.abc import Coroutine
-
-
-def create_future(loop):
-    """Compatibility wrapper for the loop.create_future() call introduced in
-    3.5.2."""
-    if hasattr(loop, 'create_future'):
-        return loop.create_future()
-    else:
-        return asyncio.Future(loop=loop)
-
-
-def create_task(coro, loop):
-    """Compatibility wrapper for the loop.create_task() call introduced in
-    3.4.2."""
-    if hasattr(loop, 'create_task'):
-        return loop.create_task(coro)
-    else:
-        return asyncio.Task(coro, loop=loop)
 
 
 class _ContextManager(Coroutine):
@@ -169,9 +149,3 @@ class _PoolConnectionContextManager:
         finally:
             self._pool = None
             self._conn = None
-
-
-try:
-    asyncio.coroutines._COROUTINE_TYPES += (_ContextManager,)
-except Exception:
-    pass

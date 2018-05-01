@@ -7,7 +7,6 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.sql import expression, sqltypes
 
 from . import exc
-from ..utils import create_task
 
 
 async def create_result_proxy(connection, cursor, dialect):
@@ -239,7 +238,7 @@ class ResultProxy:
             self._metadata = ResultMetaData(self, cursor.description)
 
             def callback(wr):
-                create_task(cursor.close(), loop)
+                loop.create_task(cursor.close())
             self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
