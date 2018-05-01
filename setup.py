@@ -8,19 +8,16 @@ install_requires = ['PyMySQL>=0.7.5']
 
 PY_VER = sys.version_info
 
-if PY_VER >= (3, 4):
-    pass
-elif PY_VER >= (3, 3):
-    install_requires.append('asyncio')
-else:
-    raise RuntimeError("aiomysql doesn't suppport Python earllier than 3.3")
+
+if not PY_VER >= (3, 5, 3):
+    raise RuntimeError("aiobotocore doesn't support Python earlier than 3.5.3")
 
 
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
 
-extras_require = {'sa': ['sqlalchemy>=0.9'], }
+extras_require = {'sa': ['sqlalchemy>=1.0'], }
 
 
 def read_version():
@@ -40,9 +37,8 @@ classifiers = [
     'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.3',
-    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Operating System :: POSIX',
     'Environment :: Web Environment',
     'Development Status :: 3 - Alpha',

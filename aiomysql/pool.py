@@ -7,7 +7,7 @@ import warnings
 
 from .connection import connect
 from .utils import (_PoolContextManager, _PoolConnectionContextManager,
-                    _PoolAcquireContextManager, create_future, create_task)
+                    _PoolAcquireContextManager)
 
 
 def create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
@@ -194,7 +194,7 @@ class Pool(asyncio.AbstractServer):
 
         This is **NOT** a coroutine.
         """
-        fut = create_future(self._loop)
+        fut = self._loop.create_future()
         fut.set_result(None)
 
         if conn in self._terminated:
@@ -212,7 +212,7 @@ class Pool(asyncio.AbstractServer):
                 conn.close()
             else:
                 self._free.append(conn)
-            fut = create_task(self._wakeup(), self._loop)
+            fut = self._loop.create_task(self._wakeup())
         return fut
 
     def get(self):
