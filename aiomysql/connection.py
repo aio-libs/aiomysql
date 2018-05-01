@@ -41,12 +41,11 @@ from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import (PY_35, _ConnectionContextManager, _ContextManager,
+from .utils import (_ConnectionContextManager, _ContextManager,
                     create_future)
 # from .log import logger
 
 DEFAULT_USER = getpass.getuser()
-PY_341 = sys.version_info >= (3, 4, 1)
 
 
 def connect(host="localhost", user=None, password="",
@@ -73,10 +72,9 @@ def connect(host="localhost", user=None, password="",
     return _ConnectionContextManager(coro)
 
 
-@asyncio.coroutine
-def _connect(*args, **kwargs):
+async def _connect(*args, **kwargs):
     conn = Connection(*args, **kwargs)
-    yield from conn._connect()
+    await conn._connect()
     return conn
 
 
@@ -280,19 +278,17 @@ class Connection:
         self._writer = None
         self._reader = None
 
-    @asyncio.coroutine
-    def ensure_closed(self):
+    async def ensure_closed(self):
         """Send quit command and then close socket connection"""
         if self._writer is None:
             # connection has been closed
             return
         send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
         self._writer.write(send_data)
-        yield from self._writer.drain()
+        await self._writer.drain()
         self.close()
 
-    @asyncio.coroutine
-    def autocommit(self, value):
+    async def autocommit(self, value):
         """Enable/disable autocommit mode for current MySQL session.
 
         :param value: ``bool``, toggle autocommit
@@ -300,7 +296,7 @@ class Connection:
         self.autocommit_mode = bool(value)
         current = self.get_autocommit()
         if value != current:
-            yield from self._send_autocommit_mode()
+            await self._send_autocommit_mode()
 
     def get_autocommit(self):
         """Returns autocommit status for current MySQL session.
@@ -310,53 +306,46 @@ class Connection:
         status = self.server_status & SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT
         return bool(status)
 
-    @asyncio.coroutine
-    def _read_ok_packet(self):
-        pkt = yield from self._read_packet()
+    async def _read_ok_packet(self):
+        pkt = await self._read_packet()
         if not pkt.is_ok_packet():
             raise OperationalError(2014, "Command Out of Sync")
         ok = OKPacketWrapper(pkt)
         self.server_status = ok.server_status
         return True
 
-    @asyncio.coroutine
-    def _send_autocommit_mode(self):
+    async def _send_autocommit_mode(self):
         """Set whether or not to commit after every execute() """
-        yield from self._execute_command(
+        await self._execute_command(
             COMMAND.COM_QUERY,
             "SET AUTOCOMMIT = %s" % self.escape(self.autocommit_mode))
-        yield from self._read_ok_packet()
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def begin(self):
+    async def begin(self):
         """Begin transaction."""
-        yield from self._execute_command(COMMAND.COM_QUERY, "BEGIN")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "BEGIN")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def commit(self):
+    async def commit(self):
         """Commit changes to stable storage."""
-        yield from self._execute_command(COMMAND.COM_QUERY, "COMMIT")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "COMMIT")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def rollback(self):
+    async def rollback(self):
         """Roll back the current transaction."""
-        yield from self._execute_command(COMMAND.COM_QUERY, "ROLLBACK")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "ROLLBACK")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def select_db(self, db):
+    async def select_db(self, db):
         """Set current db"""
-        yield from self._execute_command(COMMAND.COM_INIT_DB, db)
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_INIT_DB, db)
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def show_warnings(self):
+    async def show_warnings(self):
         """SHOW WARNINGS"""
-        yield from self._execute_command(COMMAND.COM_QUERY, "SHOW WARNINGS")
+        await self._execute_command(COMMAND.COM_QUERY, "SHOW WARNINGS")
         result = MySQLResult(self)
-        yield from result.read()
+        await result.read()
         return result.rows
 
     def escape(self, obj):
@@ -400,73 +389,67 @@ class Connection:
         return _ContextManager(fut)
 
     # The following methods are INTERNAL USE ONLY (called from Cursor)
-    @asyncio.coroutine
-    def query(self, sql, unbuffered=False):
+    async def query(self, sql, unbuffered=False):
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
-        yield from self._execute_command(COMMAND.COM_QUERY, sql)
-        yield from self._read_query_result(unbuffered=unbuffered)
+        await self._execute_command(COMMAND.COM_QUERY, sql)
+        await self._read_query_result(unbuffered=unbuffered)
         return self._affected_rows
 
-    @asyncio.coroutine
-    def next_result(self):
-        yield from self._read_query_result()
+    async def next_result(self):
+        await self._read_query_result()
         return self._affected_rows
 
     def affected_rows(self):
         return self._affected_rows
 
-    @asyncio.coroutine
-    def kill(self, thread_id):
+    async def kill(self, thread_id):
         arg = struct.pack('<I', thread_id)
-        yield from self._execute_command(COMMAND.COM_PROCESS_KILL, arg)
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_PROCESS_KILL, arg)
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def ping(self, reconnect=True):
+    async def ping(self, reconnect=True):
         """Check if the server is alive"""
         if self._writer is None and self._reader is None:
             if reconnect:
-                yield from self._connect()
+                await self._connect()
                 reconnect = False
             else:
                 raise Error("Already closed")
         try:
-            yield from self._execute_command(COMMAND.COM_PING, "")
-            yield from self._read_ok_packet()
+            await self._execute_command(COMMAND.COM_PING, "")
+            await self._read_ok_packet()
         except Exception:
             if reconnect:
-                yield from self._connect()
-                yield from self.ping(False)
+                await self._connect()
+                await self.ping(False)
             else:
                 raise
 
-    @asyncio.coroutine
-    def set_charset(self, charset):
+    async def set_charset(self, charset):
         """Sets the character set for the current connection"""
         # Make sure charset is supported.
         encoding = charset_by_name(charset).encoding
-        yield from self._execute_command(COMMAND.COM_QUERY, "SET NAMES %s"
-                                         % self.escape(charset))
-        yield from self._read_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "SET NAMES %s"
+                                    % self.escape(charset))
+        await self._read_packet()
         self._charset = charset
         self._encoding = encoding
 
-    @asyncio.coroutine
-    def _connect(self):
+    async def _connect(self):
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
-                self._reader, self._writer = yield from \
+                self._reader, self._writer = await \
                     asyncio.open_unix_connection(self._unix_socket,
                                                  loop=self._loop)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
             else:
-                self._reader, self._writer = yield from \
+                self._reader, self._writer = await \
                     asyncio.open_connection(self._host, self._port,
                                             loop=self._loop)
                 self._set_keep_alive()
@@ -478,20 +461,20 @@ class Connection:
 
             self._next_seq_id = 0
 
-            yield from self._get_server_information()
-            yield from self._request_authentication()
+            await self._get_server_information()
+            await self._request_authentication()
 
             self.connected_time = self._loop.time()
 
             if self.sql_mode is not None:
-                yield from self.query("SET sql_mode=%s" % (self.sql_mode,))
+                await self.query("SET sql_mode=%s" % (self.sql_mode,))
 
             if self.init_command is not None:
-                yield from self.query(self.init_command)
-                yield from self.commit()
+                await self.query(self.init_command)
+                await self.commit()
 
             if self.autocommit_mode is not None:
-                yield from self.autocommit(self.autocommit_mode)
+                await self.autocommit(self.autocommit_mode)
         except Exception as e:
             if self._writer:
                 self._writer.transport.close()
@@ -530,15 +513,14 @@ class Connection:
         self._write_bytes(data)
         self._next_seq_id = (self._next_seq_id + 1) % 256
 
-    @asyncio.coroutine
-    def _read_packet(self, packet_type=MysqlPacket):
+    async def _read_packet(self, packet_type=MysqlPacket):
         """Read an entire "mysql packet" in its entirety from the network
         and return a MysqlPacket type that represents the results.
         """
         buff = b''
         while True:
             try:
-                packet_header = yield from self._read_bytes(4)
+                packet_header = await self._read_bytes(4)
             except asyncio.CancelledError:
                 self._close_on_cancel()
                 raise
@@ -557,7 +539,7 @@ class Connection:
             self._next_seq_id = (self._next_seq_id + 1) % 256
 
             try:
-                recv_data = yield from self._read_bytes(bytes_to_read)
+                recv_data = await self._read_bytes(bytes_to_read)
             except asyncio.CancelledError:
                 self._close_on_cancel()
                 raise
@@ -573,10 +555,9 @@ class Connection:
         packet.check_error()
         return packet
 
-    @asyncio.coroutine
-    def _read_bytes(self, num_bytes):
+    async def _read_bytes(self, num_bytes):
         try:
-            data = yield from self._reader.readexactly(num_bytes)
+            data = await self._reader.readexactly(num_bytes)
         except asyncio.streams.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
             raise OperationalError(2013, msg) from e
@@ -588,19 +569,18 @@ class Connection:
     def _write_bytes(self, data):
         return self._writer.write(data)
 
-    @asyncio.coroutine
-    def _read_query_result(self, unbuffered=False):
+    async def _read_query_result(self, unbuffered=False):
         if unbuffered:
             try:
                 result = MySQLResult(self)
-                yield from result.init_unbuffered_query()
+                await result.init_unbuffered_query()
             except BaseException:
                 result.unbuffered_active = False
                 result.connection = None
                 raise
         else:
             result = MySQLResult(self)
-            yield from result.read()
+            await result.read()
         self._result = result
         self._affected_rows = result.affected_rows
         if result.server_status is not None:
@@ -612,21 +592,17 @@ class Connection:
         else:
             return 0
 
-    if PY_35:  # pragma: no branch
-        @asyncio.coroutine
-        def __aenter__(self):
-            return self
+    async def __aenter__(self):
+        return self
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc_val, exc_tb):
-            if exc_type:
-                self.close()
-            else:
-                yield from self.ensure_closed()
-            return
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.close()
+        else:
+            await self.ensure_closed()
+        return
 
-    @asyncio.coroutine
-    def _execute_command(self, command, sql):
+    async def _execute_command(self, command, sql):
         self._ensure_alive()
 
         # If the last query was unbuffered, make sure it finishes before
@@ -636,7 +612,7 @@ class Connection:
                 warnings.warn("Previous unbuffered result was left incomplete")
                 self._result._finish_unbuffered_query()
             while self._result.has_next:
-                yield from self.next_result()
+                await self.next_result()
             self._result = None
 
         if isinstance(sql, str):
@@ -660,8 +636,7 @@ class Connection:
             if not sql and chunk_size < MAX_PACKET_LEN:
                 break
 
-    @asyncio.coroutine
-    def _request_authentication(self):
+    async def _request_authentication(self):
         # https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
         if int(self.server_version.split('.', 1)[0]) >= 5:
             self.client_flag |= CLIENT.MULTI_RESULTS
@@ -691,7 +666,7 @@ class Connection:
             # TCP connection not at start. Passing in a socket to
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
-            self._reader, self._writer = yield from asyncio.open_connection(
+            self._reader, self._writer = await asyncio.open_connection(
                 sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
                 server_hostname=self._host
             )
@@ -742,7 +717,7 @@ class Connection:
         self._auth_plugin_used = auth_plugin
 
         self.write_packet(data)
-        auth_packet = yield from self._read_packet()
+        auth_packet = await self._read_packet()
 
         # if authentication method isn't accepted the first byte
         # will have the octet 254
@@ -753,17 +728,16 @@ class Connection:
             plugin_name = auth_packet.read_string()
             if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
                     plugin_name is not None):
-                auth_packet = yield from self._process_auth(
+                auth_packet = await self._process_auth(
                     plugin_name, auth_packet)
             else:
                 # send legacy handshake
                 data = _scramble_323(self._password.encode('latin1'),
                                      self.salt) + b'\0'
                 self.write_packet(data)
-                auth_packet = yield from self._read_packet()
+                auth_packet = await self._read_packet()
 
-    @asyncio.coroutine
-    def _process_auth(self, plugin_name, auth_packet):
+    async def _process_auth(self, plugin_name, auth_packet):
         if plugin_name == b"mysql_native_password":
             # https://dev.mysql.com/doc/internals/en/
             # secure-password-authentication.html#packet-Authentication::
@@ -785,7 +759,7 @@ class Connection:
             )
 
         self.write_packet(data)
-        pkt = yield from self._read_packet()
+        pkt = await self._read_packet()
         pkt.check_error()
 
         self._auth_plugin_used = plugin_name
@@ -805,10 +779,9 @@ class Connection:
     def get_proto_info(self):
         return self.protocol_version
 
-    @asyncio.coroutine
-    def _get_server_information(self):
+    async def _get_server_information(self):
         i = 0
-        packet = yield from self._read_packet()
+        packet = await self._read_packet()
         data = packet.get_all_data()
         # logger.debug(dump_packet(data))
         self.protocol_version = byte2int(data[i:i + 1])
@@ -883,12 +856,11 @@ class Connection:
             else:
                 raise InterfaceError(self._close_reason)
 
-    if PY_341:  # pragma: no branch
-        def __del__(self):
-            if self._writer:
-                warnings.warn("Unclosed connection {!r}".format(self),
-                              ResourceWarning)
-                self.close()
+    def __del__(self):
+        if self._writer:
+            warnings.warn("Unclosed connection {!r}".format(self),
+                          ResourceWarning)
+            self.close()
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
@@ -918,37 +890,35 @@ class MySQLResult:
         self.has_next = None
         self.unbuffered_active = False
 
-    @asyncio.coroutine
-    def read(self):
+    async def read(self):
         try:
-            first_packet = yield from self.connection._read_packet()
+            first_packet = await self.connection._read_packet()
 
             # TODO: use classes for different packet types?
             if first_packet.is_ok_packet():
                 self._read_ok_packet(first_packet)
             elif first_packet.is_load_local_packet():
-                yield from self._read_load_local_packet(first_packet)
+                await self._read_load_local_packet(first_packet)
             else:
-                yield from self._read_result_packet(first_packet)
+                await self._read_result_packet(first_packet)
         finally:
             self.connection = None
 
-    @asyncio.coroutine
-    def init_unbuffered_query(self):
+    async def init_unbuffered_query(self):
         self.unbuffered_active = True
-        first_packet = yield from self.connection._read_packet()
+        first_packet = await self.connection._read_packet()
 
         if first_packet.is_ok_packet():
             self._read_ok_packet(first_packet)
             self.unbuffered_active = False
             self.connection = None
         elif first_packet.is_load_local_packet():
-            yield from self._read_load_local_packet(first_packet)
+            await self._read_load_local_packet(first_packet)
             self.unbuffered_active = False
             self.connection = None
         else:
             self.field_count = first_packet.read_length_encoded_integer()
-            yield from self._get_descriptions()
+            await self._get_descriptions()
 
             # Apparently, MySQLdb picks this number because it's the maximum
             # value of a 64bit unsigned integer. Since we're emulating MySQLdb,
@@ -964,18 +934,17 @@ class MySQLResult:
         self.message = ok_packet.message
         self.has_next = ok_packet.has_next
 
-    @asyncio.coroutine
-    def _read_load_local_packet(self, first_packet):
+    async def _read_load_local_packet(self, first_packet):
         load_packet = LoadLocalPacketWrapper(first_packet)
         sender = LoadLocalFile(load_packet.filename, self.connection)
         try:
-            yield from sender.send_data()
+            await sender.send_data()
         except Exception:
             # Skip ok packet
-            yield from self.connection._read_packet()
+            await self.connection._read_packet()
             raise
 
-        ok_packet = yield from self.connection._read_packet()
+        ok_packet = await self.connection._read_packet()
         if not ok_packet.is_ok_packet():
             raise OperationalError(2014, "Commands Out of Sync")
         self._read_ok_packet(ok_packet)
@@ -988,19 +957,17 @@ class MySQLResult:
             return True
         return False
 
-    @asyncio.coroutine
-    def _read_result_packet(self, first_packet):
+    async def _read_result_packet(self, first_packet):
         self.field_count = first_packet.read_length_encoded_integer()
-        yield from self._get_descriptions()
-        yield from self._read_rowdata_packet()
+        await self._get_descriptions()
+        await self._read_rowdata_packet()
 
-    @asyncio.coroutine
-    def _read_rowdata_packet_unbuffered(self):
+    async def _read_rowdata_packet_unbuffered(self):
         # Check if in an active query
         if not self.unbuffered_active:
             return
 
-        packet = yield from self.connection._read_packet()
+        packet = await self.connection._read_packet()
         if self._check_packet_is_eof(packet):
             self.unbuffered_active = False
             self.connection = None
@@ -1013,24 +980,22 @@ class MySQLResult:
         self.rows = (row,)
         return row
 
-    @asyncio.coroutine
-    def _finish_unbuffered_query(self):
+    async def _finish_unbuffered_query(self):
         # After much reading on the MySQL protocol, it appears that there is,
         # in fact, no way to stop MySQL from sending all the data after
         # executing a query, so we just spin, and wait for an EOF packet.
         while self.unbuffered_active:
-            packet = yield from self.connection._read_packet()
+            packet = await self.connection._read_packet()
             if self._check_packet_is_eof(packet):
                 self.unbuffered_active = False
                 # release reference to kill cyclic reference.
                 self.connection = None
 
-    @asyncio.coroutine
-    def _read_rowdata_packet(self):
+    async def _read_rowdata_packet(self):
         """Read a rowdata packet for each data row in the result set."""
         rows = []
         while True:
-            packet = yield from self.connection._read_packet()
+            packet = await self.connection._read_packet()
             if self._check_packet_is_eof(packet):
                 # release reference to kill cyclic reference.
                 self.connection = None
@@ -1057,8 +1022,7 @@ class MySQLResult:
             row.append(data)
         return tuple(row)
 
-    @asyncio.coroutine
-    def _get_descriptions(self):
+    async def _get_descriptions(self):
         """Read a column descriptor packet for each column in the result."""
         self.fields = []
         self.converters = []
@@ -1066,7 +1030,7 @@ class MySQLResult:
         conn_encoding = self.connection.encoding
         description = []
         for i in range(self.field_count):
-            field = yield from self.connection._read_packet(
+            field = await self.connection._read_packet(
                 FieldDescriptorPacket)
             self.fields.append(field)
             description.append(field.description())
@@ -1098,7 +1062,7 @@ class MySQLResult:
                 converter = None
             self.converters.append((encoding, converter))
 
-        eof_packet = yield from self.connection._read_packet()
+        eof_packet = await self.connection._read_packet()
         assert eof_packet.is_eof_packet(), 'Protocol error, expecting EOF'
         self.description = tuple(description)
 
@@ -1143,18 +1107,17 @@ class LoadLocalFile(object):
         fut = self._loop.run_in_executor(self._executor, freader, chunk_size)
         return fut
 
-    @asyncio.coroutine
-    def send_data(self):
+    async def send_data(self):
         """Send data packets from the local file to the server"""
         self.connection._ensure_alive()
         conn = self.connection
 
         try:
-            yield from self._open_file()
+            await self._open_file()
             with self._file_object:
                 chunk_size = MAX_PACKET_LEN
                 while True:
-                    chunk = yield from self._file_read(chunk_size)
+                    chunk = await self._file_read(chunk_size)
                     if not chunk:
                         break
                     # TODO: consider drain data
