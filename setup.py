@@ -10,7 +10,7 @@ PY_VER = sys.version_info
 
 
 if not PY_VER >= (3, 5, 3):
-    raise RuntimeError("aiobotocore doesn't support Python earlier than 3.5.3")
+    raise RuntimeError("aiomysql doesn't support Python earlier than 3.5.3")
 
 
 def read(f):
