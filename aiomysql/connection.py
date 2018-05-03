@@ -803,7 +803,11 @@ class Connection:
             lang, stat, cap_h, salt_len = struct.unpack('<BHHB', data[i:i + 6])
             i += 6
             self.server_language = lang
-            self.server_charset = charset_by_id(lang).name
+            try:
+                self.server_charset = charset_by_id(lang).name
+            except KeyError:
+                # unknown collation
+                self.server_charset = None
 
             self.server_status = stat
             # logger.debug("server_status: %s" % _convert_to_str(stat))
