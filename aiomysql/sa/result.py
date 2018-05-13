@@ -9,8 +9,8 @@ from sqlalchemy.sql import expression, sqltypes
 from . import exc
 
 
-async def create_result_proxy(connection, cursor, dialect):
-    result_proxy = ResultProxy(connection, cursor, dialect)
+async def create_result_proxy(connection, cursor, dialect, result_map):
+    result_proxy = ResultProxy(connection, cursor, dialect, result_map)
     await result_proxy._prepare()
     return result_proxy
 
@@ -95,6 +95,12 @@ class ResultMetaData:
     def __init__(self, result_proxy, metadata):
         self._processors = processors = []
 
+        result_map = {}
+
+        if result_proxy._result_map:
+            result_map = {elem[0]: elem[3] for elem in
+                          result_proxy._result_map}
+
         # We do not strictly need to store the processor in the key mapping,
         # though it is faster in the Python version (probably because of the
         # saved attribute lookup self._processors)
@@ -124,8 +130,13 @@ class ResultMetaData:
             # if dialect.requires_name_normalize:
             #     colname = dialect.normalize_name(colname)
 
-            name, obj, type_ = \
-                colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
+            name, obj, type_ = (
+                colname,
+                None,
+                result_map.get(
+                    colname,
+                    typemap.get(coltype, sqltypes.NULLTYPE))
+            )
 
             processor = type_._cached_result_processor(dialect, coltype)
 
@@ -223,13 +234,14 @@ class ResultProxy:
     the originating SQL statement that produced this result set.
     """
 
-    def __init__(self, connection, cursor, dialect):
+    def __init__(self, connection, cursor, dialect, result_map):
         self._dialect = dialect
         self._closed = False
         self._cursor = cursor
         self._connection = connection
         self._rowcount = cursor.rowcount
         self._lastrowid = cursor.lastrowid
+        self._result_map = result_map
 
     async def _prepare(self):
         loop = self._connection.connection.loop
