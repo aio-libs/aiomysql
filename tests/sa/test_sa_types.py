@@ -45,7 +45,7 @@ tbl = Table('sa_test_type_tbl', meta,
             Column('val', IntEnumField(enum_class=UserDefinedEnum)))
 
 
-class TestSAConnection(unittest.TestCase):
+class TestSATypes(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
