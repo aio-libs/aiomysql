@@ -1,6 +1,12 @@
 Changes
 -------
 
+0.0.15 (2018-05-13)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed handling of user-defined types for sqlalchemy  #290
+
+
 0.0.14 (2018-04-22)
 ^^^^^^^^^^^^^^^^^^^
 
