@@ -3,6 +3,7 @@
 import weakref
 
 from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.ddl import DDLElement
 
@@ -23,10 +24,15 @@ class SAConnection:
         self._engine = engine
         self._dialect = engine.dialect
 
+    @property
+    def engine(self):
+        return self._engine
+
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
 
-        query - a SQL query string or any sqlalchemy expression.
+        query - a SQL query string or any sqlalchemy expression
+        (optionally it could be compiled).
 
         *multiparams/**params - represent bound parameter values to be
         used in the execution.  Typically, the format is a dictionary
@@ -73,10 +79,14 @@ class SAConnection:
 
         result_map = None
 
+        compiled = None
+        if isinstance(query, SQLCompiler):
+            compiled = query
+
         if isinstance(query, str):
             await cursor.execute(query, dp or None)
-        elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
+        elif compiled or isinstance(query, ClauseElement):
+            compiled = compiled or query.compile(dialect=self._dialect)
             # parameters = compiled.params
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
