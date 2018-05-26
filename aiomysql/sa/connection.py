@@ -3,7 +3,6 @@
 import weakref
 
 from sqlalchemy.sql import ClauseElement
-from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.dml import UpdateBase
 from sqlalchemy.sql.ddl import DDLElement
 
@@ -16,23 +15,19 @@ from ..utils import _TransactionContextManager, _SAConnectionContextManager
 
 class SAConnection:
 
-    def __init__(self, connection, engine):
+    def __init__(self, connection, engine, compiled_cache=None):
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
         self._weak_results = weakref.WeakSet()
         self._engine = engine
         self._dialect = engine.dialect
-
-    @property
-    def engine(self):
-        return self._engine
+        self._compiled_cache = compiled_cache
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
 
-        query - a SQL query string or any sqlalchemy expression
-        (optionally it could be compiled).
+        query - a SQL query string or any sqlalchemy expression.
 
         *multiparams/**params - represent bound parameter values to be
         used in the execution.  Typically, the format is a dictionary
@@ -79,15 +74,24 @@ class SAConnection:
 
         result_map = None
 
-        compiled = None
-        if isinstance(query, SQLCompiler):
-            compiled = query
-
         if isinstance(query, str):
             await cursor.execute(query, dp or None)
-        elif compiled or isinstance(query, ClauseElement):
-            compiled = compiled or query.compile(dialect=self._dialect)
-            # parameters = compiled.params
+        elif isinstance(query, ClauseElement):
+            if self._compiled_cache is not None:
+                key = (self._dialect, query)
+                compiled = self._compiled_cache.get(key)
+                if not compiled:
+                    compiled = query.compile(dialect=self._dialect)
+                    if (
+                        dp and dp.keys() == compiled.params.keys()
+                        or
+                        not (dp or compiled.params)
+                    ):
+                        # we only want queries with bound params in cache
+                        self._compiled_cache[key] = compiled
+            else:
+                compiled = query.compile(dialect=self._dialect)
+
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
