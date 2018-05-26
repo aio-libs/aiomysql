@@ -82,11 +82,8 @@ class SAConnection:
                 compiled = self._compiled_cache.get(key)
                 if not compiled:
                     compiled = query.compile(dialect=self._dialect)
-                    if (
-                        dp and dp.keys() == compiled.params.keys()
-                        or
-                        not (dp or compiled.params)
-                    ):
+                    if dp and dp.keys() == compiled.params.keys() \
+                            or not (dp or compiled.params):
                         # we only want queries with bound params in cache
                         self._compiled_cache[key] = compiled
             else:
