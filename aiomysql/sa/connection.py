@@ -78,7 +78,7 @@ class SAConnection:
             await cursor.execute(query, dp or None)
         elif isinstance(query, ClauseElement):
             if self._compiled_cache is not None:
-                key = (self._dialect, query)
+                key = query
                 compiled = self._compiled_cache.get(key)
                 if not compiled:
                     compiled = query.compile(dialect=self._dialect)
