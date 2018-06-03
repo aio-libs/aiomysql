@@ -41,6 +41,18 @@ install:
     - pip install .
     - pip install codecov
 
+deploy:
+    provider: pypi
+    user: jettify
+    distributions: "sdist bdist_wheel"
+    password:
+        secure: ShpWO+xBWKyrpJG0xJ6osAJSMOyhJzM5dNCizqW9TUfBPBgp+8QzCbv3AmW96VlZEjUyr5Xn7G7V2BR55mUUzJD6ZKhJnCdgyMWOwH+hNdRCz/AQsgAQVIVfuoYN/8sWL/8+MmFyRFl/+ZQ/VT3d/aShStPAUNHYEby5Gx/bnaOQxGYjHUrLoKAiL40949Z7xQABFP9uc0a16dc7T9o+SCKDCMzU2/92x5g7OFIPQoNVuQDFZg7n5akTl/2RDa0M97d9Zah6O8oECSaWBhq5Zzmb1TKTmDvu/1lEo4Bg6mzz8m5n8lG+4car1X5PNa9r86JqiJmMpXJ+Q27tFPjmX/rS2hlOifyPAtDBxA2YiiG2QqOhGYERtrj+CsVPJEwUz0SdwfPcq1dQMRnCP7Ljg13pC4LeJXK3f2gD25Jpp45RubbVXOUS0gurdUhEKkaJHnLXQkNoeLv5QCB9zXoITo6aQC9K5+MTXeiOmR95W8ykwYAICwDNqMzndz6QM2FQ8v3KpI2HgoD/TCWUji/5M4SBs82bvs92+xPsif6OsSl0Xi0itJO6mnkRyi/I0O9CnSxmSzdShrGZxpTVyh66Fr9UKX8CA3rJrdnIio0U3eg5w1O/gZOP/Smibt87N92Asp/S8M47bKX1z23J8AGRlMVZijt/8PUF5/DNpqIbRNs=
+    on:
+        tags: true
+        repo: aio-libs/aiomysql
+        all_branches: true
+        python: 3.6
+
 script:
     - make cov
 
