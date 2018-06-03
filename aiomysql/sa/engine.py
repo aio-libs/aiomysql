@@ -20,7 +20,8 @@ _dialect.default_paramstyle = 'pyformat'
 
 
 def create_engine(minsize=1, maxsize=10, loop=None,
-                  dialect=_dialect, pool_recycle=-1,  **kwargs):
+                  dialect=_dialect, pool_recycle=-1,  compiled_cache=None,
+                  **kwargs):
     """A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
@@ -28,7 +29,8 @@ def create_engine(minsize=1, maxsize=10, loop=None,
     The pool has *minsize* opened connections to PostgreSQL server.
     """
     coro = _create_engine(minsize=minsize, maxsize=maxsize, loop=loop,
-                          dialect=dialect, pool_recycle=pool_recycle, **kwargs)
+                          dialect=dialect, pool_recycle=pool_recycle,
+                          compiled_cache=compiled_cache, **kwargs)
     compatible_cursor_classes = [Cursor]
     # Without provided kwarg, default is default cursor from Connection class
     if kwargs.get('cursorclass', Cursor) not in compatible_cursor_classes:
@@ -38,7 +40,8 @@ def create_engine(minsize=1, maxsize=10, loop=None,
 
 
 async def _create_engine(minsize=1, maxsize=10, loop=None,
-                         dialect=_dialect, pool_recycle=-1, **kwargs):
+                         dialect=_dialect, pool_recycle=-1,
+                         compiled_cache=None, **kwargs):
 
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -47,7 +50,7 @@ async def _create_engine(minsize=1, maxsize=10, loop=None,
                                       pool_recycle=pool_recycle, **kwargs)
     conn = await pool.acquire()
     try:
-        return Engine(dialect, pool, **kwargs)
+        return Engine(dialect, pool, compiled_cache=compiled_cache, **kwargs)
     finally:
         pool.release(conn)
 
@@ -61,9 +64,10 @@ class Engine:
     create_engine coroutine.
     """
 
-    def __init__(self, dialect, pool, **kwargs):
+    def __init__(self, dialect, pool, compiled_cache=None, **kwargs):
         self._dialect = dialect
         self._pool = pool
+        self._compiled_cache = compiled_cache
         self._conn_kw = kwargs
 
     @property
@@ -124,7 +128,7 @@ class Engine:
 
     async def _acquire(self):
         raw = await self._pool.acquire()
-        conn = SAConnection(raw, self)
+        conn = SAConnection(raw, self, compiled_cache=self._compiled_cache)
         return conn
 
     def release(self, conn):

@@ -1,6 +1,12 @@
 Changes
 -------
 
+0.0.16 (2018-05-21)
+^^^^^^^^^^^^^^^^^^^
+
+* Added ability to execute precompiled sqlalchemy queries
+
+
 0.0.15 (2018-05-20)
 ^^^^^^^^^^^^^^^^^^^
 

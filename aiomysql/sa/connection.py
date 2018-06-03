@@ -15,13 +15,14 @@ from ..utils import _TransactionContextManager, _SAConnectionContextManager
 
 class SAConnection:
 
-    def __init__(self, connection, engine):
+    def __init__(self, connection, engine, compiled_cache=None):
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
         self._weak_results = weakref.WeakSet()
         self._engine = engine
         self._dialect = engine.dialect
+        self._compiled_cache = compiled_cache
 
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
@@ -76,8 +77,18 @@ class SAConnection:
         if isinstance(query, str):
             await cursor.execute(query, dp or None)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
-            # parameters = compiled.params
+            if self._compiled_cache is not None:
+                key = query
+                compiled = self._compiled_cache.get(key)
+                if not compiled:
+                    compiled = query.compile(dialect=self._dialect)
+                    if dp and dp.keys() == compiled.params.keys() \
+                            or not (dp or compiled.params):
+                        # we only want queries with bound params in cache
+                        self._compiled_cache[key] = compiled
+            else:
+                compiled = query.compile(dialect=self._dialect)
+
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
