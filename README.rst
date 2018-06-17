@@ -1,7 +1,7 @@
 aiomysql
 ========
-.. image:: https://travis-ci.org/aio-libs/aiomysql.svg?branch=master
-    :target: https://travis-ci.org/aio-libs/aiomysql
+.. image:: https://travis-ci.com/aio-libs/aiomysql.svg?branch=master
+    :target: https://travis-ci.com/aio-libs/aiomysql
 .. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/aio-libs/aiomysql
     :alt: Code coverage
