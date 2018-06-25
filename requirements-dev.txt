@@ -6,7 +6,7 @@ pytest==3.6.2
 pytest-cov==2.5.1
 pytest-sugar==0.9.1
 PyMySQL>=0.7.5
-docker==3.3.0
+docker==3.4.0
 sphinx==1.7.5
 sphinxcontrib-asyncio==0.2.0
 sqlalchemy==1.2.8
