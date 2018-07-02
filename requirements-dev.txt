@@ -9,4 +9,4 @@ PyMySQL==0.9.0
 docker==3.4.1
 sphinx==1.7.5
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy==1.2.8
+sqlalchemy==1.2.9
