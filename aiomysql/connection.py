@@ -43,6 +43,7 @@ from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
 # from .log import logger
 
+
 DEFAULT_USER = getpass.getuser()
 
 
@@ -90,7 +91,8 @@ class Connection:
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
                  no_delay=None, autocommit=False, echo=False,
-                 local_infile=False, loop=None, ssl=None, auth_plugin=''):
+                 local_infile=False, loop=None, ssl=None, auth_plugin='',
+                 program_name=''):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -164,6 +166,17 @@ class Connection:
         self._client_auth_plugin = auth_plugin
         self._server_auth_plugin = ""
         self._auth_plugin_used = ""
+
+        # TODO somehow import version from __init__.py
+        self._connect_attrs = {
+            '_client_name': 'aiomysql',
+            '_pid': str(os.getpid()),
+            '_client_version': '0.0.16',
+        }
+        if False or program_name:
+            self._connect_attrs["program_name"] = program_name
+        elif sys.argv:
+            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
@@ -672,8 +685,10 @@ class Connection:
         charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
+        else:
+            _user = self.user
 
-        data_init = struct.pack('<iIB23s', self.client_flag, 1,
+        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
                                 charset_id, b'')
 
         data = data_init + _user + b'\0'
@@ -686,8 +701,8 @@ class Connection:
             auth_plugin = self._server_auth_plugin
 
         if auth_plugin in ('', 'mysql_native_password'):
-            authresp = _auth.scramble_native_password(self._password,
-                                                      self.salt)
+            authresp = _auth.scramble_native_password(
+                self._password.encode('latin1'), self.salt)
         elif auth_plugin in ('', 'mysql_clear_password'):
             authresp = self._password.encode('latin1') + b'\0'
 
@@ -715,6 +730,15 @@ class Connection:
 
         self._auth_plugin_used = auth_plugin
 
+        if self.server_capabilities & CLIENT.CONNECT_ATTRS:
+            connect_attrs = b''
+            for k, v in self._connect_attrs.items():
+                k = k.encode('utf8')
+                connect_attrs += struct.pack('B', len(k)) + k
+                v = v.encode('utf8')
+                connect_attrs += struct.pack('B', len(v)) + v
+            data += struct.pack('B', len(connect_attrs)) + connect_attrs
+
         self.write_packet(data)
         auth_packet = await self._read_packet()
 
@@ -732,7 +756,8 @@ class Connection:
             else:
                 # send legacy handshake
                 data = _auth.scramble_old_password(
-                    self._password, auth_packet.read_all()) + b'\0'
+                    self._password.encode('latin1'),
+                    auth_packet.read_all()) + b'\0'
                 self.write_packet(data)
                 auth_packet = await self._read_packet()
 
@@ -741,12 +766,13 @@ class Connection:
             # https://dev.mysql.com/doc/internals/en/
             # secure-password-authentication.html#packet-Authentication::
             # Native41
-            data = _auth.scramble_native_password(self._password,
-                                                  auth_packet.read_all())
+            data = _auth.scramble_native_password(
+                self._password.encode('latin1'),
+                auth_packet.read_all())
         elif plugin_name == b"mysql_old_password":
             # https://dev.mysql.com/doc/internals/en/
             # old-password-authentication.html
-            data = _auth.scramble_old_password(self._password,
+            data = _auth.scramble_old_password(self._password.encode('latin1'),
                                                auth_packet.read_all()) + b'\0'
         elif plugin_name == b"mysql_clear_password":
             # https://dev.mysql.com/doc/internals/en/
