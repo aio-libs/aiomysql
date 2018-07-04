@@ -54,7 +54,8 @@ def connect(host="localhost", user=None, password="",
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
             no_delay=None, autocommit=False, echo=False,
-            local_infile=False, loop=None, ssl=None, auth_plugin=''):
+            local_infile=False, loop=None, ssl=None, auth_plugin='',
+            program_name=''):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -67,7 +68,7 @@ def connect(host="localhost", user=None, password="",
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
-                    auth_plugin=auth_plugin)
+                    auth_plugin=auth_plugin, program_name=program_name)
     return _ConnectionContextManager(coro)
 
 
@@ -126,6 +127,13 @@ class Connection:
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
             command. (default: False)
+        :param ssl: Optional SSL Context to force SSL
+        :param auth_plugin: String to manually specify the authentication
+            plugin to use, i.e you will want to use mysql_clear_password
+            when using IAM authentication with Amazon RDS.
+            (default: Server Default)
+        :param program_name: Program name string to provide when
+            handshaking with MySQL. (default: sys.argv[0])
         :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
