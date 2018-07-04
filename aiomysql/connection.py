@@ -181,7 +181,7 @@ class Connection:
             '_pid': str(os.getpid()),
             '_client_version': '0.0.16',
         }
-        if False or program_name:
+        if program_name:
             self._connect_attrs["program_name"] = program_name
         elif sys.argv:
             self._connect_attrs["program_name"] = sys.argv[0]
@@ -738,12 +738,12 @@ class Connection:
 
         self._auth_plugin_used = auth_plugin
 
+        # Sends the server a few pieces of client info
         if self.server_capabilities & CLIENT.CONNECT_ATTRS:
             connect_attrs = b''
             for k, v in self._connect_attrs.items():
-                k = k.encode('utf8')
+                k, v = k.encode('utf8'), v.encode('utf8')
                 connect_attrs += struct.pack('B', len(k)) + k
-                v = v.encode('utf8')
                 connect_attrs += struct.pack('B', len(v)) + v
             data += struct.pack('B', len(connect_attrs)) + connect_attrs
 
@@ -759,15 +759,14 @@ class Connection:
             plugin_name = auth_packet.read_string()
             if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
                     plugin_name is not None):
-                auth_packet = await self._process_auth(
-                    plugin_name, auth_packet)
+                await self._process_auth(plugin_name, auth_packet)
             else:
                 # send legacy handshake
                 data = _auth.scramble_old_password(
                     self._password.encode('latin1'),
                     auth_packet.read_all()) + b'\0'
                 self.write_packet(data)
-                auth_packet = await self._read_packet()
+                await self._read_packet()
 
     async def _process_auth(self, plugin_name, auth_packet):
         if plugin_name == b"mysql_native_password":
