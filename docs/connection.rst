@@ -46,7 +46,8 @@ Example::
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, echo=False, loop=None)
+            no_delay=False, autocommit=False, echo=False,
+            ssl=None, auth_plugin='', program_name='', loop=None)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -81,6 +82,13 @@ Example::
     :param bool no_delay: disable Nagle's algorithm on the socket
     :param autocommit: Autocommit mode. None means use server default.
         (default: ``False``)
+    :param ssl: Optional SSL Context to force SSL
+    :param auth_plugin: String to manually specify the authentication
+        plugin to use, i.e you will want to use mysql_clear_password
+        when using IAM authentication with Amazon RDS.
+        (default: Server Default)
+    :param program_name: Program name string to provide when
+        handshaking with MySQL. (default: sys.argv[0])
     :param loop: asyncio event loop instance or ``None`` for default one.
     :returns: :class:`Connection` instance.
 

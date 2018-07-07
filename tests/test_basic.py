@@ -22,11 +22,15 @@ def datatype_table(loop, cursor, table_cleanup):
 
 @pytest.mark.run_loop
 async def test_datatypes(connection, cursor, datatype_table):
+    encoding = connection.charset
+    if encoding == 'utf8mb4':
+        encoding = 'utf8'
+
     # insert values
     v = (
         True, -3, 123456789012, 5.7, "hello'\" world",
         u"Espa\xc3\xb1ol",
-        "binary\x00data".encode(connection.charset),
+        "binary\x00data".encode(encoding),
         datetime.date(1988, 2, 2),
         datetime.datetime.now().replace(microsecond=0),
         datetime.timedelta(5, 6), datetime.time(16, 32),

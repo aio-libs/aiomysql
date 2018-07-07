@@ -170,7 +170,7 @@ class TestConnection(AIOPyMySQLTestCase):
         conn = yield from self.connect()
         # trhead id is int
         self.assertIsInstance(conn.thread_id(), int)
-        self.assertEqual(conn.character_set_name(), 'latin1')
+        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
         self.assertTrue(str(conn.port) in conn.get_host_info())
         self.assertIsInstance(conn.get_server_info(), str)
         # protocol id is int
@@ -180,7 +180,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_connection_set_charset(self):
         conn = yield from self.connect()
-        self.assertEqual(conn.character_set_name(), 'latin1')
+        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
         yield from conn.set_charset('utf8')
         self.assertEqual(conn.character_set_name(), 'utf8')
 
