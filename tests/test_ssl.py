@@ -54,5 +54,5 @@ async def test_auth_plugin_renegotiation(mysql_server, loop):
                     'Server did not ask for native auth'
                 # Check we actually used the servers default plugin
                 assert conn._auth_plugin_used in (
-                    b'mysql_native_password', b'caching_sha2_password'), \
+                    'mysql_native_password', 'caching_sha2_password'), \
                     'Client did not renegotiate with server\'s default auth'

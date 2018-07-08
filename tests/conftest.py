@@ -218,6 +218,14 @@ def docker():
     return APIClient(version='auto')
 
 
+@pytest.fixture(autouse=True)
+def ensure_mysql_verison(request, mysql_tag):
+    if request.node.get_marker('mysql_verison'):
+        if request.node.get_marker('mysql_verison').args[0] != mysql_tag:
+            pytest.skip('Not applicable for '
+                        'MySQL version: {0}'.format(mysql_tag))
+
+
 @pytest.fixture(scope='session')
 def mysql_server(unused_port, docker, session_id, mysql_tag, request):
     if not request.config.option.no_pull:
@@ -294,6 +302,32 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
                     # As we connected with TLS, it should start with that :D
                     assert result['Value'].startswith('TLS'), \
                         "Not connected to the database with TLS"
+
+                    # Create Databases
+                    cursor.execute('CREATE DATABASE test_pymysql  '
+                                   'DEFAULT CHARACTER SET utf8 '
+                                   'DEFAULT COLLATE utf8_general_ci;')
+                    cursor.execute('CREATE DATABASE test_pymysql2 '
+                                   'DEFAULT CHARACTER SET utf8 '
+                                   'DEFAULT COLLATE utf8_general_ci;')
+
+                    # Do MySQL8+ Specific Setup
+                    if mysql_tag in ('8.0',):
+                        # Create Users to test SHA256
+                        cursor.execute('CREATE USER user_sha256 '
+                                       'IDENTIFIED WITH "sha256_password" '
+                                       'BY "pass_sha256"')
+                        cursor.execute('CREATE USER nopass_sha256 '
+                                       'IDENTIFIED WITH "sha256_password"')
+                        cursor.execute('CREATE USER user_caching_sha2   '
+                                       'IDENTIFIED '
+                                       'WITH "caching_sha2_password" '
+                                       'BY "pass_caching_sha2"')
+                        cursor.execute('CREATE USER nopass_caching_sha2 '
+                                       'IDENTIFIED '
+                                       'WITH "caching_sha2_password" '
+                                       'PASSWORD EXPIRE NEVER')
+                        cursor.execute('FLUSH PRIVILEGES')
 
                 break
             except Exception as err:

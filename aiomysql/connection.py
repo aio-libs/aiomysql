@@ -798,10 +798,10 @@ class Connection:
         # These auth plugins do their own packet handling
         if plugin_name == b"caching_sha2_password":
             await self.caching_sha2_password_auth(auth_packet)
-            self._auth_plugin_used = plugin_name
+            self._auth_plugin_used = plugin_name.decode()
         elif plugin_name == b"sha256_password":
             await self.sha256_password_auth(auth_packet)
-            self._auth_plugin_used = plugin_name
+            self._auth_plugin_used = plugin_name.decode()
         else:
 
             if plugin_name == b"mysql_native_password":
@@ -832,7 +832,7 @@ class Connection:
             pkt = await self._read_packet()
             pkt.check_error()
 
-            self._auth_plugin_used = plugin_name
+            self._auth_plugin_used = plugin_name.decode()
 
             return pkt
 
