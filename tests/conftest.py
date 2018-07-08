@@ -35,15 +35,15 @@ def pytest_generate_tests(metafunc):
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
 
-    # if 'mysql_tag' in metafunc.fixturenames:
-    #     tags = set(metafunc.config.option.mysql_tag)
-    #     if not tags:
-    #         tags = ['5.7']
-    #     elif 'all' in tags:
-    #         tags = ['5.6', '5.7', '8.0']
-    #     else:
-    #         tags = list(tags)
-    #     metafunc.parametrize("mysql_tag", tags, scope='session')
+    if 'mysql_tag' in metafunc.fixturenames:
+        # tags = set(metafunc.config.option.mysql_tag)
+        # if not tags:
+        #     tags = ['5.7']
+        # elif 'all' in tags:
+        #     tags = ['5.6', '5.7', '8.0']
+        # else:
+        #     tags = list(tags)
+        metafunc.parametrize("mysql_tag", ['5.6', '8.0'], scope='session')
 
 
 # This is here unless someone fixes the generate_tests bit

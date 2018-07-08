@@ -41,7 +41,7 @@ from pymysql.connections import lenenc_int
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
-# from .log import logger
+from .log import logger
 
 
 DEFAULT_USER = getpass.getuser()
@@ -55,7 +55,7 @@ def connect(host="localhost", user=None, password="",
             connect_timeout=None, read_default_group=None,
             no_delay=None, autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
-            program_name=''):
+            program_name='', server_public_key=None):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -93,7 +93,7 @@ class Connection:
                  connect_timeout=None, read_default_group=None,
                  no_delay=None, autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
-                 program_name=''):
+                 program_name='', server_public_key=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -134,6 +134,8 @@ class Connection:
             (default: Server Default)
         :param program_name: Program name string to provide when
             handshaking with MySQL. (default: sys.argv[0])
+        :param server_public_key: SHA256 authentication plugin public
+            key value.
         :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
@@ -174,6 +176,8 @@ class Connection:
         self._client_auth_plugin = auth_plugin
         self._server_auth_plugin = ""
         self._auth_plugin_used = ""
+        self.server_public_key = server_public_key
+        self.salt = None
 
         # TODO somehow import version from __init__.py
         self._connect_attrs = {
@@ -711,6 +715,20 @@ class Connection:
         if auth_plugin in ('', 'mysql_native_password'):
             authresp = _auth.scramble_native_password(
                 self._password.encode('latin1'), self.salt)
+        elif auth_plugin == 'caching_sha2_password':
+            if self._password:
+                authresp = _auth.scramble_caching_sha2(
+                    self._password.encode('latin1'), self.salt
+                )
+            # Else: empty password
+        elif auth_plugin == 'sha256_password':
+            if self._ssl_context and self.server_capabilities & CLIENT.SSL:
+                authresp = self._password.encode('latin1') + b'\0'
+            elif self._password:
+                authresp = b'\1'  # request public key
+            else:
+                authresp = b'\0'  # empty password
+
         elif auth_plugin in ('', 'mysql_clear_password'):
             authresp = self._password.encode('latin1') + b'\0'
 
@@ -767,9 +785,21 @@ class Connection:
                     auth_packet.read_all()) + b'\0'
                 self.write_packet(data)
                 await self._read_packet()
+        elif auth_packet.is_extra_auth_data():
+            if auth_plugin == "caching_sha2_password":
+                await self.caching_sha2_password_auth(auth_packet)
+            elif auth_plugin == "sha256_password":
+                await self.sha256_password_auth(auth_packet)
+            else:
+                raise OperationalError("Received extra packet "
+                                       "for auth method %r", auth_plugin)
 
     async def _process_auth(self, plugin_name, auth_packet):
-        if plugin_name == b"mysql_native_password":
+        if plugin_name == b"caching_sha2_password":
+            return self.caching_sha2_password_auth(auth_packet)
+        elif plugin_name == b"sha256_password":
+            return self.sha256_password_auth(auth_packet)
+        elif plugin_name == b"mysql_native_password":
             # https://dev.mysql.com/doc/internals/en/
             # secure-password-authentication.html#packet-Authentication::
             # Native41
@@ -796,6 +826,125 @@ class Connection:
 
         self._auth_plugin_used = plugin_name
 
+        return pkt
+
+    async def caching_sha2_password_auth(self, pkt):
+        # No password fast path
+        if not self._password:
+            self.write_packet(b'')
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if pkt.is_auth_switch_request():
+            # Try from fast auth
+            logger.debug("caching sha2: Trying fast path")
+            self.salt = pkt.read_all()
+            scrambled = _auth.scramble_caching_sha2(
+                self._password.encode('latin1'), self.salt
+            )
+
+            self.write_packet(scrambled)
+            pkt = await self._read_packet()
+            pkt.check_error()
+
+        # else: fast auth is tried in initial handshake
+
+        if not pkt.is_extra_auth_data():
+            raise OperationalError(
+                "caching sha2: Unknown packet "
+                "for fast auth: {0}".format(pkt._data[:1])
+            )
+
+        # magic numbers:
+        # 2 - request public key
+        # 3 - fast auth succeeded
+        # 4 - need full auth
+
+        pkt.advance(1)
+        n = pkt.read_uint8()
+
+        if n == 3:
+            logger.debug("caching sha2: succeeded by fast path.")
+            pkt = await self._read_packet()
+            pkt.check_error()  # pkt must be OK packet
+            return pkt
+
+        if n != 4:
+            raise OperationalError("caching sha2: Unknown "
+                                   "result for fast auth: {0}".format(n))
+
+        logger.debug("caching sha2: Trying full auth...")
+
+        if self._ssl_context:
+            logger.debug("caching sha2: Sending plain "
+                         "password via secure connection")
+            self.write_packet(self._password.encode('latin1') + b'\0')
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if not self.server_public_key:
+            self.write_packet(b'\x02')
+            pkt = await self._read_packet()  # Request public key
+            pkt.check_error()
+
+            if not pkt.is_extra_auth_data():
+                raise OperationalError(
+                    "caching sha2: Unknown packet "
+                    "for public key: {0}".format(pkt._data[:1])
+                )
+
+            self.server_public_key = pkt._data[1:]
+            logger.debug(self.server_public_key.decode('ascii'))
+
+        data = _auth.sha2_rsa_encrypt(
+            self._password.encode('latin1'), self.salt,
+            self.server_public_key
+        )
+        self.write_packet(data)
+        pkt = await self._read_packet()
+        pkt.check_error()
+
+    async def sha256_password_auth(self, pkt):
+        if self._ssl_context:
+            logger.debug("sha256: Sending plain password")
+            data = self._password.encode('latin1') + b'\0'
+            self.write_packet(data)
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if pkt.is_auth_switch_request():
+            self.salt = pkt.read_all()
+            if not self.server_public_key and self._password:
+                # Request server public key
+                logger.debug("sha256: Requesting server public key")
+                self.write_packet(b'\1')
+                pkt = await self._read_packet()
+                pkt.check_error()
+
+        if pkt.is_extra_auth_data():
+            self.server_public_key = pkt._data[1:]
+            logger.debug(
+                "Received public key:\n",
+                self.server_public_key.decode('ascii')
+            )
+
+        if self._password:
+            if not self.server_public_key:
+                raise OperationalError("Couldn't receive server's public key")
+
+            data = _auth.sha2_rsa_encrypt(
+                self._password.encode('latin1'), self.salt,
+                self.server_public_key
+            )
+        else:
+            data = b''
+
+        self.write_packet(data)
+        pkt = await self._read_packet()
+        pkt.check_error()
         return pkt
 
     # _mysql support

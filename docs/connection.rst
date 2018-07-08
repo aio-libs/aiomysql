@@ -47,7 +47,8 @@ Example::
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
             no_delay=False, autocommit=False, echo=False,
-            ssl=None, auth_plugin='', program_name='', loop=None)
+            ssl=None, auth_plugin='', program_name='',
+            server_public_key=None, loop=None)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -89,6 +90,7 @@ Example::
         (default: Server Default)
     :param program_name: Program name string to provide when
         handshaking with MySQL. (default: sys.argv[0])
+    :param server_public_key: SHA256 authenticaiton plugin public key value.
     :param loop: asyncio event loop instance or ``None`` for default one.
     :returns: :class:`Connection` instance.
 
