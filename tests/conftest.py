@@ -228,6 +228,8 @@ def ensure_mysql_verison(request, mysql_tag):
 
 @pytest.fixture(scope='session')
 def mysql_server(unused_port, docker, session_id, mysql_tag, request):
+    print('\nSTARTUP CONTAINER - {0}\n'.format(mysql_tag))
+
     if not request.config.option.no_pull:
         docker.pull('mysql:{}'.format(mysql_tag))
 
@@ -342,5 +344,6 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
 
         yield container
     finally:
+        print('\nTEARDOWN CONTAINER - {0}\n'.format(mysql_tag))
         docker.kill(container=container['Id'])
         docker.remove_container(container['Id'])
