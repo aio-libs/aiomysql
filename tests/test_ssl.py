@@ -44,9 +44,15 @@ async def test_auth_plugin_renegotiation(mysql_server, loop):
 
                 assert len(value), 'No databases found'
 
+                # Check we tried to use the cleartext plugin
                 assert conn._client_auth_plugin == 'mysql_clear_password', \
                     'Client did not try clear password auth'
-                assert conn._server_auth_plugin == 'mysql_native_password', \
+
+                # Check the server asked us to use MySQL's default plugin
+                assert conn._server_auth_plugin in (
+                    'mysql_native_password', 'caching_sha2_password'), \
                     'Server did not ask for native auth'
-                assert conn._auth_plugin_used == b'mysql_native_password', \
-                    'Client did not renegotiate with native auth'
+                # Check we actually used the servers default plugin
+                assert conn._auth_plugin_used in (
+                    b'mysql_native_password', b'caching_sha2_password'), \
+                    'Client did not renegotiate with server\'s default auth'
