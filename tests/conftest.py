@@ -36,14 +36,14 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("loop_type", loop_type)
 
     if 'mysql_tag' in metafunc.fixturenames:
-        # tags = set(metafunc.config.option.mysql_tag)
-        # if not tags:
-        #     tags = ['5.7']
-        # elif 'all' in tags:
-        #     tags = ['5.6', '5.7', '8.0']
-        # else:
-        #     tags = list(tags)
-        metafunc.parametrize("mysql_tag", ['5.6', '8.0'], scope='session')
+        tags = set(metafunc.config.option.mysql_tag)
+        if not tags:
+            tags = ['5.6', '8.0']
+        elif 'all' in tags:
+            tags = ['5.6', '5.7', '8.0']
+        else:
+            tags = list(tags)
+        metafunc.parametrize("mysql_tag", tags, scope='session')
 
 
 # This is here unless someone fixes the generate_tests bit
@@ -288,7 +288,7 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
                     assert result['have_ssl'] == "YES", \
                         "SSL Not Enabled on docker'd MySQL"
 
-                    cursor.execute("SHOW STATUS LIKE '%Ssl_version%'")
+                    cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
 
                     result = cursor.fetchone()
                     # As we connected with TLS, it should start with that :D

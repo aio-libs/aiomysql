@@ -22,7 +22,7 @@ async def test_tls_connect(mysql_server, loop):
                     'Could not find the "mysql" table'
 
                 # Check TLS variables
-                await cur.execute("SHOW STATUS LIKE '%Ssl_version%';")
+                await cur.execute("SHOW STATUS LIKE 'Ssl_version%';")
                 value = await cur.fetchone()
 
                 # The context has TLS
