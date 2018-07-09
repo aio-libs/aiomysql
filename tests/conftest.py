@@ -35,15 +35,15 @@ def pytest_generate_tests(metafunc):
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
 
-    # if 'mysql_tag' in metafunc.fixturenames:
-    #     tags = set(metafunc.config.option.mysql_tag)
-    #     if not tags:
-    #         tags = ['5.7']
-    #     elif 'all' in tags:
-    #         tags = ['5.6', '5.7', '8.0']
-    #     else:
-    #         tags = list(tags)
-    #     metafunc.parametrize("mysql_tag", tags, scope='session')
+    if 'mysql_tag' in metafunc.fixturenames:
+        tags = set(metafunc.config.option.mysql_tag)
+        if not tags:
+            tags = ['5.6', '8.0']
+        elif 'all' in tags:
+            tags = ['5.6', '5.7', '8.0']
+        else:
+            tags = list(tags)
+        metafunc.parametrize("mysql_tag", tags, scope='session')
 
 
 # This is here unless someone fixes the generate_tests bit
@@ -218,8 +218,18 @@ def docker():
     return APIClient(version='auto')
 
 
+@pytest.fixture(autouse=True)
+def ensure_mysql_verison(request, mysql_tag):
+    if request.node.get_marker('mysql_verison'):
+        if request.node.get_marker('mysql_verison').args[0] != mysql_tag:
+            pytest.skip('Not applicable for '
+                        'MySQL version: {0}'.format(mysql_tag))
+
+
 @pytest.fixture(scope='session')
 def mysql_server(unused_port, docker, session_id, mysql_tag, request):
+    print('\nSTARTUP CONTAINER - {0}\n'.format(mysql_tag))
+
     if not request.config.option.no_pull:
         docker.pull('mysql:{}'.format(mysql_tag))
 
@@ -288,12 +298,38 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
                     assert result['have_ssl'] == "YES", \
                         "SSL Not Enabled on docker'd MySQL"
 
-                    cursor.execute("SHOW STATUS LIKE '%Ssl_version%'")
+                    cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
 
                     result = cursor.fetchone()
                     # As we connected with TLS, it should start with that :D
                     assert result['Value'].startswith('TLS'), \
                         "Not connected to the database with TLS"
+
+                    # Create Databases
+                    cursor.execute('CREATE DATABASE test_pymysql  '
+                                   'DEFAULT CHARACTER SET utf8 '
+                                   'DEFAULT COLLATE utf8_general_ci;')
+                    cursor.execute('CREATE DATABASE test_pymysql2 '
+                                   'DEFAULT CHARACTER SET utf8 '
+                                   'DEFAULT COLLATE utf8_general_ci;')
+
+                    # Do MySQL8+ Specific Setup
+                    if mysql_tag in ('8.0',):
+                        # Create Users to test SHA256
+                        cursor.execute('CREATE USER user_sha256 '
+                                       'IDENTIFIED WITH "sha256_password" '
+                                       'BY "pass_sha256"')
+                        cursor.execute('CREATE USER nopass_sha256 '
+                                       'IDENTIFIED WITH "sha256_password"')
+                        cursor.execute('CREATE USER user_caching_sha2   '
+                                       'IDENTIFIED '
+                                       'WITH "caching_sha2_password" '
+                                       'BY "pass_caching_sha2"')
+                        cursor.execute('CREATE USER nopass_caching_sha2 '
+                                       'IDENTIFIED '
+                                       'WITH "caching_sha2_password" '
+                                       'PASSWORD EXPIRE NEVER')
+                        cursor.execute('FLUSH PRIVILEGES')
 
                 break
             except Exception as err:
@@ -308,5 +344,6 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
 
         yield container
     finally:
+        print('\nTEARDOWN CONTAINER - {0}\n'.format(mysql_tag))
         docker.kill(container=container['Id'])
         docker.remove_container(container['Id'])
