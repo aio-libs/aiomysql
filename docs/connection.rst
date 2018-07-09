@@ -57,7 +57,8 @@ Example::
     :param str host: host where the database server is located,
         default: `localhost`.
     :param str user: username to log in as.
-    :param str password: password to use.
+    :param str password: Password to use. If password is a callable, then
+        it will be invoked with no arguments
     :param str db: database to use, None to not use a particular one.
     :param int port: MySQL port to use, default is usually OK.
     :param str unix_socket: optionally, you can use a unix socket rather

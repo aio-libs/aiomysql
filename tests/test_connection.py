@@ -83,6 +83,19 @@ class TestConnection(AIOPyMySQLTestCase):
         conn.close()
 
     @run_until_complete
+    def test_password_callable(self):
+        def get_password():
+            return self.password
+
+        conn = yield from self.connect(password=get_password)
+
+        cur = yield from conn.cursor()
+        yield from cur.execute('SELECT 42;')
+        (r,) = yield from cur.fetchone()
+        self.assertEqual(r, 42)
+        conn.close()
+
+    @run_until_complete
     def test_largedata(self):
         """Large query and response (>=16MB)"""
         cur = yield from self.connections[0].cursor()

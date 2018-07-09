@@ -100,11 +100,12 @@ class Connection:
 
         :param host: Host where the database server is located
         :param user: Username to log in as
-        :param password: Password to use.
+        :param password: Password to use. If password is a callable, then
+            it will be invoked with no arguments
         :param db: Database to use, None to not use a particular one.
         :param port: MySQL port to use, default is usually OK.
         :param unix_socket: Optionally, you can use a unix socket rather
-        than TCP/IP.
+            than TCP/IP.
         :param charset: Charset you want to use.
         :param sql_mode: Default SQL_MODE to use.
         :param read_default_file: Specifies  my.cnf file to read these
@@ -233,6 +234,14 @@ class Connection:
         # If connection was closed for specific reason, we should show that to
         # user
         self._close_reason = None
+
+    @property
+    def password(self):
+        # Return the result of self._password() if its a function
+        if callable(self._password):
+            return self._password()
+
+        return self._password
 
     @property
     def host(self):
@@ -710,9 +719,9 @@ class Connection:
 
         if auth_plugin in ('', 'mysql_native_password'):
             authresp = _auth.scramble_native_password(
-                self._password.encode('latin1'), self.salt)
+                self.password.encode('latin1'), self.salt)
         elif auth_plugin in ('', 'mysql_clear_password'):
-            authresp = self._password.encode('latin1') + b'\0'
+            authresp = self.password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
             data += lenenc_int(len(authresp)) + authresp
@@ -763,7 +772,7 @@ class Connection:
             else:
                 # send legacy handshake
                 data = _auth.scramble_old_password(
-                    self._password.encode('latin1'),
+                    self.password.encode('latin1'),
                     auth_packet.read_all()) + b'\0'
                 self.write_packet(data)
                 await self._read_packet()
@@ -774,17 +783,17 @@ class Connection:
             # secure-password-authentication.html#packet-Authentication::
             # Native41
             data = _auth.scramble_native_password(
-                self._password.encode('latin1'),
+                self.password.encode('latin1'),
                 auth_packet.read_all())
         elif plugin_name == b"mysql_old_password":
             # https://dev.mysql.com/doc/internals/en/
             # old-password-authentication.html
-            data = _auth.scramble_old_password(self._password.encode('latin1'),
+            data = _auth.scramble_old_password(self.password.encode('latin1'),
                                                auth_packet.read_all()) + b'\0'
         elif plugin_name == b"mysql_clear_password":
             # https://dev.mysql.com/doc/internals/en/
             # clear-text-authentication.html
-            data = self._password.encode('latin1') + b'\0'
+            data = self.password.encode('latin1') + b'\0'
         else:
             raise OperationalError(
                 2059, "Authentication plugin '%s' not configured" % plugin_name
