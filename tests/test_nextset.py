@@ -1,4 +1,7 @@
+import asyncio
+
 import pytest
+from pymysql.err import ProgrammingError
 
 
 @pytest.mark.run_loop
@@ -25,6 +28,15 @@ async def test_skip_nextset(cursor):
     await cursor.execute("SELECT 42")
     r = await cursor.fetchall()
     assert [(42,)] == list(r)
+
+
+@pytest.mark.run_loop
+async def test_nextset_error(cursor):
+    await cursor.execute("SELECT 1; xyzzy;")
+
+    # nextset shouldn't hang on error
+    with pytest.raises(ProgrammingError):
+        await asyncio.wait_for(cursor.nextset(), 5)
 
 
 @pytest.mark.run_loop
