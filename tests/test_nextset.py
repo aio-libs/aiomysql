@@ -34,7 +34,7 @@ async def test_skip_nextset(cursor):
 async def test_nextset_error(cursor):
     await cursor.execute("SELECT 1; xyzzy;")
 
-    # nextset shouldn't hang on error
+    # nextset shouldn't hang on error, it should raise syntax error
     with pytest.raises(ProgrammingError):
         await asyncio.wait_for(cursor.nextset(), 5)
 

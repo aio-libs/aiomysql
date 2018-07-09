@@ -589,6 +589,7 @@ class Connection:
         return self._writer.write(data)
 
     async def _read_query_result(self, unbuffered=False):
+        self._result = None
         if unbuffered:
             try:
                 result = MySQLResult(self)

@@ -184,6 +184,8 @@ class Cursor:
             return
         if not current_result.has_next:
             return
+        self._result = None
+        self._clear_result()
         await conn.next_result()
         await self._do_get_result()
         return True
@@ -449,8 +451,18 @@ class Cursor:
     async def _query(self, q):
         conn = self._get_db()
         self._last_executed = q
+        self._clear_result()
         await conn.query(q)
         await self._do_get_result()
+
+    def _clear_result(self):
+        self._rownumber = 0
+        self._result = None
+
+        self._rowcount = 0
+        self._description = None
+        self._lastrowid = None
+        self._rows = None
 
     async def _do_get_result(self):
         conn = self._get_db()
