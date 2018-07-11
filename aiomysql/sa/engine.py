@@ -48,11 +48,8 @@ async def _create_engine(minsize=1, maxsize=10, loop=None,
     pool = await aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
                                       loop=loop,
                                       pool_recycle=pool_recycle, **kwargs)
-    conn = await pool.acquire()
-    try:
-        return Engine(dialect, pool, compiled_cache=compiled_cache, **kwargs)
-    finally:
-        pool.release(conn)
+
+    return Engine(dialect, pool, compiled_cache=compiled_cache, **kwargs)
 
 
 class Engine:
