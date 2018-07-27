@@ -275,8 +275,15 @@ class TestSAConnection(unittest.TestCase):
                 "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
                 [{"id": 2, "name": 'third'}, {"id": 3, "name": 'forth'}])
             await conn.execute(
-                tbl.update().where(tbl.c.id==bindparam("id")).values({"name": bindparam("name")}),
-                [{"id": 2, "name": "t2"}, {"id": 3, "name": "t3"}]
+                tbl.update().where(
+                    tbl.c.id == bindparam("id")
+                ).values(
+                    {"name": bindparam("name")}
+                ),
+                [
+                    {"id": 2, "name": "t2"},
+                    {"id": 3, "name": "t3"}
+                ]
             )
             with self.assertRaises(sa.ArgumentError):
                 await conn.execute(
