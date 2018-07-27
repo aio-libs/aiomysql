@@ -93,6 +93,7 @@ class SAConnection:
         """
         executemany
         """
+        result_map = None
         if isinstance(query, str):
             await cursor.executemany(query, dps)
         elif isinstance(query, DDLElement):
@@ -114,13 +115,13 @@ class SAConnection:
                     )
                 )
             await cursor.executemany(str(compiled), params)
+            result_map = compiled._result_columns
         else:
             raise exc.ArgumentError(
                 "sql statement should be str or "
                 "SQLAlchemy data "
                 "selection/modification clause"
             )
-        result_map = compiled._result_columns
         ret = await create_result_proxy(
             self,
             cursor,
@@ -134,8 +135,8 @@ class SAConnection:
         cursor = await self._connection.cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
-            return await self._executemany(query, dp, cursor)
             # raise exc.ArgumentError("aiomysql doesn't support executemany")
+            return await self._executemany(query, dp, cursor)
         elif dp:
             dp = dp[0]
 

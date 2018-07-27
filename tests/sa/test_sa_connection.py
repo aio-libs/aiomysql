@@ -272,7 +272,7 @@ class TestSAConnection(unittest.TestCase):
             # with self.assertRaises(sa.ArgumentError):
             await conn.execute(
                 "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
-                [(2, 'third'), (3, 'forth')])
+                [{"id": 2, "name": 'third'}, {"id": 3, "name": 'forth'}])
         self.loop.run_until_complete(go())
 
     def test_raw_select_with_wildcard(self):
