@@ -121,7 +121,12 @@ class SAConnection:
                 "selection/modification clause"
             )
         result_map = compiled._result_columns
-        ret = await create_result_proxy(self, cursor, self._dialect, result_map)
+        ret = await create_result_proxy(
+            self,
+            cursor,
+            self._dialect,
+            result_map
+        )
         self._weak_results.add(ret)
         return ret
 
