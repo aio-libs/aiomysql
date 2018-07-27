@@ -63,7 +63,7 @@ class SAConnection:
         """
         coro = self._execute(query, *multiparams, **params)
         return _SAConnectionContextManager(coro)
-    
+
     def _base_params(self, query, dp, compiled, is_update):
         """
         handle params
@@ -105,7 +105,14 @@ class SAConnection:
             params = []
             is_update = isinstance(query, UpdateBase)
             for dp in dps:
-                params.append(self._base_params(query, dp, compiled, is_update))
+                params.append(
+                    self._base_params(
+                        query,
+                        dp,
+                        compiled,
+                        is_update,
+                    )
+                )
             await cursor.executemany(str(compiled), params)
         else:
             raise exc.ArgumentError(
@@ -144,7 +151,12 @@ class SAConnection:
                 compiled = query.compile(dialect=self._dialect)
 
             if not isinstance(query, DDLElement):
-                post_processed_params = self._base_params(query, dp, compiled, isinstance(query, UpdateBase))
+                post_processed_params = self._base_params(
+                    query,
+                    dp,
+                    compiled,
+                    isinstance(query, UpdateBase)
+                )
                 result_map = compiled._result_columns
             else:
                 if dp:
