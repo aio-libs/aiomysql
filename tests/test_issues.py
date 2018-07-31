@@ -2,6 +2,8 @@ import datetime
 import unittest
 import aiomysql
 
+import pytest
+from pymysql.err import Warning
 from tests import base
 from tests._testutils import run_until_complete
 
@@ -404,3 +406,41 @@ class TestGitHubIssues(base.AIOPyMySQLTestCase):
                 assert len(cur.description) == length
             finally:
                 yield from cur.execute('drop table if exists test_field_count')
+
+
+# MySQL will get you to renegotiate if sent a cleartext password
+@pytest.mark.run_loop
+async def test_issue_323(mysql_server, loop, recwarn):
+    async with aiomysql.create_pool(**mysql_server['conn_params'],
+                                    loop=loop) as pool:
+        async with pool.get() as conn:
+            async with conn.cursor() as cur:
+                create_db = "CREATE DATABASE IF NOT EXISTS bugtest;"
+                await cur.execute(create_db)
+
+                create_table = """CREATE TABLE IF NOT EXISTS `bugtest`.`testtable` (
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `bindata` VARBINARY(200) NOT NULL,
+                PRIMARY KEY (`id`)
+                );"""
+
+                await cur.execute(create_table)
+
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute("INSERT INTO `bugtest`.`testtable` "
+                                      "(bindata) VALUES (%s);",
+                                      (b'\xB0\x17',))
+
+                    warnings = [warn for warn in recwarn.list
+                                if warn.category is Warning]
+                    assert len(warnings) == 0, "Got unexpected MySQL warning"
+
+                    await cur.execute("SELECT * FROM `bugtest`.`testtable`;")
+                    rows = await cur.fetchall()
+
+                    assert len(rows) == 1, "Table should have 1 row"
+
+            finally:
+                async with conn.cursor() as cur:
+                    await cur.execute("DELETE FROM `bugtest`.`testtable`;")
