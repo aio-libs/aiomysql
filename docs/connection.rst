@@ -18,19 +18,26 @@ connection to the database, consider connection pool for multiple connections.
 
 Example::
 
-  import asyncio
-  import aiomysql
+    import asyncio
+    import aiomysql
 
+    loop = asyncio.get_event_loop()
 
-  @asyncio.coroutine
-  def go():
-      conn = yield from aiomysql.connect(database='aiomysql',
-                                      user='root',
-                                      password='secret',
-                                      host='127.0.0.1')
-      cur = yield from conn.cursor()
-      yield from cur.execute("SELECT * FROM tbl")
-      ret = yield from cur.fetchall()
+    @asyncio.coroutine
+    def test_example():
+        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                           user='root', password='', db='mysql',
+                                           loop=loop)
+
+        cur = yield from conn.cursor()
+        yield from cur.execute("SELECT Host,User FROM user")
+        print(cur.description)
+        r = yield from cur.fetchall()
+        print(r)
+        yield from cur.close()
+        conn.close()
+
+    loop.run_until_complete(test_example())
 
 
 .. function:: connect(host="localhost", user=None, password="",
@@ -39,7 +46,9 @@ Example::
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, echo=False, loop=None)
+            no_delay=False, autocommit=False, echo=False,
+            ssl=None, auth_plugin='', program_name='',
+            server_public_key=None, loop=None)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -74,6 +83,14 @@ Example::
     :param bool no_delay: disable Nagle's algorithm on the socket
     :param autocommit: Autocommit mode. None means use server default.
         (default: ``False``)
+    :param ssl: Optional SSL Context to force SSL
+    :param auth_plugin: String to manually specify the authentication
+        plugin to use, i.e you will want to use mysql_clear_password
+        when using IAM authentication with Amazon RDS.
+        (default: Server Default)
+    :param program_name: Program name string to provide when
+        handshaking with MySQL. (default: sys.argv[0])
+    :param server_public_key: SHA256 authenticaiton plugin public key value.
     :param loop: asyncio event loop instance or ``None`` for default one.
     :returns: :class:`Connection` instance.
 
@@ -125,7 +142,7 @@ Example::
 
    .. method:: begin()
 
-        A :ref:`coroutine <coroutine>` to egin transaction.
+        A :ref:`coroutine <coroutine>` to begin transaction.
 
    .. method:: commit()
 

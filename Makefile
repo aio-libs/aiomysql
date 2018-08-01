@@ -4,7 +4,7 @@ FLAGS=
 
 
 flake:
-	flake8 --exclude=pep492 aiomysql tests examples
+	flake8 aiomysql tests examples
 
 test: flake
 	py.test -s $(FLAGS) ./tests/
@@ -30,6 +30,15 @@ clean:
 	rm -rf build
 	rm -rf htmlcov
 	rm -rf dist
+
+start_mysql:
+	@echo "----------------------------------------------------"
+	@echo "Starting mysql, see docker-compose.yml for user/pass"
+	@echo "----------------------------------------------------"
+	docker-compose -f docker-compose.yml up -d mysql
+
+stop_mysql:
+	docker-compose -f docker-compose.yml stop mysql
 
 doc:
 	make -C docs html

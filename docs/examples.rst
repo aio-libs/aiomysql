@@ -4,7 +4,8 @@ Examples of aiomysql usage
 Below is a list of examples from `aiomysql/examples
 <https://github.com/aio-libs/aiomysql/tree/master/examples>`_
 
-Every example is a correct tiny python program.
+Every example is a correct tiny python program that demonstrates specific
+feature of library.
 
 .. _aiomysql-examples-simple:
 
@@ -25,6 +26,10 @@ Example of using `executemany` method:
 Example of using transactions `rollback` and `commit` methods:
 
 .. literalinclude:: ../examples/example_transaction.py
+
+Example of using connection pool:
+
+.. literalinclude:: ../examples/example_pool.py
 
 
 sqlalchemy usage

@@ -313,6 +313,50 @@ Cursor
 
         loop.run_until_complete(test_example())
 
+    You can customize your dictionary, see example::
+
+        import asyncio
+        import aiomysql
+
+        class AttrDict(dict):
+            """Dict that can get attribute by dot, and doesn't raise KeyError"""
+
+            def __getattr__(self, name):
+                try:
+                    return self[name]
+                except KeyError:
+                    return None
+
+        class AttrDictCursor(aiomysql.DictCursor):
+            dict_type = AttrDict
+
+        loop = asyncio.get_event_loop()
+
+        @asyncio.coroutine
+        def test_example():
+            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+                                               user='root', password='',
+                                               db='mysql', loop=loop)
+
+            # create your dict cursor
+            cursor = yield from conn.cursor(AttrDictCursor)
+
+            # execute sql query
+            yield from cursor.execute(
+                "SELECT * from people where name='bob'")
+
+            # fetch all results
+            r = yield from cursor.fetchone()
+            print(r)
+            # {'age': 20, 'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56),
+            # 'name': 'bob'}
+            print(r.age)
+            # 20
+            print(r.foo)
+            # None
+
+        loop.run_until_complete(test_example())
+
 
 .. class:: SSCursor
 

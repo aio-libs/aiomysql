@@ -1,15 +1,19 @@
 aiomysql
 ========
-.. image:: https://travis-ci.org/aio-libs/aiomysql.svg?branch=master
-    :target: https://travis-ci.org/aio-libs/aiomysql
-.. image:: https://coveralls.io/repos/aio-libs/aiomysql/badge.svg
-    :target: https://coveralls.io/r/aio-libs/aiomysql
-.. image:: https://pypip.in/version/aiomysql/badge.svg
-    :target: https://pypi.python.org/pypi/aiomysql/
+.. image:: https://travis-ci.com/aio-libs/aiomysql.svg?branch=master
+    :target: https://travis-ci.com/aio-libs/aiomysql
+.. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/aio-libs/aiomysql
+    :alt: Code coverage
+.. image:: https://badge.fury.io/py/aiomysql.svg
+    :target: https://badge.fury.io/py/aiomysql
     :alt: Latest Version
 .. image:: https://readthedocs.org/projects/aiomysql/badge/?version=latest
-    :target: http://aiomysql.readthedocs.org/
+    :target: https://aiomysql.readthedocs.io/
     :alt: Documentation Status
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/aio-libs/Lobby
+    :alt: Chat on Gitter
 
 **aiomysql** is a "driver" for accessing a `MySQL` database
 from the asyncio_ (PEP-3156/tulip) framework. It depends on and reuses most
@@ -23,7 +27,7 @@ proper places)). `sqlalchemy` support ported from aiopg_.
 
 Documentation
 -------------
-http://aiomysql.readthedocs.org/
+https://aiomysql.readthedocs.io/
 
 
 Mailing List
@@ -74,24 +78,22 @@ Connection pooling ported from aiopg_ :
     import aiomysql
 
 
-    loop = asyncio.get_event_loop()
-
-
-    @asyncio.coroutine
-    def test_example():
-        pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop)
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-            yield from cur.execute("SELECT 10")
-            # print(cur.description)
-            (r,) = yield from cur.fetchone()
-            assert r == 10
+    async def test_example(loop):
+        pool = await aiomysql.create_pool(host='127.0.0.1', port=3306,
+                                          user='root', password='',
+                                          db='mysql', loop=loop)
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 42;")
+                print(cur.description)
+                (r,) = await cur.fetchone()
+                assert r == 42
         pool.close()
-        yield from pool.wait_closed()
+        await pool.wait_closed()
 
-    loop.run_until_complete(test_example())
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(test_example(loop))
 
 
 Example of SQLAlchemy optional integration
@@ -101,41 +103,41 @@ for aiopg_ user.:
 
 .. code:: python
 
-   import asyncio
-   from aiomysql.sa import create_engine
-   import sqlalchemy as sa
+    import asyncio
+    import sqlalchemy as sa
+
+    from aiomysql.sa import create_engine
 
 
-   metadata = sa.MetaData()
+    metadata = sa.MetaData()
 
-   tbl = sa.Table('tbl', metadata,
-       sa.Column('id', sa.Integer, primary_key=True),
-       sa.Column('val', sa.String(255)))
-
-
-   @asyncio.coroutine
-   def go():
-       engine = yield from create_engine(user='root',
-                                         db='aiomysql',
-                                         host='127.0.0.1',
-                                         password='')
-
-       with (yield from engine) as conn:
-           yield from conn.execute(tbl.insert().values(val='abc'))
-
-           res = yield from conn.execute(tbl.select())
-           for row in res:
-               print(row.id, row.val)
+    tbl = sa.Table('tbl', metadata,
+                   sa.Column('id', sa.Integer, primary_key=True),
+                   sa.Column('val', sa.String(255)))
 
 
-   asyncio.get_event_loop().run_until_complete(go())
+    async def go(loop):
+        engine = await create_engine(user='root', db='test_pymysql',
+                                     host='127.0.0.1', password='', loop=loop)
+        async with engine.acquire() as conn:
+            await conn.execute(tbl.insert().values(val='abc'))
+            await conn.execute(tbl.insert().values(val='xyz'))
+
+            async for row in conn.execute(tbl.select()):
+                print(row.id, row.val)
+
+        engine.close()
+        await engine.wait_closed()
+
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(go(loop))
 
 
 Requirements
 ------------
 
-* Python_ 3.3+
-* asyncio_ or Python_ 3.4+
+* Python_ 3.5.3+
 * PyMySQL_
 
 

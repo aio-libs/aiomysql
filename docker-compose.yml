@@ -1,0 +1,11 @@
+mysql:
+    image: mysql:5.7
+    environment:
+        - MYSQL_USER=aiomysql
+        - MYSQL_PASSWORD=mypass
+        - MYSQL_DATABASE=test_pymysql
+        - MYSQL_ROOT_PASSWORD=mypass
+    ports:
+        - 3306:3306
+    volumes:
+        - /tmp/aiomysql:/var/run/mysqld/

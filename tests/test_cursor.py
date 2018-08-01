@@ -2,7 +2,7 @@ import asyncio
 from tests import base
 from tests._testutils import run_until_complete
 
-from aiomysql import ProgrammingError, Cursor
+from aiomysql import ProgrammingError, Cursor, InterfaceError
 
 
 class TestCursor(base.AIOPyMySQLTestCase):
@@ -70,7 +70,7 @@ class TestCursor(base.AIOPyMySQLTestCase):
         self.assertIs(cur.connection, conn)
         cur.setinputsizes()
         cur.setoutputsizes()
-        self.assertEqual(cur.echo, False)
+        self.assertEqual(cur.echo, conn.echo)
 
     @run_until_complete
     def test_scroll_relative(self):
@@ -286,3 +286,21 @@ class TestCursor(base.AIOPyMySQLTestCase):
                     "INSERT INTO tbl VALUES(2, 'b')",
                     "INSERT INTO tbl VALUES(3, 'c')"]
         self.assertEqual(results, expected)
+
+    @run_until_complete
+    def test_execute_cancel(self):
+        conn = self.connections[0]
+        cur = yield from conn.cursor()
+        # Cancel a cursor in the middle of execution, before it could
+        # read even the first packet (SLEEP assures the timings)
+        task = self.loop.create_task(cur.execute(
+            "SELECT 1 as id, SLEEP(0.1) as xxx"))
+        yield from asyncio.sleep(0.05, loop=self.loop)
+        task.cancel()
+        try:
+            yield from task
+        except asyncio.CancelledError:
+            pass
+
+        with self.assertRaises(InterfaceError):
+            yield from conn.cursor()

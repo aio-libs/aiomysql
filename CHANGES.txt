@@ -1,6 +1,100 @@
 Changes
 -------
 
+0.0.17 (2018-07-06)
+^^^^^^^^^^^^^^^^^^^
+
+* Pinned version of PyMySQL
+
+
+0.0.16 (2018-06-03)
+^^^^^^^^^^^^^^^^^^^
+
+* Added ability to execute precompiled sqlalchemy queries #294 (Thanks @vlanse)
+
+
+0.0.15 (2018-05-20)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed handling of user-defined types for sqlalchemy  #290
+
+* Fix KeyError when server reports unknown collation #289
+
+
+0.0.14 (2018-04-22)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed SSL connection finalization  #282
+
+
+0.0.13 (2018-04-19)
+^^^^^^^^^^^^^^^^^^^
+
+* Added SSL support #280 (Thanks @terrycain)
+
+* Fixed __all__ in aiomysql/__init__ #270 (Thanks @matianjun1)
+
+* Added docker fixtures #275 (Thanks @terrycain)
+
+
+0.0.12 (2018-01-18)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed support for SQLAlchemy 1.2.0
+
+* Fixed argument for cursor.execute in sa engine #239 (Thanks @NotSoSuper)
+
+
+0.0.11 (2017-12-06)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed README formatting on pypi
+
+
+0.0.10 (2017-12-06)
+^^^^^^^^^^^^^^^^^^^
+
+* Updated regular expressions to be compatible with pymysql #167 (Thanks @AlexLisovoy)
+
+* Added connection recycling in the pool #216
+
+
+0.0.9 (2016-09-14)
+^^^^^^^^^^^^^^^^^^
+
+* Fixed AttributeError in  _request_authentication function #104 (Thanks @ttlttl)
+
+* Fixed legacy auth #105
+
+* uvloop added to test suite #106
+
+* Fixed bug with unicode in json field #107 (Thanks @methane)
+
+
+0.0.8 (2016-08-24)
+^^^^^^^^^^^^^^^^^^
+
+* Default min pool size reduced to 1 #80 (Thanks @Drizzt1991)
+
+* Update to PyMySQL 0.7.5 #89
+
+* Fixed connection cancellation in process of executing a query #79 (Thanks @Drizzt1991)
+
+
+0.0.7 (2016-01-27)
+^^^^^^^^^^^^^^^^^^
+
+* Fix for multiple results issue, ported from pymysql #52
+
+* Fixed useless warning with no_delay option #55
+
+* Added async/await support for Engine, SAConnection, Transaction #57
+
+* pool.release returns future so we can wait on it in __aexit__ #60
+
+* Update to PyMySQL 0.6.7
+
+
 0.0.6 (2015-12-11)
 ^^^^^^^^^^^^^^^^^^
 

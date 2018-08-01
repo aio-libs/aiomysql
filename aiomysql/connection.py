@@ -4,7 +4,6 @@
 import asyncio
 import os
 import socket
-import hashlib
 import struct
 import sys
 import warnings
@@ -14,10 +13,12 @@ from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
-from pymysql.constants.CLIENT import *  # noqa
-from pymysql.constants.COMMAND import *  # noqa
+from pymysql.constants import CLIENT
+from pymysql.constants import COMMAND
+from pymysql.constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
-from pymysql.converters import escape_item, encoders, decoders, escape_string
+from pymysql.converters import (escape_item, encoders, decoders,
+                                escape_string, escape_bytes_prefixed, through)
 from pymysql.err import (Warning, Error,
                          InterfaceError, DataError, DatabaseError,
                          OperationalError,
@@ -25,9 +26,8 @@ from pymysql.err import (Warning, Error,
                          ProgrammingError)
 
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
-# from pymysql.connections import dump_packet
-from pymysql.connections import _scramble
-from pymysql.connections import _scramble_323
+from pymysql.connections import _auth
+
 from pymysql.connections import pack_int24
 
 from pymysql.connections import MysqlPacket
@@ -35,17 +35,16 @@ from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
+from pymysql.connections import lenenc_int
 
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
-# from .log import logger
+from .log import logger
+
 
 DEFAULT_USER = getpass.getuser()
-PY_341 = sys.version_info >= (3, 4, 1)
-PY_35 = sys.version_info >= (3, 5, 0)
-sha_new = partial(hashlib.new, 'sha1')
 
 
 def connect(host="localhost", user=None, password="",
@@ -54,8 +53,9 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, echo=False,
-            local_infile=False, loop=None):
+            no_delay=None, autocommit=False, echo=False,
+            local_infile=False, loop=None, ssl=None, auth_plugin='',
+            program_name='', server_public_key=None):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -67,14 +67,14 @@ def connect(host="localhost", user=None, password="",
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
                     no_delay=no_delay, autocommit=autocommit, echo=echo,
-                    local_infile=local_infile, loop=loop)
+                    local_infile=local_infile, loop=loop, ssl=ssl,
+                    auth_plugin=auth_plugin, program_name=program_name)
     return _ConnectionContextManager(coro)
 
 
-@asyncio.coroutine
-def _connect(*args, **kwargs):
+async def _connect(*args, **kwargs):
     conn = Connection(*args, **kwargs)
-    yield from conn._connect()
+    await conn._connect()
     return conn
 
 
@@ -92,7 +92,8 @@ class Connection:
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
                  no_delay=None, autocommit=False, echo=False,
-                 local_infile=False, loop=None):
+                 local_infile=False, loop=None, ssl=None, auth_plugin='',
+                 program_name='', server_public_key=None):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -126,6 +127,15 @@ class Connection:
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
             command. (default: False)
+        :param ssl: Optional SSL Context to force SSL
+        :param auth_plugin: String to manually specify the authentication
+            plugin to use, i.e you will want to use mysql_clear_password
+            when using IAM authentication with Amazon RDS.
+            (default: Server Default)
+        :param program_name: Program name string to provide when
+            handshaking with MySQL. (default: sys.argv[0])
+        :param server_public_key: SHA256 authentication plugin public
+            key value.
         :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
@@ -162,6 +172,23 @@ class Connection:
         self._db = db
         self._no_delay = no_delay
         self._echo = echo
+        self._last_usage = self._loop.time()
+        self._client_auth_plugin = auth_plugin
+        self._server_auth_plugin = ""
+        self._auth_plugin_used = ""
+        self.server_public_key = server_public_key
+        self.salt = None
+
+        # TODO somehow import version from __init__.py
+        self._connect_attrs = {
+            '_client_name': 'aiomysql',
+            '_pid': str(os.getpid()),
+            '_client_version': '0.0.16',
+        }
+        if program_name:
+            self._connect_attrs["program_name"] = program_name
+        elif sys.argv:
+            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
@@ -174,15 +201,19 @@ class Connection:
         if use_unicode is not None:
             self.use_unicode = use_unicode
 
+        self._ssl_context = ssl
+        if ssl:
+            client_flag |= CLIENT.SSL
+
         self._encoding = charset_by_name(self._charset).encoding
 
         if local_infile:
-            client_flag |= LOCAL_FILES
+            client_flag |= CLIENT.LOCAL_FILES
 
-        client_flag |= CAPABILITIES
-        client_flag |= MULTI_STATEMENTS
+        client_flag |= CLIENT.CAPABILITIES
+        client_flag |= CLIENT.MULTI_STATEMENTS
         if self._db:
-            client_flag |= CONNECT_WITH_DB
+            client_flag |= CLIENT.CONNECT_WITH_DB
         self.client_flag = client_flag
 
         self.cursorclass = cursorclass
@@ -203,6 +234,9 @@ class Connection:
         # asyncio StreamReader, StreamWriter
         self._reader = None
         self._writer = None
+        # If connection was closed for specific reason, we should show that to
+        # user
+        self._close_reason = None
 
     @property
     def host(self):
@@ -235,6 +269,11 @@ class Connection:
         return self._echo
 
     @property
+    def last_usage(self):
+        """Return time() when connection was used."""
+        return self._last_usage
+
+    @property
     def loop(self):
         return self._loop
 
@@ -262,19 +301,17 @@ class Connection:
         self._writer = None
         self._reader = None
 
-    @asyncio.coroutine
-    def ensure_closed(self):
+    async def ensure_closed(self):
         """Send quit command and then close socket connection"""
         if self._writer is None:
             # connection has been closed
             return
-        send_data = struct.pack('<i', 1) + int2byte(COM_QUIT)
+        send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
         self._writer.write(send_data)
-        yield from self._writer.drain()
+        await self._writer.drain()
         self.close()
 
-    @asyncio.coroutine
-    def autocommit(self, value):
+    async def autocommit(self, value):
         """Enable/disable autocommit mode for current MySQL session.
 
         :param value: ``bool``, toggle autocommit
@@ -282,7 +319,7 @@ class Connection:
         self.autocommit_mode = bool(value)
         current = self.get_autocommit()
         if value != current:
-            yield from self._send_autocommit_mode()
+            await self._send_autocommit_mode()
 
     def get_autocommit(self):
         """Returns autocommit status for current MySQL session.
@@ -292,51 +329,54 @@ class Connection:
         status = self.server_status & SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT
         return bool(status)
 
-    @asyncio.coroutine
-    def _read_ok_packet(self):
-        pkt = yield from self._read_packet()
+    async def _read_ok_packet(self):
+        pkt = await self._read_packet()
         if not pkt.is_ok_packet():
             raise OperationalError(2014, "Command Out of Sync")
         ok = OKPacketWrapper(pkt)
         self.server_status = ok.server_status
         return True
 
-    @asyncio.coroutine
-    def _send_autocommit_mode(self):
+    async def _send_autocommit_mode(self):
         """Set whether or not to commit after every execute() """
-        yield from self._execute_command(
-            COM_QUERY,
+        await self._execute_command(
+            COMMAND.COM_QUERY,
             "SET AUTOCOMMIT = %s" % self.escape(self.autocommit_mode))
-        yield from self._read_ok_packet()
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def begin(self):
+    async def begin(self):
         """Begin transaction."""
-        yield from self._execute_command(COM_QUERY, "BEGIN")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "BEGIN")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def commit(self):
+    async def commit(self):
         """Commit changes to stable storage."""
-        yield from self._execute_command(COM_QUERY, "COMMIT")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "COMMIT")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def rollback(self):
+    async def rollback(self):
         """Roll back the current transaction."""
-        yield from self._execute_command(COM_QUERY, "ROLLBACK")
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "ROLLBACK")
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def select_db(self, db):
+    async def select_db(self, db):
         """Set current db"""
-        yield from self._execute_command(COM_INIT_DB, db)
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_INIT_DB, db)
+        await self._read_ok_packet()
+
+    async def show_warnings(self):
+        """SHOW WARNINGS"""
+        await self._execute_command(COMMAND.COM_QUERY, "SHOW WARNINGS")
+        result = MySQLResult(self)
+        await result.read()
+        return result.rows
 
     def escape(self, obj):
         """ Escape whatever value you pass to it"""
         if isinstance(obj, str):
             return "'" + self.escape_string(obj) + "'"
+        if isinstance(obj, bytes):
+            return escape_bytes_prefixed(obj)
         return escape_item(obj, self._charset)
 
     def literal(self, obj):
@@ -360,104 +400,106 @@ class Connection:
         :returns: instance of cursor, by default :class:`Cursor`
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
+        self._ensure_alive()
+        self._last_usage = self._loop.time()
         if cursor is not None and not issubclass(cursor, Cursor):
             raise TypeError('Custom cursor must be subclass of Cursor')
 
-        cur = cursor(self, self._echo) if cursor else self.cursorclass(self)
-        fut = asyncio.Future(loop=self._loop)
+        if cursor:
+            cur = cursor(self, self._echo)
+        else:
+            cur = self.cursorclass(self, self._echo)
+        fut = self._loop.create_future()
         fut.set_result(cur)
         return _ContextManager(fut)
 
     # The following methods are INTERNAL USE ONLY (called from Cursor)
-    @asyncio.coroutine
-    def query(self, sql, unbuffered=False):
+    async def query(self, sql, unbuffered=False):
         # logger.debug("DEBUG: sending query: %s", _convert_to_str(sql))
         if isinstance(sql, str):
             sql = sql.encode(self.encoding, 'surrogateescape')
-        yield from self._execute_command(COM_QUERY, sql)
-        yield from self._read_query_result(unbuffered=unbuffered)
+        await self._execute_command(COMMAND.COM_QUERY, sql)
+        await self._read_query_result(unbuffered=unbuffered)
         return self._affected_rows
 
-    @asyncio.coroutine
-    def next_result(self):
-        yield from self._read_query_result()
+    async def next_result(self):
+        await self._read_query_result()
         return self._affected_rows
 
     def affected_rows(self):
         return self._affected_rows
 
-    @asyncio.coroutine
-    def kill(self, thread_id):
+    async def kill(self, thread_id):
         arg = struct.pack('<I', thread_id)
-        yield from self._execute_command(COM_PROCESS_KILL, arg)
-        yield from self._read_ok_packet()
+        await self._execute_command(COMMAND.COM_PROCESS_KILL, arg)
+        await self._read_ok_packet()
 
-    @asyncio.coroutine
-    def ping(self, reconnect=True):
+    async def ping(self, reconnect=True):
         """Check if the server is alive"""
         if self._writer is None and self._reader is None:
             if reconnect:
-                yield from self._connect()
+                await self._connect()
                 reconnect = False
             else:
                 raise Error("Already closed")
         try:
-            yield from self._execute_command(COM_PING, "")
-            yield from self._read_ok_packet()
+            await self._execute_command(COMMAND.COM_PING, "")
+            await self._read_ok_packet()
         except Exception:
             if reconnect:
-                yield from self._connect()
-                yield from self.ping(False)
+                await self._connect()
+                await self.ping(False)
             else:
                 raise
 
-    @asyncio.coroutine
-    def set_charset(self, charset):
+    async def set_charset(self, charset):
         """Sets the character set for the current connection"""
         # Make sure charset is supported.
         encoding = charset_by_name(charset).encoding
-        yield from self._execute_command(COM_QUERY, "SET NAMES %s"
-                                         % self.escape(charset))
-        yield from self._read_packet()
+        await self._execute_command(COMMAND.COM_QUERY, "SET NAMES %s"
+                                    % self.escape(charset))
+        await self._read_packet()
         self._charset = charset
         self._encoding = encoding
 
-    @asyncio.coroutine
-    def _connect(self):
+    async def _connect(self):
         # TODO: Set close callback
         # raise OperationalError(2006,
         # "MySQL server has gone away (%r)" % (e,))
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
-                self._reader, self._writer = yield from \
+                self._reader, self._writer = await \
                     asyncio.open_unix_connection(self._unix_socket,
                                                  loop=self._loop)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
             else:
-                self._reader, self._writer = yield from \
+                self._reader, self._writer = await \
                     asyncio.open_connection(self._host, self._port,
                                             loop=self._loop)
+                self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
             # do not set no delay in case of unix_socket
             if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
 
-            yield from self._get_server_information()
-            yield from self._request_authentication()
+            self._next_seq_id = 0
+
+            await self._get_server_information()
+            await self._request_authentication()
 
             self.connected_time = self._loop.time()
 
             if self.sql_mode is not None:
-                yield from self.query("SET sql_mode=%s" % (self.sql_mode,))
+                await self.query("SET sql_mode=%s" % (self.sql_mode,))
 
             if self.init_command is not None:
-                yield from self.query(self.init_command)
-                yield from self.commit()
+                await self.query(self.init_command)
+                await self.commit()
 
             if self.autocommit_mode is not None:
-                yield from self.autocommit(self.autocommit_mode)
+                await self.autocommit(self.autocommit_mode)
         except Exception as e:
             if self._writer:
                 self._writer.transport.close()
@@ -466,6 +508,15 @@ class Connection:
             raise OperationalError(2003,
                                    "Can't connect to MySQL server on %r" %
                                    self._host) from e
+
+    def _set_keep_alive(self):
+        transport = self._writer.transport
+        transport.pause_reading()
+        raw_sock = transport.get_extra_info('socket', default=None)
+        if raw_sock is None:
+            raise RuntimeError("Transport does not expose socket instance")
+        raw_sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        transport.resume_reading()
 
     def _set_nodelay(self, value):
         flag = int(bool(value))
@@ -477,46 +528,85 @@ class Connection:
         raw_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, flag)
         transport.resume_reading()
 
-    @asyncio.coroutine
-    def _read_packet(self, packet_type=MysqlPacket):
+    def write_packet(self, payload):
+        """Writes an entire "mysql packet" in its entirety to the network
+        addings its length and sequence number.
+        """
+        # Internal note: when you build packet manually and calls
+        # _write_bytes() directly, you should set self._next_seq_id properly.
+        data = pack_int24(len(payload)) + int2byte(self._next_seq_id) + payload
+        self._write_bytes(data)
+        self._next_seq_id = (self._next_seq_id + 1) % 256
+
+    async def _read_packet(self, packet_type=MysqlPacket):
         """Read an entire "mysql packet" in its entirety from the network
         and return a MysqlPacket type that represents the results.
         """
         buff = b''
-        try:
-            while True:
-                packet_header = yield from self._reader.readexactly(4)
-                btrl, btrh, packet_number = struct.unpack(
-                    '<HBB', packet_header)
-                bytes_to_read = btrl + (btrh << 16)
-                # TODO: check sequence id
-                recv_data = yield from self._reader.readexactly(bytes_to_read)
-                buff += recv_data
-                if bytes_to_read < MAX_PACKET_LEN:
-                    break
-        except (OSError, EOFError) as exc:
-            msg = "MySQL server has gone away (%s)"
-            raise OperationalError(2006, msg % (exc,)) from exc
+        while True:
+            try:
+                packet_header = await self._read_bytes(4)
+            except asyncio.CancelledError:
+                self._close_on_cancel()
+                raise
+
+            btrl, btrh, packet_number = struct.unpack(
+                '<HBB', packet_header)
+            bytes_to_read = btrl + (btrh << 16)
+
+            # Outbound and inbound packets are numbered sequentialy, so
+            # we increment in both write_packet and read_packet. The count
+            # is reset at new COMMAND PHASE.
+            if packet_number != self._next_seq_id:
+                raise InternalError(
+                    "Packet sequence number wrong - got %d expected %d" %
+                    (packet_number, self._next_seq_id))
+            self._next_seq_id = (self._next_seq_id + 1) % 256
+
+            try:
+                recv_data = await self._read_bytes(bytes_to_read)
+            except asyncio.CancelledError:
+                self._close_on_cancel()
+                raise
+
+            buff += recv_data
+            # https://dev.mysql.com/doc/internals/en/sending-more-than-16mbyte.html
+            if bytes_to_read == 0xffffff:
+                continue
+            if bytes_to_read < MAX_PACKET_LEN:
+                break
+
         packet = packet_type(buff, self._encoding)
         packet.check_error()
         return packet
 
+    async def _read_bytes(self, num_bytes):
+        try:
+            data = await self._reader.readexactly(num_bytes)
+        except asyncio.streams.IncompleteReadError as e:
+            msg = "Lost connection to MySQL server during query"
+            raise OperationalError(2013, msg) from e
+        except (IOError, OSError) as e:
+            msg = "Lost connection to MySQL server during query (%s)" % (e,)
+            raise OperationalError(2013, msg) from e
+        return data
+
     def _write_bytes(self, data):
         return self._writer.write(data)
 
-    @asyncio.coroutine
-    def _read_query_result(self, unbuffered=False):
+    async def _read_query_result(self, unbuffered=False):
+        self._result = None
         if unbuffered:
             try:
                 result = MySQLResult(self)
-                yield from result.init_unbuffered_query()
-            except:
+                await result.init_unbuffered_query()
+            except BaseException:
                 result.unbuffered_active = False
                 result.connection = None
                 raise
         else:
             result = MySQLResult(self)
-            yield from result.read()
+            await result.read()
         self._result = result
         self._affected_rows = result.affected_rows
         if result.server_status is not None:
@@ -528,97 +618,345 @@ class Connection:
         else:
             return 0
 
-    @asyncio.coroutine
-    def __aenter__(self):
+    async def __aenter__(self):
         return self
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             self.close()
         else:
-            yield from self.ensure_closed()
+            await self.ensure_closed()
         return
 
-    @asyncio.coroutine
-    def _execute_command(self, command, sql):
-        if not self._writer:
-            raise InterfaceError("(0, 'Not connected')")
+    async def _execute_command(self, command, sql):
+        self._ensure_alive()
 
         # If the last query was unbuffered, make sure it finishes before
         # sending new commands
-        if self._result is not None and self._result.unbuffered_active:
-            yield from self._result._finish_unbuffered_query()
+        if self._result is not None:
+            if self._result.unbuffered_active:
+                warnings.warn("Previous unbuffered result was left incomplete")
+                self._result._finish_unbuffered_query()
+            while self._result.has_next:
+                await self.next_result()
+            self._result = None
 
         if isinstance(sql, str):
             sql = sql.encode(self._encoding)
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 
-        prelude = struct.pack('<i', chunk_size) + int2byte(command)
+        prelude = struct.pack('<iB', chunk_size, command)
         self._write_bytes(prelude + sql[:chunk_size - 1])
         # logger.debug(dump_packet(prelude + sql))
+        self._next_seq_id = 1
+
         if chunk_size < MAX_PACKET_LEN:
             return
 
-        seq_id = 1
         sql = sql[chunk_size - 1:]
         while True:
             chunk_size = min(MAX_PACKET_LEN, len(sql))
-            prelude = struct.pack('<i', chunk_size)[:3]
-            data = prelude + int2byte(seq_id % 256) + sql[:chunk_size]
-            self._write_bytes(data)
-            # logger.debug(dump_packet(data))
+            self.write_packet(sql[:chunk_size])
             sql = sql[chunk_size:]
             if not sql and chunk_size < MAX_PACKET_LEN:
                 break
-            seq_id += 1
 
-    @asyncio.coroutine
-    def _request_authentication(self):
-        self.client_flag |= CAPABILITIES
+    async def _request_authentication(self):
+        # https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
         if int(self.server_version.split('.', 1)[0]) >= 5:
-            self.client_flag |= MULTI_RESULTS
+            self.client_flag |= CLIENT.MULTI_RESULTS
 
-        if self._user is None:
+        if self.user is None:
             raise ValueError("Did not specify a username")
 
-        charset_id = charset_by_name(self._charset).id
-        user = self._user
-        if isinstance(self._user, str):
-            user = self._user.encode(self._encoding)
+        if self._ssl_context:
+            # capablities, max packet, charset
+            data = struct.pack('<IIB', self.client_flag, 16777216, 33)
+            data += b'\x00' * (32 - len(data))
 
-        data_init = struct.pack('<iIB23s', self.client_flag, 1,
+            self.write_packet(data)
+
+            # Stop sending events to data_received
+            self._writer.transport.pause_reading()
+
+            # Get the raw socket from the transport
+            raw_sock = self._writer.transport.get_extra_info('socket',
+                                                             default=None)
+            if raw_sock is None:
+                raise RuntimeError("Transport does not expose socket instance")
+
+            raw_sock = raw_sock.dup()
+            self._writer.transport.close()
+            # MySQL expects TLS negotiation to happen in the middle of a
+            # TCP connection not at start. Passing in a socket to
+            # open_connection will cause it to negotiate TLS on an existing
+            # connection not initiate a new one.
+            self._reader, self._writer = await asyncio.open_connection(
+                sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
+                server_hostname=self._host
+            )
+
+        charset_id = charset_by_name(self.charset).id
+        if isinstance(self.user, str):
+            _user = self.user.encode(self.encoding)
+        else:
+            _user = self.user
+
+        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
                                 charset_id, b'')
 
-        next_packet = 1
+        data = data_init + _user + b'\0'
 
-        data = data_init + user + b'\0' + _scramble(
-            self._password.encode('latin1'), self.salt)
+        authresp = b''
 
-        if self._db:
-            db = self._db
+        auth_plugin = self._client_auth_plugin
+        if not self._client_auth_plugin:
+            # Contains the auth plugin from handshake
+            auth_plugin = self._server_auth_plugin
+
+        if auth_plugin in ('', 'mysql_native_password'):
+            authresp = _auth.scramble_native_password(
+                self._password.encode('latin1'), self.salt)
+        elif auth_plugin == 'caching_sha2_password':
+            if self._password:
+                authresp = _auth.scramble_caching_sha2(
+                    self._password.encode('latin1'), self.salt
+                )
+            # Else: empty password
+        elif auth_plugin == 'sha256_password':
+            if self._ssl_context and self.server_capabilities & CLIENT.SSL:
+                authresp = self._password.encode('latin1') + b'\0'
+            elif self._password:
+                authresp = b'\1'  # request public key
+            else:
+                authresp = b'\0'  # empty password
+
+        elif auth_plugin in ('', 'mysql_clear_password'):
+            authresp = self._password.encode('latin1') + b'\0'
+
+        if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
+            data += lenenc_int(len(authresp)) + authresp
+        elif self.server_capabilities & CLIENT.SECURE_CONNECTION:
+            data += struct.pack('B', len(authresp)) + authresp
+        else:  # pragma: no cover
+            # not testing against servers without secure auth (>=5.0)
+            data += authresp + b'\0'
+
+        if self._db and self.server_capabilities & CLIENT.CONNECT_WITH_DB:
+
             if isinstance(self._db, str):
-                db = self._db.encode(self._encoding)
-            data += db + int2byte(0)
+                db = self._db.encode(self.encoding)
+            else:
+                db = self._db
+            data += db + b'\0'
 
-        data = pack_int24(len(data)) + int2byte(next_packet) + data
-        next_packet += 2
-        # logger.debug(dump_packet(data))
-        self._write_bytes(data)
+        if self.server_capabilities & CLIENT.PLUGIN_AUTH:
+            name = auth_plugin
+            if isinstance(name, str):
+                name = name.encode('ascii')
+            data += name + b'\0'
 
-        auth_packet = yield from self._read_packet()
+        self._auth_plugin_used = auth_plugin
 
-        # if old_passwords is enabled the packet will be 1 byte long and
-        # have the octet 254
+        # Sends the server a few pieces of client info
+        if self.server_capabilities & CLIENT.CONNECT_ATTRS:
+            connect_attrs = b''
+            for k, v in self._connect_attrs.items():
+                k, v = k.encode('utf8'), v.encode('utf8')
+                connect_attrs += struct.pack('B', len(k)) + k
+                connect_attrs += struct.pack('B', len(v)) + v
+            data += struct.pack('B', len(connect_attrs)) + connect_attrs
 
-        if auth_packet.is_eof_packet():
-            # send legacy handshake
-            data = _scramble_323(self._password.encode('latin1'),
-                                 self.salt) + b'\0'
-            data = pack_int24(len(data)) + int2byte(next_packet) + data
-            self._write_bytes(data)
-            auth_packet = self._read_packet()
+        self.write_packet(data)
+        auth_packet = await self._read_packet()
+
+        # if authentication method isn't accepted the first byte
+        # will have the octet 254
+        if auth_packet.is_auth_switch_request():
+            # https://dev.mysql.com/doc/internals/en/
+            # connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
+            auth_packet.read_uint8()  # 0xfe packet identifier
+            plugin_name = auth_packet.read_string()
+            if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
+                    plugin_name is not None):
+                await self._process_auth(plugin_name, auth_packet)
+            else:
+                # send legacy handshake
+                data = _auth.scramble_old_password(
+                    self._password.encode('latin1'),
+                    auth_packet.read_all()) + b'\0'
+                self.write_packet(data)
+                await self._read_packet()
+        elif auth_packet.is_extra_auth_data():
+            if auth_plugin == "caching_sha2_password":
+                await self.caching_sha2_password_auth(auth_packet)
+            elif auth_plugin == "sha256_password":
+                await self.sha256_password_auth(auth_packet)
+            else:
+                raise OperationalError("Received extra packet "
+                                       "for auth method %r", auth_plugin)
+
+    async def _process_auth(self, plugin_name, auth_packet):
+        # These auth plugins do their own packet handling
+        if plugin_name == b"caching_sha2_password":
+            await self.caching_sha2_password_auth(auth_packet)
+            self._auth_plugin_used = plugin_name.decode()
+        elif plugin_name == b"sha256_password":
+            await self.sha256_password_auth(auth_packet)
+            self._auth_plugin_used = plugin_name.decode()
+        else:
+
+            if plugin_name == b"mysql_native_password":
+                # https://dev.mysql.com/doc/internals/en/
+                # secure-password-authentication.html#packet-Authentication::
+                # Native41
+                data = _auth.scramble_native_password(
+                    self._password.encode('latin1'),
+                    auth_packet.read_all())
+            elif plugin_name == b"mysql_old_password":
+                # https://dev.mysql.com/doc/internals/en/
+                # old-password-authentication.html
+                data = _auth.scramble_old_password(
+                    self._password.encode('latin1'),
+                    auth_packet.read_all()
+                ) + b'\0'
+            elif plugin_name == b"mysql_clear_password":
+                # https://dev.mysql.com/doc/internals/en/
+                # clear-text-authentication.html
+                data = self._password.encode('latin1') + b'\0'
+            else:
+                raise OperationalError(
+                    2059, "Authentication plugin '{0}'"
+                          " not configured".format(plugin_name)
+                )
+
+            self.write_packet(data)
+            pkt = await self._read_packet()
+            pkt.check_error()
+
+            self._auth_plugin_used = plugin_name.decode()
+
+            return pkt
+
+    async def caching_sha2_password_auth(self, pkt):
+        # No password fast path
+        if not self._password:
+            self.write_packet(b'')
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if pkt.is_auth_switch_request():
+            # Try from fast auth
+            logger.debug("caching sha2: Trying fast path")
+            self.salt = pkt.read_all()
+            scrambled = _auth.scramble_caching_sha2(
+                self._password.encode('latin1'), self.salt
+            )
+
+            self.write_packet(scrambled)
+            pkt = await self._read_packet()
+            pkt.check_error()
+
+        # else: fast auth is tried in initial handshake
+
+        if not pkt.is_extra_auth_data():
+            raise OperationalError(
+                "caching sha2: Unknown packet "
+                "for fast auth: {0}".format(pkt._data[:1])
+            )
+
+        # magic numbers:
+        # 2 - request public key
+        # 3 - fast auth succeeded
+        # 4 - need full auth
+
+        pkt.advance(1)
+        n = pkt.read_uint8()
+
+        if n == 3:
+            logger.debug("caching sha2: succeeded by fast path.")
+            pkt = await self._read_packet()
+            pkt.check_error()  # pkt must be OK packet
+            return pkt
+
+        if n != 4:
+            raise OperationalError("caching sha2: Unknown "
+                                   "result for fast auth: {0}".format(n))
+
+        logger.debug("caching sha2: Trying full auth...")
+
+        if self._ssl_context:
+            logger.debug("caching sha2: Sending plain "
+                         "password via secure connection")
+            self.write_packet(self._password.encode('latin1') + b'\0')
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if not self.server_public_key:
+            self.write_packet(b'\x02')
+            pkt = await self._read_packet()  # Request public key
+            pkt.check_error()
+
+            if not pkt.is_extra_auth_data():
+                raise OperationalError(
+                    "caching sha2: Unknown packet "
+                    "for public key: {0}".format(pkt._data[:1])
+                )
+
+            self.server_public_key = pkt._data[1:]
+            logger.debug(self.server_public_key.decode('ascii'))
+
+        data = _auth.sha2_rsa_encrypt(
+            self._password.encode('latin1'), self.salt,
+            self.server_public_key
+        )
+        self.write_packet(data)
+        pkt = await self._read_packet()
+        pkt.check_error()
+
+    async def sha256_password_auth(self, pkt):
+        if self._ssl_context:
+            logger.debug("sha256: Sending plain password")
+            data = self._password.encode('latin1') + b'\0'
+            self.write_packet(data)
+            pkt = await self._read_packet()
+            pkt.check_error()
+            return pkt
+
+        if pkt.is_auth_switch_request():
+            self.salt = pkt.read_all()
+            if not self.server_public_key and self._password:
+                # Request server public key
+                logger.debug("sha256: Requesting server public key")
+                self.write_packet(b'\1')
+                pkt = await self._read_packet()
+                pkt.check_error()
+
+        if pkt.is_extra_auth_data():
+            self.server_public_key = pkt._data[1:]
+            logger.debug(
+                "Received public key:\n",
+                self.server_public_key.decode('ascii')
+            )
+
+        if self._password:
+            if not self.server_public_key:
+                raise OperationalError("Couldn't receive server's public key")
+
+            data = _auth.sha2_rsa_encrypt(
+                self._password.encode('latin1'), self.salt,
+                self.server_public_key
+            )
+        else:
+            data = b''
+
+        self.write_packet(data)
+        pkt = await self._read_packet()
+        pkt.check_error()
+        return pkt
 
     # _mysql support
     def thread_id(self):
@@ -633,16 +971,15 @@ class Connection:
     def get_proto_info(self):
         return self.protocol_version
 
-    @asyncio.coroutine
-    def _get_server_information(self):
+    async def _get_server_information(self):
         i = 0
-        packet = yield from self._read_packet()
+        packet = await self._read_packet()
         data = packet.get_all_data()
         # logger.debug(dump_packet(data))
         self.protocol_version = byte2int(data[i:i + 1])
         i += 1
 
-        server_end = data.find(int2byte(0), i)
+        server_end = data.find(b'\0', i)
         self.server_version = data[i:server_end].decode('latin1')
         i = server_end + 1
 
@@ -659,7 +996,11 @@ class Connection:
             lang, stat, cap_h, salt_len = struct.unpack('<BHHB', data[i:i + 6])
             i += 6
             self.server_language = lang
-            self.server_charset = charset_by_id(lang).name
+            try:
+                self.server_charset = charset_by_id(lang).name
+            except KeyError:
+                # unknown collation
+                self.server_charset = None
 
             self.server_status = stat
             # logger.debug("server_status: %s" % _convert_to_str(stat))
@@ -673,7 +1014,24 @@ class Connection:
         if len(data) >= i + salt_len:
             # salt_len includes auth_plugin_data_part_1 and filler
             self.salt += data[i:i + salt_len]
-            # TODO: AUTH PLUGIN NAME may appeare here.
+            i += salt_len
+
+        i += 1
+
+        # AUTH PLUGIN NAME may appear here.
+        if self.server_capabilities & CLIENT.PLUGIN_AUTH and len(data) >= i:
+            # Due to Bug#59453 the auth-plugin-name is missing the terminating
+            # NUL-char in versions prior to 5.5.10 and 5.6.2.
+            # ref: https://dev.mysql.com/doc/internals/en/
+            # connection-phase-packets.html#packet-Protocol::Handshake
+            # didn't use version checks as mariadb is corrected and reports
+            # earlier than those two.
+            server_end = data.find(b'\0', i)
+            if server_end < 0:  # pragma: no cover - very specific upstream bug
+                # not found \0 and last field so take it all
+                self._server_auth_plugin = data[i:].decode('latin1')
+            else:
+                self._server_auth_plugin = data[i:server_end].decode('latin1')
 
     def get_transaction_status(self):
         return bool(self.server_status & SERVER_STATUS.SERVER_STATUS_IN_TRANS)
@@ -681,12 +1039,24 @@ class Connection:
     def get_server_info(self):
         return self.server_version
 
-    if PY_341:  # pragma: no branch
-        def __del__(self):
-            if self._writer:
-                warnings.warn("Unclosed connection {!r}".format(self),
-                              ResourceWarning)
-                self.close()
+    # Just to always have consistent errors 2 helpers
+
+    def _close_on_cancel(self):
+        self.close()
+        self._close_reason = "Cancelled during execution"
+
+    def _ensure_alive(self):
+        if not self._writer:
+            if self._close_reason is None:
+                raise InterfaceError("(0, 'Not connected')")
+            else:
+                raise InterfaceError(self._close_reason)
+
+    def __del__(self):
+        if self._writer:
+            warnings.warn("Unclosed connection {!r}".format(self),
+                          ResourceWarning)
+            self.close()
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
@@ -715,35 +1085,36 @@ class MySQLResult:
         self.rows = None
         self.has_next = None
         self.unbuffered_active = False
-        self.filename = None
 
-    @asyncio.coroutine
-    def read(self):
+    async def read(self):
         try:
-            first_packet = yield from self.connection._read_packet()
+            first_packet = await self.connection._read_packet()
 
             # TODO: use classes for different packet types?
             if first_packet.is_ok_packet():
                 self._read_ok_packet(first_packet)
             elif first_packet.is_load_local_packet():
-                yield from self._read_load_local_packet(first_packet)
+                await self._read_load_local_packet(first_packet)
             else:
-                yield from self._read_result_packet(first_packet)
+                await self._read_result_packet(first_packet)
         finally:
             self.connection = None
 
-    @asyncio.coroutine
-    def init_unbuffered_query(self):
+    async def init_unbuffered_query(self):
         self.unbuffered_active = True
-        first_packet = yield from self.connection._read_packet()
+        first_packet = await self.connection._read_packet()
 
         if first_packet.is_ok_packet():
             self._read_ok_packet(first_packet)
             self.unbuffered_active = False
             self.connection = None
+        elif first_packet.is_load_local_packet():
+            await self._read_load_local_packet(first_packet)
+            self.unbuffered_active = False
+            self.connection = None
         else:
             self.field_count = first_packet.read_length_encoded_integer()
-            yield from self._get_descriptions()
+            await self._get_descriptions()
 
             # Apparently, MySQLdb picks this number because it's the maximum
             # value of a 64bit unsigned integer. Since we're emulating MySQLdb,
@@ -759,32 +1130,20 @@ class MySQLResult:
         self.message = ok_packet.message
         self.has_next = ok_packet.has_next
 
-    @asyncio.coroutine
-    def _read_load_local_packet(self, first_packet):
+    async def _read_load_local_packet(self, first_packet):
         load_packet = LoadLocalPacketWrapper(first_packet)
-        local_packet = LoadLocalFile(load_packet.filename, self.connection)
-        self.filename = load_packet.filename
-        yield from local_packet.send_data()
+        sender = LoadLocalFile(load_packet.filename, self.connection)
+        try:
+            await sender.send_data()
+        except Exception:
+            # Skip ok packet
+            await self.connection._read_packet()
+            raise
 
-        ok_packet = yield from self.connection._read_packet()
+        ok_packet = await self.connection._read_packet()
         if not ok_packet.is_ok_packet():
             raise OperationalError(2014, "Commands Out of Sync")
         self._read_ok_packet(ok_packet)
-
-        if self.warning_count > 0:
-            yield from self._print_warnings()
-        self.filename = None
-
-    @asyncio.coroutine
-    def _print_warnings(self):
-        yield from self.connection._execute_command(COM_QUERY, 'SHOW WARNINGS')
-        yield from self.read()
-        if self.rows:
-            message = "\n"
-            for db_warning in self.rows:
-                message += "{0} in file '{1}'\n".format(
-                    db_warning[2], self.filename.decode('utf-8'))
-            warnings.warn(message, Warning, 3)
 
     def _check_packet_is_eof(self, packet):
         if packet.is_eof_packet():
@@ -794,19 +1153,17 @@ class MySQLResult:
             return True
         return False
 
-    @asyncio.coroutine
-    def _read_result_packet(self, first_packet):
+    async def _read_result_packet(self, first_packet):
         self.field_count = first_packet.read_length_encoded_integer()
-        yield from self._get_descriptions()
-        yield from self._read_rowdata_packet()
+        await self._get_descriptions()
+        await self._read_rowdata_packet()
 
-    @asyncio.coroutine
-    def _read_rowdata_packet_unbuffered(self):
+    async def _read_rowdata_packet_unbuffered(self):
         # Check if in an active query
         if not self.unbuffered_active:
             return
 
-        packet = yield from self.connection._read_packet()
+        packet = await self.connection._read_packet()
         if self._check_packet_is_eof(packet):
             self.unbuffered_active = False
             self.connection = None
@@ -819,24 +1176,22 @@ class MySQLResult:
         self.rows = (row,)
         return row
 
-    @asyncio.coroutine
-    def _finish_unbuffered_query(self):
+    async def _finish_unbuffered_query(self):
         # After much reading on the MySQL protocol, it appears that there is,
         # in fact, no way to stop MySQL from sending all the data after
         # executing a query, so we just spin, and wait for an EOF packet.
         while self.unbuffered_active:
-            packet = yield from self.connection._read_packet()
+            packet = await self.connection._read_packet()
             if self._check_packet_is_eof(packet):
                 self.unbuffered_active = False
                 # release reference to kill cyclic reference.
                 self.connection = None
 
-    @asyncio.coroutine
-    def _read_rowdata_packet(self):
+    async def _read_rowdata_packet(self):
         """Read a rowdata packet for each data row in the result set."""
         rows = []
         while True:
-            packet = yield from self.connection._read_packet()
+            packet = await self.connection._read_packet()
             if self._check_packet_is_eof(packet):
                 # release reference to kill cyclic reference.
                 self.connection = None
@@ -847,44 +1202,63 @@ class MySQLResult:
         self.rows = tuple(rows)
 
     def _read_row_from_packet(self, packet):
-        use_unicode = self.connection.use_unicode
         row = []
-        for field in self.fields:
-            data = packet.read_length_coded_string()
+        for encoding, converter in self.converters:
+            try:
+                data = packet.read_length_coded_string()
+            except IndexError:
+                # No more columns in this row
+                # See https://github.com/PyMySQL/PyMySQL/pull/434
+                break
             if data is not None:
-                field_type = field.type_code
-                if use_unicode:
-                    if field_type in TEXT_TYPES:
-                        charset = charset_by_id(field.charsetnr)
-                        if use_unicode and not charset.is_binary:
-                            # TEXTs with charset=binary means BINARY types.
-                            data = data.decode(charset.encoding)
-                    else:
-                        data = data.decode()
-
-                converter = self.connection.decoders.get(field_type)
-
-                # logger.debug('DEBUG: field={}, converter={}'.format(
-                #     field, converter))
-                # logger.debug('DEBUG: DATA = {}'.format(data))
-
+                if encoding is not None:
+                    data = data.decode(encoding)
                 if converter is not None:
                     data = converter(data)
             row.append(data)
         return tuple(row)
 
-    @asyncio.coroutine
-    def _get_descriptions(self):
+    async def _get_descriptions(self):
         """Read a column descriptor packet for each column in the result."""
         self.fields = []
+        self.converters = []
+        use_unicode = self.connection.use_unicode
+        conn_encoding = self.connection.encoding
         description = []
         for i in range(self.field_count):
-            field = yield from self.connection._read_packet(
+            field = await self.connection._read_packet(
                 FieldDescriptorPacket)
             self.fields.append(field)
             description.append(field.description())
+            field_type = field.type_code
+            if use_unicode:
+                if field_type == FIELD_TYPE.JSON:
+                    # When SELECT from JSON column: charset = binary
+                    # When SELECT CAST(... AS JSON): charset = connection
+                    # encoding
+                    # This behavior is different from TEXT / BLOB.
+                    # We should decode result by connection encoding
+                    # regardless charsetnr.
+                    # See https://github.com/PyMySQL/PyMySQL/issues/488
+                    encoding = conn_encoding  # SELECT CAST(... AS JSON)
+                elif field_type in TEXT_TYPES:
+                    if field.charsetnr == 63:  # binary
+                        # TEXTs with charset=binary means BINARY types.
+                        encoding = None
+                    else:
+                        encoding = conn_encoding
+                else:
+                    # Integers, Dates and Times, and other basic data
+                    # is encoded in ascii
+                    encoding = 'ascii'
+            else:
+                encoding = None
+            converter = self.connection.decoders.get(field_type)
+            if converter is through:
+                converter = None
+            self.converters.append((encoding, converter))
 
-        eof_packet = yield from self.connection._read_packet()
+        eof_packet = await self.connection._read_packet()
         assert eof_packet.is_eof_packet(), 'Protocol error, expecting EOF'
         self.description = tuple(description)
 
@@ -895,17 +1269,18 @@ class LoadLocalFile(object):
         self.connection = connection
         self._loop = connection.loop
         self._file_object = None
+        self._executor = None  # means use default executor
 
     def _open_file(self):
 
         def opener(filename):
             try:
                 self._file_object = open(filename, 'rb')
-            except IOError:
-                raise OperationalError(1017, "Can't find file"
-                                       " '{0}'".format(filename))
+            except IOError as e:
+                msg = "Can't find file '{0}'".format(filename)
+                raise OperationalError(1017, msg) from e
 
-        fut = self._loop.run_in_executor(None, opener, self.filename)
+        fut = self._loop.run_in_executor(self._executor, opener, self.filename)
         return fut
 
     def _file_read(self, chunk_size):
@@ -921,36 +1296,31 @@ class LoadLocalFile(object):
             except Exception as e:
                 self._file_object.close()
                 self._file_object = None
-                raise OperationalError(
-                    1024, "Error reading file {}".format(self.filename)) from e
+                msg = "Error reading file {}".format(self.filename)
+                raise OperationalError(1024, msg) from e
             return chunk
 
-        fut = self._loop.run_in_executor(None, freader, chunk_size)
+        fut = self._loop.run_in_executor(self._executor, freader, chunk_size)
         return fut
 
-    @asyncio.coroutine
-    def send_data(self):
+    async def send_data(self):
         """Send data packets from the local file to the server"""
-        if not self.connection._writer:
-            raise InterfaceError("(0, '')")
+        self.connection._ensure_alive()
+        conn = self.connection
 
-        # sequence id is 2 as we already sent a query packet
-        seq_id = 2
         try:
-            yield from self._open_file()
-            chunk_size = MAX_PACKET_LEN
-            while True:
-                chunk = yield from self._file_read(chunk_size)
-                if not chunk:
-                    break
-                packet = (struct.pack('<i', len(chunk))[:3] +
-                          int2byte(seq_id))
-                format_str = '!{0}s'.format(len(chunk))
-                packet += struct.pack(format_str, chunk)
-                self.connection._write_bytes(packet)
-                seq_id += 1
-
+            await self._open_file()
+            with self._file_object:
+                chunk_size = MAX_PACKET_LEN
+                while True:
+                    chunk = await self._file_read(chunk_size)
+                    if not chunk:
+                        break
+                    # TODO: consider drain data
+                    conn.write_packet(chunk)
+        except asyncio.CancelledError:
+            self.connection._close_on_cancel()
+            raise
         finally:
             # send the empty packet to signify we are done sending data
-            packet = struct.pack('<i', 0)[:3] + int2byte(seq_id)
-            self.connection._write_bytes(packet)
+            conn.write_packet(b"")

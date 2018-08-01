@@ -33,7 +33,7 @@ from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
 
-__version__ = '0.0.6'
+__version__ = '0.0.19'
 
 __all__ = [
 
@@ -53,10 +53,9 @@ __all__ = [
     'escape_dict',
     'escape_sequence',
     'escape_string',
-    '__version__',
 
     'Connection',
-    'Pool'
+    'Pool',
     'connect',
     'create_pool',
     'Cursor',

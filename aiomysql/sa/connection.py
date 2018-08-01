@@ -1,6 +1,5 @@
 # ported from:
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/connection.py
-import asyncio
 import weakref
 
 from sqlalchemy.sql import ClauseElement
@@ -11,19 +10,20 @@ from . import exc
 from .result import create_result_proxy
 from .transaction import (RootTransaction, Transaction,
                           NestedTransaction, TwoPhaseTransaction)
+from ..utils import _TransactionContextManager, _SAConnectionContextManager
 
 
 class SAConnection:
 
-    def __init__(self, connection, engine):
+    def __init__(self, connection, engine, compiled_cache=None):
         self._connection = connection
         self._transaction = None
         self._savepoint_seq = 0
         self._weak_results = weakref.WeakSet()
         self._engine = engine
         self._dialect = engine.dialect
+        self._compiled_cache = compiled_cache
 
-    @asyncio.coroutine
     def execute(self, query, *multiparams, **params):
         """Executes a SQL query with optional parameters.
 
@@ -33,26 +33,26 @@ class SAConnection:
         used in the execution.  Typically, the format is a dictionary
         passed to *multiparams:
 
-            yield from conn.execute(
+            await conn.execute(
                 table.insert(),
                 {"id":1, "value":"v1"},
             )
 
         ...or individual key/values interpreted by **params::
 
-            yield from conn.execute(
+            await conn.execute(
                 table.insert(), id=1, value="v1"
             )
 
         In the case that a plain SQL string is passed, a tuple or
         individual values in \*multiparams may be passed::
 
-            yield from conn.execute(
+            await conn.execute(
                 "INSERT INTO table (id, value) VALUES (%d, %s)",
                 (1, "v1")
             )
 
-            yield from conn.execute(
+            await conn.execute(
                 "INSERT INTO table (id, value) VALUES (%s, %s)",
                 1, "v1"
             )
@@ -61,18 +61,34 @@ class SAConnection:
         execution.
 
         """
-        cursor = yield from self._connection.cursor()
+        coro = self._execute(query, *multiparams, **params)
+        return _SAConnectionContextManager(coro)
+
+    async def _execute(self, query, *multiparams, **params):
+        cursor = await self._connection.cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
-            raise exc.ArgumentError("aiopg doesn't support executemany")
+            raise exc.ArgumentError("aiomysql doesn't support executemany")
         elif dp:
             dp = dp[0]
 
+        result_map = None
+
         if isinstance(query, str):
-            yield from cursor.execute(query, dp)
+            await cursor.execute(query, dp or None)
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
-            # parameters = compiled.params
+            if self._compiled_cache is not None:
+                key = query
+                compiled = self._compiled_cache.get(key)
+                if not compiled:
+                    compiled = query.compile(dialect=self._dialect)
+                    if dp and dp.keys() == compiled.params.keys() \
+                            or not (dp or compiled.params):
+                        # we only want queries with bound params in cache
+                        self._compiled_cache[key] = compiled
+            else:
+                compiled = query.compile(dialect=self._dialect)
+
             if not isinstance(query, DDLElement):
                 if dp and isinstance(dp, (list, tuple)):
                     if isinstance(query, UpdateBase):
@@ -94,26 +110,30 @@ class SAConnection:
                     processed_parameters.append(params)
                 post_processed_params = self._dialect.execute_sequence_format(
                     processed_parameters)
+                result_map = compiled._result_columns
+
             else:
                 if dp:
                     raise exc.ArgumentError("Don't mix sqlalchemy DDL clause "
                                             "and execution with parameters")
                 post_processed_params = [compiled.construct_params()]
-            yield from cursor.execute(str(compiled), post_processed_params[0])
+                result_map = None
+            await cursor.execute(str(compiled), post_processed_params[0])
         else:
             raise exc.ArgumentError("sql statement should be str or "
                                     "SQLAlchemy data "
                                     "selection/modification clause")
 
-        ret = yield from create_result_proxy(self, cursor, self._dialect)
+        ret = await create_result_proxy(
+            self, cursor, self._dialect, result_map
+        )
         self._weak_results.add(ret)
         return ret
 
-    @asyncio.coroutine
-    def scalar(self, query, *multiparams, **params):
+    async def scalar(self, query, *multiparams, **params):
         """Executes a SQL query and returns a scalar value."""
-        res = yield from self.execute(query, *multiparams, **params)
-        return (yield from res.scalar())
+        res = await self.execute(query, *multiparams, **params)
+        return (await res.scalar())
 
     @property
     def closed(self):
@@ -124,7 +144,6 @@ class SAConnection:
     def connection(self):
         return self._connection
 
-    @asyncio.coroutine
     def begin(self):
         """Begin a transaction and return a transaction handle.
 
@@ -138,10 +157,10 @@ class SAConnection:
         transaction within the scope of the enclosing transaction,
         that is::
 
-            trans = yield from conn.begin()   # outermost transaction
-            trans2 = yield from conn.begin()  # "nested"
-            yield from trans2.commit()        # does nothing
-            yield from trans.commit()         # actually commits
+            trans = await conn.begin()   # outermost transaction
+            trans2 = await conn.begin()  # "nested"
+            await trans2.commit()        # does nothing
+            await trans.commit()         # actually commits
 
         Calls to .commit only have an effect when invoked via the
         outermost Transaction object, though the .rollback method of
@@ -152,44 +171,48 @@ class SAConnection:
           .begin_twophase - use a two phase/XA transaction
 
         """
+        coro = self._begin()
+        return _TransactionContextManager(coro)
+
+    async def _begin(self):
         if self._transaction is None:
             try:
-                yield from self._begin_impl()
-                self._transaction = RootTransaction(self)
+                self._transaction = RootTransaction(self)          
+                await self._begin_impl()
+                
             except asyncio.CancelledError as e:
                 self._transaction = None
-                yield from self._rollback_impl()
+                await self._rollback_impl()
                 raise e
+                
             return self._transaction
         else:
             return Transaction(self, self._transaction)
 
-    @asyncio.coroutine
-    def _begin_impl(self):
-        cur = yield from self._connection.cursor()
+    async def _begin_impl(self):
+        cur = await self._connection.cursor()
         try:
-            yield from cur.execute('BEGIN')
+            await cur.execute('BEGIN')
         finally:
-            yield from cur.close()
+            await cur.close()
 
-    @asyncio.coroutine
-    def _commit_impl(self):
-        cur = yield from self._connection.cursor()
+    async def _commit_impl(self):
+        cur = await self._connection.cursor()
         try:
-            yield from cur.execute('COMMIT')
+            await cur.execute('COMMIT')
         finally:
-            yield from cur.close()
+            await cur.close()
             self._transaction = None
 
-    @asyncio.coroutine
-    def _rollback_impl(self):
+    async def _rollback_impl(self):
+        cur = await self._connection.cursor()
         try:
-            yield from self._connection.rollback()
+            await cur.execute('ROLLBACK')
         finally:
+            await cur.close()
             self._transaction = None
 
-    @asyncio.coroutine
-    def begin_nested(self):
+    async def begin_nested(self):
         """Begin a nested transaction and return a transaction handle.
 
         The returned object is an instance of :class:`.NestedTransaction`.
@@ -202,44 +225,40 @@ class SAConnection:
         """
         if self._transaction is None:
             self._transaction = RootTransaction(self)
-            yield from self._begin_impl()
+            await self._begin_impl()
         else:
             self._transaction = NestedTransaction(self, self._transaction)
-            self._transaction._savepoint = yield from self._savepoint_impl()
+            self._transaction._savepoint = await self._savepoint_impl()
         return self._transaction
 
-    @asyncio.coroutine
-    def _savepoint_impl(self, name=None):
+    async def _savepoint_impl(self, name=None):
         self._savepoint_seq += 1
         name = 'aiomysql_sa_savepoint_%s' % self._savepoint_seq
 
-        cur = yield from self._connection.cursor()
+        cur = await self._connection.cursor()
         try:
-            yield from cur.execute('SAVEPOINT ' + name)
+            await cur.execute('SAVEPOINT ' + name)
             return name
         finally:
-            yield from cur.close()
+            await cur.close()
 
-    @asyncio.coroutine
-    def _rollback_to_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
+    async def _rollback_to_savepoint_impl(self, name, parent):
+        cur = await self._connection.cursor()
         try:
-            yield from cur.execute('ROLLBACK TO SAVEPOINT ' + name)
+            await cur.execute('ROLLBACK TO SAVEPOINT ' + name)
         finally:
-            yield from cur.close()
+            await cur.close()
         self._transaction = parent
 
-    @asyncio.coroutine
-    def _release_savepoint_impl(self, name, parent):
-        cur = yield from self._connection.cursor()
+    async def _release_savepoint_impl(self, name, parent):
+        cur = await self._connection.cursor()
         try:
-            yield from cur.execute('RELEASE SAVEPOINT ' + name)
+            await cur.execute('RELEASE SAVEPOINT ' + name)
         finally:
-            yield from cur.close()
+            await cur.close()
         self._transaction = parent
 
-    @asyncio.coroutine
-    def begin_twophase(self, xid=None):
+    async def begin_twophase(self, xid=None):
         """Begin a two-phase or XA transaction and return a transaction
         handle.
 
@@ -259,41 +278,36 @@ class SAConnection:
         if xid is None:
             xid = self._dialect.create_xid()
         self._transaction = TwoPhaseTransaction(self, xid)
-        yield from self.execute("XA START %s", xid)
+        await self.execute("XA START %s", xid)
         return self._transaction
 
-    @asyncio.coroutine
-    def _prepare_twophase_impl(self, xid):
-        yield from self.execute("XA END '%s'" % xid)
-        yield from self.execute("XA PREPARE '%s'" % xid)
+    async def _prepare_twophase_impl(self, xid):
+        await self.execute("XA END '%s'" % xid)
+        await self.execute("XA PREPARE '%s'" % xid)
 
-    @asyncio.coroutine
-    def recover_twophase(self):
+    async def recover_twophase(self):
         """Return a list of prepared twophase transaction ids."""
-        result = yield from self.execute("XA RECOVER;")
+        result = await self.execute("XA RECOVER;")
         return [row[0] for row in result]
 
-    @asyncio.coroutine
-    def rollback_prepared(self, xid, *, is_prepared=True):
+    async def rollback_prepared(self, xid, *, is_prepared=True):
         """Rollback prepared twophase transaction."""
         if not is_prepared:
-            yield from self.execute("XA END '%s'" % xid)
-        yield from self.execute("XA ROLLBACK '%s'" % xid)
+            await self.execute("XA END '%s'" % xid)
+        await self.execute("XA ROLLBACK '%s'" % xid)
 
-    @asyncio.coroutine
-    def commit_prepared(self, xid, *, is_prepared=True):
+    async def commit_prepared(self, xid, *, is_prepared=True):
         """Commit prepared twophase transaction."""
         if not is_prepared:
-            yield from self.execute("XA END '%s'" % xid)
-        yield from self.execute("XA COMMIT '%s'" % xid)
+            await self.execute("XA END '%s'" % xid)
+        await self.execute("XA COMMIT '%s'" % xid)
 
     @property
     def in_transaction(self):
         """Return True if a transaction is in progress."""
         return self._transaction is not None and self._transaction.is_active
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         """Close this SAConnection.
 
         This results in a release of the underlying database
@@ -311,7 +325,7 @@ class SAConnection:
             return
 
         if self._transaction is not None:
-            yield from self._transaction.rollback()
+            await self._transaction.rollback()
             self._transaction = None
         # don't close underlying connection, it can be reused by pool
         # conn.close()
@@ -319,13 +333,11 @@ class SAConnection:
         self._connection = None
         self._engine = None
 
-    @asyncio.coroutine
-    def __aenter__(self):
+    async def __aenter__(self):
         return self
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
-        yield from self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
 
 def _distill_params(multiparams, params):

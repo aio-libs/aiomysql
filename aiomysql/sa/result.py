@@ -1,7 +1,6 @@
 # ported from:
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/result.py
 
-import asyncio
 import weakref
 from collections.abc import Mapping, Sequence
 
@@ -10,16 +9,9 @@ from sqlalchemy.sql import expression, sqltypes
 from . import exc
 
 
-try:
-    StopAsyncIteration
-except NameError:
-    from aiomysql.cursors import StopAsyncIteration
-
-
-@asyncio.coroutine
-def create_result_proxy(connection, cursor, dialect):
-    result_proxy = ResultProxy(connection, cursor, dialect)
-    yield from result_proxy._prepare()
+async def create_result_proxy(connection, cursor, dialect, result_map):
+    result_proxy = ResultProxy(connection, cursor, dialect, result_map)
+    await result_proxy._prepare()
     return result_proxy
 
 
@@ -103,13 +95,24 @@ class ResultMetaData:
     def __init__(self, result_proxy, metadata):
         self._processors = processors = []
 
+        result_map = {}
+
+        if result_proxy._result_map:
+            result_map = {elem[0]: elem[3] for elem in
+                          result_proxy._result_map}
+
         # We do not strictly need to store the processor in the key mapping,
         # though it is faster in the Python version (probably because of the
         # saved attribute lookup self._processors)
         self._keymap = keymap = {}
         self.keys = []
         dialect = result_proxy.dialect
-        typemap = dialect.dbapi_type_map
+
+        # `dbapi_type_map` property removed in SQLAlchemy 1.2+.
+        # Usage of `getattr` only needed for backward compatibility with
+        # older versions of SQLAlchemy.
+        typemap = getattr(dialect, 'dbapi_type_map', {})
+
         assert dialect.case_sensitive, \
             "Doesn't support case insensitive database connection"
 
@@ -127,8 +130,13 @@ class ResultMetaData:
             # if dialect.requires_name_normalize:
             #     colname = dialect.normalize_name(colname)
 
-            name, obj, type_ = \
-                colname, None, typemap.get(coltype, sqltypes.NULLTYPE)
+            name, obj, type_ = (
+                colname,
+                None,
+                result_map.get(
+                    colname,
+                    typemap.get(coltype, sqltypes.NULLTYPE))
+            )
 
             processor = type_._cached_result_processor(dialect, coltype)
 
@@ -226,25 +234,27 @@ class ResultProxy:
     the originating SQL statement that produced this result set.
     """
 
-    def __init__(self, connection, cursor, dialect):
+    def __init__(self, connection, cursor, dialect, result_map):
         self._dialect = dialect
         self._closed = False
         self._cursor = cursor
         self._connection = connection
         self._rowcount = cursor.rowcount
         self._lastrowid = cursor.lastrowid
+        self._result_map = result_map
 
-    @asyncio.coroutine
-    def _prepare(self):
+    async def _prepare(self):
         loop = self._connection.connection.loop
         cursor = self._cursor
         if cursor.description is not None:
             self._metadata = ResultMetaData(self, cursor.description)
-            callback = lambda wr: asyncio.Task(cursor.close(), loop=loop)
+
+            def callback(wr):
+                loop.create_task(cursor.close())
             self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
-            yield from self.close()
+            await self.close()
             self._weak = None
 
     @property
@@ -317,8 +327,7 @@ class ResultProxy:
     def closed(self):
         return self._closed
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         """Close this ResultProxy.
 
         Closes the underlying DBAPI cursor corresponding to the execution.
@@ -338,18 +347,18 @@ class ResultProxy:
 
         if not self._closed:
             self._closed = True
-            yield from self._cursor.close()
+            await self._cursor.close()
             # allow consistent errors
             self._cursor = None
             self._weak = None
 
-    def __iter__(self):
-        while True:
-            row = yield from self.fetchone()
-            if row is None:
-                raise StopIteration
-            else:
-                yield row
+    # def __iter__(self):
+    #     while True:
+    #         row = yield from self.fetchone()
+    #         if row is None:
+    #             raise StopIteration
+    #         else:
+    #             yield row
 
     def _non_result(self):
         if self._metadata is None:
@@ -367,38 +376,35 @@ class ResultProxy:
         return [process_row(metadata, row, processors, keymap)
                 for row in rows]
 
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         """Fetch all rows, just like DB-API cursor.fetchall()."""
         try:
-            rows = yield from self._cursor.fetchall()
+            rows = await self._cursor.fetchall()
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
-            yield from self.close()
-            return l
+            ret = self._process_rows(rows)
+            await self.close()
+            return ret
 
-    @asyncio.coroutine
-    def fetchone(self):
+    async def fetchone(self):
         """Fetch one row, just like DB-API cursor.fetchone().
 
         If a row is present, the cursor remains open after this is called.
         Else the cursor is automatically closed and None is returned.
         """
         try:
-            row = yield from self._cursor.fetchone()
+            row = await self._cursor.fetchone()
         except AttributeError:
             self._non_result()
         else:
             if row is not None:
                 return self._process_rows([row])[0]
             else:
-                yield from self.close()
+                await self.close()
                 return None
 
-    @asyncio.coroutine
-    def fetchmany(self, size=None):
+    async def fetchmany(self, size=None):
         """Fetch many rows, just like DB-API
         cursor.fetchmany(size=cursor.arraysize).
 
@@ -407,19 +413,18 @@ class ResultProxy:
         """
         try:
             if size is None:
-                rows = yield from self._cursor.fetchmany()
+                rows = await self._cursor.fetchmany()
             else:
-                rows = yield from self._cursor.fetchmany(size)
+                rows = await self._cursor.fetchmany(size)
         except AttributeError:
             self._non_result()
         else:
-            l = self._process_rows(rows)
-            if len(l) == 0:
-                yield from self.close()
-            return l
+            ret = self._process_rows(rows)
+            if len(ret) == 0:
+                await self.close()
+            return ret
 
-    @asyncio.coroutine
-    def first(self):
+    async def first(self):
         """Fetch the first row and then close the result set unconditionally.
 
         Returns None if no row is present.
@@ -427,30 +432,27 @@ class ResultProxy:
         if self._metadata is None:
             self._non_result()
         try:
-            return (yield from self.fetchone())
+            return (await self.fetchone())
         finally:
-            yield from self.close()
+            await self.close()
 
-    @asyncio.coroutine
-    def scalar(self):
+    async def scalar(self):
         """Fetch the first column of the first row, and close the result set.
 
         Returns None if no row is present.
         """
-        row = yield from self.first()
+        row = await self.first()
         if row is not None:
             return row[0]
         else:
             return None
 
-    @asyncio.coroutine
-    def __aiter__(self):
+    async def __aiter__(self):
         return self
 
-    @asyncio.coroutine
-    def __anext__(self):
-        data = yield from self.fetchone()
+    async def __anext__(self):
+        data = await self.fetchone()
         if data is not None:
             return data
         else:
-            raise StopAsyncIteration
+            raise StopAsyncIteration  # noqa

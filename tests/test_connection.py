@@ -170,7 +170,7 @@ class TestConnection(AIOPyMySQLTestCase):
         conn = yield from self.connect()
         # trhead id is int
         self.assertIsInstance(conn.thread_id(), int)
-        self.assertEqual(conn.character_set_name(), 'latin1')
+        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
         self.assertTrue(str(conn.port) in conn.get_host_info())
         self.assertIsInstance(conn.get_server_info(), str)
         # protocol id is int
@@ -180,7 +180,7 @@ class TestConnection(AIOPyMySQLTestCase):
     @run_until_complete
     def test_connection_set_charset(self):
         conn = yield from self.connect()
-        self.assertEqual(conn.character_set_name(), 'latin1')
+        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
         yield from conn.set_charset('utf8')
         self.assertEqual(conn.character_set_name(), 'utf8')
 
@@ -194,16 +194,8 @@ class TestConnection(AIOPyMySQLTestCase):
         self.assertEqual(conn.closed, False)
 
     @run_until_complete
-    def test_connection_set_nodelay_option(self):
-        conn = yield from self.connect(no_delay=True)
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT 1;")
-        (r, ) = yield from cur.fetchone()
-        self.assertEqual(r, 1)
-
-    @run_until_complete
     def test_connection_properties(self):
-        conn = yield from self.connect(no_delay=True)
+        conn = yield from self.connect()
         self.assertEqual(conn.host, self.host)
         self.assertEqual(conn.port, self.port)
         self.assertEqual(conn.user, self.user)
@@ -213,7 +205,7 @@ class TestConnection(AIOPyMySQLTestCase):
 
     @run_until_complete
     def test_connection_double_ensure_closed(self):
-        conn = yield from self.connect(no_delay=True)
+        conn = yield from self.connect()
         self.assertFalse(conn.closed)
         yield from conn.ensure_closed()
         self.assertTrue(conn.closed)
@@ -243,3 +235,23 @@ class TestConnection(AIOPyMySQLTestCase):
         conn = yield from self.connect()
         self.assertTrue(conn._no_delay)
         conn.close()
+
+    @run_until_complete
+    def test_previous_cursor_not_closed(self):
+        conn = yield from self.connect()
+        cur1 = yield from conn.cursor()
+        yield from cur1.execute("SELECT 1; SELECT 2")
+        cur2 = yield from conn.cursor()
+        yield from cur2.execute("SELECT 3;")
+        resp = yield from cur2.fetchone()
+        self.assertEqual(resp[0], 3)
+
+    @run_until_complete
+    def test_commit_during_multi_result(self):
+        conn = yield from self.connect()
+        cur = yield from conn.cursor()
+        yield from cur.execute("SELECT 1; SELECT 2;")
+        yield from conn.commit()
+        yield from cur.execute("SELECT 3;")
+        resp = yield from cur.fetchone()
+        self.assertEqual(resp[0], 3)

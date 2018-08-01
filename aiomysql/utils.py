@@ -1,22 +1,7 @@
-import asyncio
-import sys
+from collections.abc import Coroutine
 
 
-PY_35 = sys.version_info >= (3, 5)
-if PY_35:
-    from collections.abc import Coroutine
-    base = Coroutine
-else:
-    base = object
-
-
-try:
-    StopAsyncIteration
-except NameError:
-    StopAsyncIteration = Exception
-
-
-class _ContextManager(base):
+class _ContextManager(Coroutine):
 
     __slots__ = ('_coro', '_obj')
 
@@ -38,62 +23,87 @@ class _ContextManager(base):
     def close(self):
         return self._coro.close()
 
-    @asyncio.coroutine
+    @property
+    def gi_frame(self):
+        return self._coro.gi_frame
+
+    @property
+    def gi_running(self):
+        return self._coro.gi_running
+
+    @property
+    def gi_code(self):
+        return self._coro.gi_code
+
+    def __next__(self):
+        return self.send(None)
+
     def __iter__(self):
-        resp = yield from self._coro
-        return resp
+        return self._coro.__await__()
 
-    if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
+    def __await__(self):
+        return self._coro.__await__()
 
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
+    async def __aenter__(self):
+        self._obj = await self._coro
+        return self._obj
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            yield from self._obj.close()
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._obj.close()
+        self._obj = None
 
 
 class _ConnectionContextManager(_ContextManager):
-
-    if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
-
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
-
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            if exc_type is not None:
-                self._obj.close()
-            else:
-                yield from self._obj.ensure_closed()
+    async def __aexit__(self, exc_type, exc, tb):
+        if exc_type is not None:
+            self._obj.close()
+        else:
+            await self._obj.ensure_closed()
+        self._obj = None
 
 
 class _PoolContextManager(_ContextManager):
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        await self._obj.wait_closed()
+        self._obj = None
 
-    if PY_35:
-        def __await__(self):
-            resp = yield from self._coro
-            return resp
 
-        @asyncio.coroutine
-        def __aenter__(self):
-            self._obj = yield from self._coro
-            return self._obj
+class _SAConnectionContextManager(_ContextManager):
+    async def __aiter__(self):
+        result = await self._coro
+        return result
 
-        @asyncio.coroutine
-        def __aexit__(self, exc_type, exc, tb):
-            self._obj.close()
-            yield from self._obj.wait_closed()
+
+class _TransactionContextManager(_ContextManager):
+    async def __aexit__(self, exc_type, exc, tb):
+        if exc_type:
+            await self._obj.rollback()
+        else:
+            if self._obj.is_active:
+                await self._obj.commit()
+        self._obj = None
+
+
+class _PoolAcquireContextManager(_ContextManager):
+
+    __slots__ = ('_coro', '_conn', '_pool')
+
+    def __init__(self, coro, pool):
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+
+    async def __aenter__(self):
+        self._conn = await self._coro
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc, tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
 
 
 class _PoolConnectionContextManager:
@@ -128,24 +138,14 @@ class _PoolConnectionContextManager:
             self._pool = None
             self._conn = None
 
-    @asyncio.coroutine
-    def __aenter__(self):
+    async def __aenter__(self):
         assert not self._conn
-        self._conn = yield from self._pool.acquire()
+        self._conn = await self._pool.acquire()
         return self._conn
 
-    @asyncio.coroutine
-    def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
-            self._pool.release(self._conn)
+            await self._pool.release(self._conn)
         finally:
             self._pool = None
             self._conn = None
-
-
-if not PY_35:
-    try:
-        from asyncio import coroutines
-        coroutines._COROUTINE_TYPES += (_ContextManager,)
-    except:
-        pass

@@ -54,6 +54,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.asyncio',
 ]
 
 intersphinx_mapping = {'python': ('http://docs.python.org/3', None),
@@ -75,7 +76,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'aiomysql'
-copyright = '2015, Nikolay Novik'
+copyright = '2015,2016 Nikolay Novik'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
