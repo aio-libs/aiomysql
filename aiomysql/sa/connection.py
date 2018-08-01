@@ -1,5 +1,6 @@
 # ported from:
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/sa/connection.py
+import asyncio
 import weakref
 
 from sqlalchemy.sql import ClauseElement
@@ -177,14 +178,14 @@ class SAConnection:
     async def _begin(self):
         if self._transaction is None:
             try:
-                self._transaction = RootTransaction(self)          
+                self._transaction = RootTransaction(self)
                 await self._begin_impl()
-                
+
             except asyncio.CancelledError as e:
                 self._transaction = None
                 await self._rollback_impl()
                 raise e
-                
+
             return self._transaction
         else:
             return Transaction(self, self._transaction)
