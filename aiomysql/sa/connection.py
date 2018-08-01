@@ -206,11 +206,10 @@ class SAConnection:
             self._transaction = None
 
     async def _rollback_impl(self):
-        cur = await self._connection.cursor()
         try:
-            await cur.execute('ROLLBACK')
+            if not self._connection.closed:
+                await self._connection.rollback()
         finally:
-            await cur.close()
             self._transaction = None
 
     async def begin_nested(self):
