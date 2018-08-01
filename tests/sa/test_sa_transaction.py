@@ -97,18 +97,17 @@ class TestTransaction(unittest.TestCase):
         self.loop.run_until_complete(go())
 
     def test_root_transaction_canceled(self):
-        @asyncio.coroutine
-        def go():
-            conn = yield from self.connect()
+        async def go():
+            conn = await self.connect()
             raw_conn = conn._connection
             self.assertFalse(raw_conn.get_transaction_status())
             with self.assertRaises(asyncio.CancelledError):
-                f = asyncio.async(conn.begin(), loop=self.loop)
-                yield from asyncio.sleep(0, loop=self.loop)
+                f = asyncio.ensure_future(conn.begin(), loop=self.loop)
+                await asyncio.sleep(0, loop=self.loop)
                 f.cancel()
-                yield from f
+                await f
             self.assertIs(conn._transaction, None)
-            yield from conn.close()
+            await conn.close()
 
         self.loop.run_until_complete(go())
 
