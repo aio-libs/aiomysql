@@ -492,6 +492,7 @@ async def test_cancelled_connection(pool_creator, loop):
         # If we receive [(1, 0)] - we retrieved old cursor's values
         assert list(res) == [(2, 0)]
 
+
 @pytest.mark.run_loop
 async def test_pool_with_connection_recycling(pool_creator, loop):
     pool = await pool_creator(minsize=1, maxsize=1, pool_recycle=3)
@@ -510,8 +511,9 @@ async def test_pool_with_connection_recycling(pool_creator, loop):
         val = await cur.fetchone()
         assert (1,) == val
 
+
 @pytest.mark.run_loop
-async def test_pool_does_not_reuse_connection_with_exception(pool_creator, loop):
+async def test_pool_drops_connection_with_exception(pool_creator, loop):
     pool = await pool_creator(minsize=1, maxsize=1)
 
     async with pool.get() as conn:
