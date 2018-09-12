@@ -519,7 +519,7 @@ async def test_pool_does_not_reuse_connection_with_exception(pool_creator, loop)
         await cur.execute('SELECT 1;')
 
     connection, = pool._free
-    connection._reader.set_exception(IOError())
+    connection._writer._protocol.connection_lost(IOError())
 
     async with pool.get() as conn:
         cur = await conn.cursor()
