@@ -16,6 +16,7 @@ from ..utils import _TransactionContextManager, _SAConnectionContextManager
 def noop(k):
     return k
 
+
 class SAConnection:
 
     def __init__(self, connection, engine, compiled_cache=None):
