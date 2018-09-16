@@ -13,6 +13,9 @@ from .transaction import (RootTransaction, Transaction,
 from ..utils import _TransactionContextManager, _SAConnectionContextManager
 
 
+def noop(k):
+    return k
+
 class SAConnection:
 
     def __init__(self, connection, engine, compiled_cache=None):
@@ -80,10 +83,7 @@ class SAConnection:
         compiled_params = compiled.construct_params(dp)
         processors = compiled._bind_processors
         params = [{
-            key: (
-                processors[key](compiled_params[key])
-                if key in processors else compiled_params[key]
-            )
+            key: processors.get(key, noop)(compiled_params[key])
             for key in compiled_params
         }]
         post_processed_params = self._dialect.execute_sequence_format(params)
@@ -135,7 +135,6 @@ class SAConnection:
         cursor = await self._connection.cursor()
         dp = _distill_params(multiparams, params)
         if len(dp) > 1:
-            # raise exc.ArgumentError("aiomysql doesn't support executemany")
             return await self._executemany(query, dp, cursor)
         elif dp:
             dp = dp[0]
