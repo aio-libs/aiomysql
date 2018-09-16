@@ -73,10 +73,6 @@ After that please install libraries required for development::
 
    $ pip install -r requirements-dev.txt
 
-We also recommend to install *ipdb* but it's on your own::
-
-   $ pip install ipdb
-
 Congratulations, you are ready to run the test suite
 
 Install database
