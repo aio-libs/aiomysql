@@ -493,6 +493,7 @@ async def test_cancelled_connection(pool_creator, loop):
         assert list(res) == [(2, 0)]
 
 
+@pytest.mark.run_loop
 async def test_pool_with_connection_recycling(pool_creator, loop):
     pool = await pool_creator(minsize=1, maxsize=1, pool_recycle=3)
     async with pool.get() as conn:
@@ -509,3 +510,19 @@ async def test_pool_with_connection_recycling(pool_creator, loop):
         await cur.execute('SELECT 1;')
         val = await cur.fetchone()
         assert (1,) == val
+
+
+@pytest.mark.run_loop
+async def test_pool_drops_connection_with_exception(pool_creator, loop):
+    pool = await pool_creator(minsize=1, maxsize=1)
+
+    async with pool.get() as conn:
+        cur = await conn.cursor()
+        await cur.execute('SELECT 1;')
+
+    connection, = pool._free
+    connection._writer._protocol.connection_lost(IOError())
+
+    async with pool.get() as conn:
+        cur = await conn.cursor()
+        await cur.execute('SELECT 1;')
