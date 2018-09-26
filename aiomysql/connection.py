@@ -37,12 +37,10 @@ from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
 from pymysql.connections import lenenc_int
 
-
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
 from .log import logger
-
 
 DEFAULT_USER = getpass.getuser()
 
@@ -389,7 +387,7 @@ class Connection:
             return s.replace("'", "''")
         return escape_string(s)
 
-    def cursor(self, cursor=None):
+    def cursor(self, *cursors):
         """Instantiates and returns a cursor
 
         By default, :class:`Cursor` is returned. It is possible to also give a
@@ -402,11 +400,20 @@ class Connection:
         """
         self._ensure_alive()
         self._last_usage = self._loop.time()
-        if cursor is not None and not issubclass(cursor, Cursor):
+        try:
+            if cursors and \
+                    any(not issubclass(cursor, Cursor) for cursor in cursors):
+                raise TypeError('Custom cursor must be subclass of Cursor')
+        except TypeError:
             raise TypeError('Custom cursor must be subclass of Cursor')
-
-        if cursor:
-            cur = cursor(self, self._echo)
+        if cursors and len(cursors) == 1:
+            cur = cursors[0](self, self._echo)
+        elif cursors:
+            cursor_name = ''.join(map(lambda x: x.__name__, cursors)) \
+                .replace('Cursor', '')
+            cursor_name = f"{cursor_name}Cursor"
+            cursor_class = type(cursor_name, cursors, {})
+            cur = cursor_class(self, self._echo)
         else:
             cur = self.cursorclass(self, self._echo)
         fut = self._loop.create_future()
@@ -1057,6 +1064,7 @@ class Connection:
             warnings.warn("Unclosed connection {!r}".format(self),
                           ResourceWarning)
             self.close()
+
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError
