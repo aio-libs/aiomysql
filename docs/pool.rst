@@ -20,14 +20,14 @@ The basic usage is::
                                                user='root', password='',
                                                db='mysql', loop=loop, autocommit=False)
 
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-            yield from cur.execute("SELECT 10")
-            # print(cur.description)
-            (r,) = yield from cur.fetchone()
-           assert r == 10
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 10")
+                # print(cur.description)
+                (r,) = await cur.fetchone()
+                assert r == 10
         pool.close()
-        yield from pool.wait_closed()
+        await pool.wait_closed()
 
     loop.run_until_complete(go())
 
