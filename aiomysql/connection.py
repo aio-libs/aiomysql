@@ -14,6 +14,7 @@ from functools import partial
 from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
+from pymysql.constants import CR
 from pymysql.constants import COMMAND
 from pymysql.constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
@@ -558,6 +559,12 @@ class Connection:
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
+                self._force_close()
+                if packet_number == 0:
+                    # MariaDB sends error packet with seqno==0 when shutdown
+                    raise OperationalError(
+                        CR.CR_SERVER_LOST,
+                        "Lost connection to MySQL server during query")
                 raise InternalError(
                     "Packet sequence number wrong - got %d expected %d" %
                     (packet_number, self._next_seq_id))
@@ -585,10 +592,12 @@ class Connection:
             data = await self._reader.readexactly(num_bytes)
         except asyncio.streams.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
-            raise OperationalError(2013, msg) from e
+            self._force_close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         except (IOError, OSError) as e:
             msg = "Lost connection to MySQL server during query (%s)" % (e,)
-            raise OperationalError(2013, msg) from e
+            self._force_close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         return data
 
     def _write_bytes(self, data):
@@ -1052,11 +1061,14 @@ class Connection:
             else:
                 raise InterfaceError(self._close_reason)
 
-    def __del__(self):
+    def _force_close(self):
         if self._writer:
             warnings.warn("Unclosed connection {!r}".format(self),
                           ResourceWarning)
             self.close()
+
+    __del__ = _force_close
+
     Warning = Warning
     Error = Error
     InterfaceError = InterfaceError

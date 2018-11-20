@@ -5,7 +5,9 @@ import sys
 import unittest
 import aiomysql
 from tests._testutils import run_until_complete
+from asynctest import patch, MagicMock, CoroutineMock
 from tests.base import AIOPyMySQLTestCase
+from tests._testutils import BaseTest
 
 
 PY_341 = sys.version_info >= (3, 4, 1)
@@ -255,3 +257,116 @@ class TestConnection(AIOPyMySQLTestCase):
         yield from cur.execute("SELECT 3;")
         resp = yield from cur.fetchone()
         self.assertEqual(resp[0], 3)
+
+
+class PacketTestCase(BaseTest):
+
+    @patch('aiomysql.connection.Connection._close_on_cancel')
+    @patch('aiomysql.connection.Connection._read_bytes')
+    @run_until_complete
+    async def test_read_packet_close_on_cancel(self,
+                                               read_bytes_mock,
+                                               close_on_cancel_mock):
+
+        read_bytes_mock.side_effect = asyncio.CancelledError()
+        conn = aiomysql.Connection()
+
+        try:
+            await conn._read_packet()
+        except asyncio.CancelledError:
+            pass
+
+        close_on_cancel_mock.assert_called_once()
+
+    @patch('aiomysql.connection.Connection._read_bytes')
+    @run_until_complete
+    async def test_read_mariadb_shutdown_packet(self,
+                                                read_bytes_mock):
+
+        read_bytes_mock.return_value = b'\x10\x00\x00\x00'
+        conn = aiomysql.Connection()
+        writer_mock = MagicMock()
+        conn._writer = writer_mock  # Fake a connection
+        conn._next_seq_id = 1
+
+        with self.assertRaises(aiomysql.OperationalError):
+            await conn._read_packet()
+
+        self.assertTrue(conn.closed)
+        writer_mock.transport.close.assert_called_once()
+
+    @patch('aiomysql.connection.Connection._read_bytes')
+    @run_until_complete
+    async def test_read_packet_wrong_sequence(self,
+                                              read_bytes_mock):
+
+        read_bytes_mock.return_value = b'\x10\x00\x00\x01'
+        conn = aiomysql.Connection()
+        writer_mock = MagicMock()
+        conn._writer = writer_mock  # Fake a connection
+        conn._next_seq_id = 2
+
+        with self.assertRaises(aiomysql.InternalError):
+            await conn._read_packet()
+
+        self.assertTrue(conn.closed)
+        writer_mock.transport.close.assert_called_once()
+
+    @run_until_complete
+    async def test_read_bytes_incomplete(self):
+        conn = aiomysql.Connection()
+
+        writer_mock = MagicMock()
+        reader_mock = MagicMock()
+        reader_mock.readexactly = CoroutineMock(
+            side_effect=asyncio.streams.IncompleteReadError(
+                partial=b'\x01',
+                expected=10)
+        )
+
+        conn._writer = writer_mock  # Fake a connection
+        conn._reader = reader_mock
+
+        with self.assertRaises(aiomysql.OperationalError):
+            await conn._read_bytes(10)
+
+        self.assertTrue(conn.closed)
+        writer_mock.transport.close.assert_called_once()
+
+    @run_until_complete
+    async def test_read_bytes_ioerror(self):
+        conn = aiomysql.Connection()
+
+        writer_mock = MagicMock()
+        reader_mock = MagicMock()
+        reader_mock.readexactly = CoroutineMock(
+            side_effect=IOError()
+        )
+
+        conn._writer = writer_mock  # Fake a connection
+        conn._reader = reader_mock
+
+        with self.assertRaises(aiomysql.OperationalError):
+            await conn._read_bytes(10)
+
+        self.assertTrue(conn.closed)
+        writer_mock.transport.close.assert_called_once()
+
+    @run_until_complete
+    async def test_read_bytes_oserror(self):
+        conn = aiomysql.Connection()
+
+        writer_mock = MagicMock()
+        reader_mock = MagicMock()
+        reader_mock.readexactly = CoroutineMock(
+            side_effect=OSError()
+        )
+
+        conn._writer = writer_mock  # Fake a connection
+        conn._reader = reader_mock
+
+        with self.assertRaises(aiomysql.OperationalError):
+            await conn._read_bytes(10)
+
+        self.assertTrue(conn.closed)
+        writer_mock.transport.close.assert_called_once()
