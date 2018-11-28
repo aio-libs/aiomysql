@@ -23,6 +23,12 @@ class TestConnection(AIOPyMySQLTestCase):
             f2.write(tmpl.format_map(self.__dict__))
 
     @run_until_complete
+    def test_connect_timeout(self):
+        # All exceptions are caught and raised as operational errors
+        with self.assertRaises(aiomysql.OperationalError):
+            yield from self.connect(connect_timeout=0.000000000001)
+
+    @run_until_complete
     def test_config_file(self):
         self.fill_my_cnf()
         tests_root = os.path.abspath(os.path.dirname(__file__))
