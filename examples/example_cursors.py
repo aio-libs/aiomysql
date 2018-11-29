@@ -6,10 +6,10 @@ async def test_example(loop):
     conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                   user='root', password='', db='mysql',
                                   loop=loop)
-    debugsize = "SELECT 1 `id`, JSON_OBJECT('key1', 1, 'key2', 'abc') obj"
+    sql = "SELECT 1 `id`, JSON_OBJECT('key1', 1, 'key2', 'abc') obj"
     async with conn.cursor(aiomysql.cursors.DeserializationCursor,
                            aiomysql.cursors.DictCursor) as cur:
-        await cur.execute()
+        await cur.execute(sql)
         print(cur.description)
         r = await cur.fetchall()
         print(r)
