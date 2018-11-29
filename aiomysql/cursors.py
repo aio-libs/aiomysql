@@ -11,7 +11,6 @@ from pymysql.err import (
 from .log import logger
 from .connection import FIELD_TYPE
 
-
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
 #: Regular expression for :meth:`Cursor.executemany`.
@@ -521,7 +520,8 @@ class Cursor:
 class _DeserializationCursorMixin:
     async def _do_get_result(self):
         await super()._do_get_result()
-        self._rows = [self._deserialization_row(r) for r in self._rows]
+        if self._rows:
+            self._rows = [self._deserialization_row(r) for r in self._rows]
 
     def _deserialization_row(self, row):
         if row is None:
