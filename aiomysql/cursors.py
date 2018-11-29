@@ -534,7 +534,7 @@ class _DeserializationCursorMixin:
         for index, (name, field_type, *n) in enumerate(self._description):
             if field_type == FIELD_TYPE.JSON:
                 point = name if dict_flag else index
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(ValueError, TypeError):
                     row[point] = json.loads(row[point])
         if dict_flag:
             return row
