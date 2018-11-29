@@ -541,6 +541,12 @@ class _DeserializationCursorMixin:
         else:
             return tuple(row)
 
+    def _conv_row(self, row):
+        if row is None:
+            return None
+        row = super()._conv_row(row)
+        return self._deserialization_row(row)
+
 
 class DeserializationCursor(_DeserializationCursorMixin, Cursor):
     """A cursor automatic deserialization of json type fields"""
@@ -567,6 +573,7 @@ class _DictCursorMixin:
     def _conv_row(self, row):
         if row is None:
             return None
+        row = super()._conv_row(row)
         return self.dict_type(zip(self._fields, row))
 
 
