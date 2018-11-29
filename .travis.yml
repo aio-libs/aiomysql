@@ -26,6 +26,10 @@ matrix:
           env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 10.1
+        - python: 3.6
+          env: PYTHONASYNCIODEBUG=
+          addons:
+              mysql: 5.7
 
 
 before_script:
