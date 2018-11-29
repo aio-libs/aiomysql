@@ -7,9 +7,9 @@ from tests._testutils import run_until_complete
 
 
 class TestDeserializeCursor(base.AIOPyMySQLTestCase):
-    bob = ("bob", 21, '{"k1": "pretty", "k2": [18, 25]}')
-    jim = ("jim", 56, '{"k1": "rich", "k2": [20, 60]}')
-    fred = ("fred", 100, '{"k1": "longevity", "k2": [100, 160]}')
+    bob = ("bob", 21, {"k1": "pretty", "k2": [18, 25]})
+    jim = ("jim", 56, {"k1": "rich", "k2": [20, 60]})
+    fred = ("fred", 100, {"k1": "longevity", "k2": [100, 160]})
 
     cursor_type = aiomysql.cursors.DeserializationCursor
 
