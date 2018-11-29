@@ -410,8 +410,7 @@ class Connection:
             cur = cursors[0](self, self._echo)
         elif cursors:
             cursor_name = ''.join(map(lambda x: x.__name__, cursors)) \
-                .replace('Cursor', '')
-            cursor_name = f"{cursor_name}Cursor"
+                .replace('Cursor', '') + 'Cursor'
             cursor_class = type(cursor_name, cursors, {})
             cur = cursor_class(self, self._echo)
         else:
