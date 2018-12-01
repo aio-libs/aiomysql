@@ -8,6 +8,7 @@ from unittest import mock
 
 from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.schema import DropTable, CreateTable
+from sqlalchemy.sql.expression import bindparam
 
 
 meta = MetaData()
@@ -269,10 +270,31 @@ class TestSAConnection(unittest.TestCase):
     def test_raw_insert_with_executemany(self):
         async def go():
             conn = await self.connect()
+            # with self.assertRaises(sa.ArgumentError):
+            await conn.execute(
+                "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
+                [{"id": 2, "name": 'third'}, {"id": 3, "name": 'forth'}])
+            await conn.execute(
+                tbl.update().where(
+                    tbl.c.id == bindparam("id")
+                ).values(
+                    {"name": bindparam("name")}
+                ),
+                [
+                    {"id": 2, "name": "t2"},
+                    {"id": 3, "name": "t3"}
+                ]
+            )
             with self.assertRaises(sa.ArgumentError):
                 await conn.execute(
-                    "INSERT INTO sa_tbl (id, name) VALUES (%(id)s, %(name)s)",
-                    [(2, 'third'), (3, 'forth')])
+                    DropTable(tbl),
+                    [{}, {}]
+                )
+            with self.assertRaises(sa.ArgumentError):
+                await conn.execute(
+                    {},
+                    [{}, {}]
+                )
         self.loop.run_until_complete(go())
 
     def test_raw_select_with_wildcard(self):
