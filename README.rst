@@ -35,7 +35,7 @@ Mailing List
 https://groups.google.com/forum/#!forum/aio-libs
 
 
-Basic
+Basic Example
 -------------
 
 **aiomysql** based on PyMySQL_ , and provides same api, you just need
@@ -44,11 +44,6 @@ to use  ``await conn.f()`` or ``yield from conn.f()`` instead of calling
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
 ``conn.prop = val``.
-
-
-Connection Pool
----------------
-Connection pooling ported from aiopg_ :
 
 .. code:: python
 
