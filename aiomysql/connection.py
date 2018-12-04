@@ -475,14 +475,21 @@ class Connection:
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = await \
-                    asyncio.open_unix_connection(self._unix_socket,
-                                                 loop=self._loop)
+                    asyncio.wait_for(
+                        asyncio.open_unix_connection(
+                            self._unix_socket,
+                            loop=self._loop),
+                        timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
             else:
                 self._reader, self._writer = await \
-                    asyncio.open_connection(self._host, self._port,
-                                            loop=self._loop)
+                    asyncio.wait_for(
+                        asyncio.open_connection(
+                            self._host,
+                            self._port,
+                            loop=self._loop),
+                        timeout=self.connect_timeout)
                 self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
 
