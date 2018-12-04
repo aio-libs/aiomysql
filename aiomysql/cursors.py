@@ -1,5 +1,7 @@
 import re
+import json
 import warnings
+import contextlib
 
 from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
@@ -7,7 +9,7 @@ from pymysql.err import (
     NotSupportedError, ProgrammingError)
 
 from .log import logger
-
+from .connection import FIELD_TYPE
 
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
@@ -515,6 +517,41 @@ class Cursor:
         return
 
 
+class _DeserializationCursorMixin:
+    async def _do_get_result(self):
+        await super()._do_get_result()
+        if self._rows:
+            self._rows = [self._deserialization_row(r) for r in self._rows]
+
+    def _deserialization_row(self, row):
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            dict_flag = True
+        else:
+            row = list(row)
+            dict_flag = False
+        for index, (name, field_type, *n) in enumerate(self._description):
+            if field_type == FIELD_TYPE.JSON:
+                point = name if dict_flag else index
+                with contextlib.suppress(ValueError, TypeError):
+                    row[point] = json.loads(row[point])
+        if dict_flag:
+            return row
+        else:
+            return tuple(row)
+
+    def _conv_row(self, row):
+        if row is None:
+            return None
+        row = super()._conv_row(row)
+        return self._deserialization_row(row)
+
+
+class DeserializationCursor(_DeserializationCursorMixin, Cursor):
+    """A cursor automatic deserialization of json type fields"""
+
+
 class _DictCursorMixin:
     # You can override this to use OrderedDict or other dict-like types.
     dict_type = dict
@@ -536,6 +573,7 @@ class _DictCursorMixin:
     def _conv_row(self, row):
         if row is None:
             return None
+        row = super()._conv_row(row)
         return self.dict_type(zip(self._fields, row))
 
 
