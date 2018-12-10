@@ -76,7 +76,7 @@ Example::
     :param cursorclass: custom cursor class to use.
     :param str init_command: initial SQL statement to run when connection is
         established.
-    :param connect_timeout: Timeout before throwing an exception
+    :param connect_timeout: Timeout in seconds before throwing an exception
         when connecting.
     :param str read_default_group: Group to read from in the configuration
         file.
