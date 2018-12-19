@@ -1,6 +1,40 @@
 Changes
 -------
 
+0.0.20 (2018-07-06)
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed connect_timeout #360
+
+* Fixed support for SQLA executemany #324
+
+* Fix the python 3.7 compatibility #357
+
+* Fixed reuse connections when StreamReader has an exception #339
+
+* Fixes warning when inserting binary strings #326
+
+
+0.0.19 (2018-07-12)
+^^^^^^^^^^^^^^^^^^^
+
+* See v0.0.18
+
+
+0.0.18 (2018-07-09)
+^^^^^^^^^^^^^^^^^^^
+
+* Updated to support latest PyMySQL changes.
+
+* aiomysql now sends client connection info.
+
+* MySQL8+ Support including sha256_password and cached_sha2_password authentication plugins.
+
+* Default max packet length sent to the server is no longer 1.
+
+* Fixes issue where cursor.nextset can hang on query sets that raise errors.
+
+
 0.0.17 (2018-07-06)
 ^^^^^^^^^^^^^^^^^^^
 
