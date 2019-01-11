@@ -42,7 +42,7 @@ Example::
                                           host='127.0.0.1',
                                           password='')
 
-        with (yield from engine) as conn:
+        with (yield from engine.acquire()) as conn:
             yield from conn.execute(tbl.insert().values(val='abc'))
 
             res = yield from conn.execute(tbl.select())
