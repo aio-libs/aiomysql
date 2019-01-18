@@ -6,7 +6,8 @@ import aiomysql
 from .connection import SAConnection
 from .exc import InvalidRequestError, ArgumentError
 from ..utils import _PoolContextManager, _PoolAcquireContextManager
-from ..cursors import Cursor
+from ..cursors import (
+    Cursor, DeserializationCursor, DictCursor, SSCursor, SSDictCursor)
 
 
 try:
@@ -26,16 +27,23 @@ def create_engine(minsize=1, maxsize=10, loop=None,
 
     Returns Engine instance with embedded connection pool.
 
-    The pool has *minsize* opened connections to PostgreSQL server.
+    The pool has *minsize* opened connections to MySQL server.
     """
+    deprecated_cursor_classes = [
+        DeserializationCursor, DictCursor, SSCursor, SSDictCursor,
+    ]
+
+    cursorclass = kwargs.get('cursorclass', Cursor)
+    if not issubclass(cursorclass, Cursor) or any(
+        issubclass(cursorclass, cursor_class)
+        for cursor_class in deprecated_cursor_classes
+    ):
+        raise ArgumentError('SQLAlchemy engine does not support '
+                            'this cursor class')
+
     coro = _create_engine(minsize=minsize, maxsize=maxsize, loop=loop,
                           dialect=dialect, pool_recycle=pool_recycle,
                           compiled_cache=compiled_cache, **kwargs)
-    compatible_cursor_classes = [Cursor]
-    # Without provided kwarg, default is default cursor from Connection class
-    if kwargs.get('cursorclass', Cursor) not in compatible_cursor_classes:
-        raise ArgumentError('SQLAlchemy engine does not support '
-                            'this cursor class')
     return _EngineContextManager(coro)
 
 
