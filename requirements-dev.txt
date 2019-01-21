@@ -2,7 +2,7 @@ coverage==4.5.2
 flake8==3.6.0
 ipdb==0.11
 ipython==7.2.0
-pytest==3.9.1
+pytest==4.1.1
 pytest-cov==2.6.0
 pytest-sugar==0.9.1
 PyMySQL>=0.9,<=0.9.2
