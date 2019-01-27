@@ -1,3 +1,5 @@
+dist: xenial
+sudo: true
 language: python
 
 python:
@@ -32,14 +34,10 @@ matrix:
           addons:
               mysql: 5.7
         - python: 3.7
-          dist: xenial
-          sudo: true
           env: PYTHONASYNCIODEBUG=1
           addons:
               mariadb: 10.1
         - python: 3.7
-          dist: xenial
-          sudo: true
           env: PYTHONASYNCIODEBUG=1
           addons:
               mysql: 5.7
