@@ -1,3 +1,5 @@
+import asyncio
+
 from collections.abc import Coroutine
 
 
@@ -70,9 +72,20 @@ class _PoolContextManager(_ContextManager):
 
 
 class _SAConnectionContextManager(_ContextManager):
-    async def __aiter__(self):
-        result = await self._coro
-        return result
+    def __aiter__(self):
+        return self
+
+    @asyncio.coroutine
+    def __anext__(self):
+        if self._obj is None:
+            self._obj = yield from self._coro
+
+        try:
+            return (yield from self._obj.__anext__())
+        except StopAsyncIteration:
+            self._obj.close()
+            self._obj = None
+            raise
 
 
 class _TransactionContextManager(_ContextManager):
