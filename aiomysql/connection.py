@@ -177,11 +177,11 @@ class Connection:
         self.server_public_key = server_public_key
         self.salt = None
 
-        # TODO somehow import version from __init__.py
+        from . import __version__
         self._connect_attrs = {
             '_client_name': 'aiomysql',
             '_pid': str(os.getpid()),
-            '_client_version': '0.0.16',
+            '_client_version': __version__,
         }
         if program_name:
             self._connect_attrs["program_name"] = program_name
