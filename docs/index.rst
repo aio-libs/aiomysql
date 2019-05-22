@@ -7,7 +7,7 @@ Welcome to aiomysql's documentation!
 ====================================
 
 .. _GitHub: https://github.com/aio-libs/aiomysql
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+.. _asyncio: http://docs.python.org/3.5/library/asyncio.html
 .. _aiopg: https://github.com/aio-libs/aiopg
 .. _Tornado-MySQL: https://github.com/PyMySQL/Tornado-MySQL
 .. _aio-libs: https://github.com/aio-libs
@@ -105,7 +105,7 @@ coverage reports.
 Dependencies
 ------------
 
-- Python 3.3 and :mod:`asyncio` or Python 3.4+
+- Python 3.5.3+
 - :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 

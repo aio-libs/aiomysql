@@ -115,7 +115,7 @@ Requirements
 
 
 .. _Python: https://www.python.org
-.. _asyncio: http://docs.python.org/3.4/library/asyncio.html
+.. _asyncio: http://docs.python.org/3.5/library/asyncio.html
 .. _aiopg: https://github.com/aio-libs/aiopg
 .. _PyMySQL: https://github.com/PyMySQL/PyMySQL
 .. _Tornado-MySQL: https://github.com/PyMySQL/Tornado-MySQL
