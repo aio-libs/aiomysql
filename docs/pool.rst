@@ -15,7 +15,7 @@ The basic usage is::
     loop = asyncio.get_event_loop()
 
     @asyncio.coroutine
-    def go()
+    def go():
         pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
                                                user='root', password='',
                                                db='mysql', loop=loop, autocommit=False)
@@ -25,7 +25,7 @@ The basic usage is::
             yield from cur.execute("SELECT 10")
             # print(cur.description)
             (r,) = yield from cur.fetchone()
-           assert r == 10
+            assert r == 10
         pool.close()
         yield from pool.wait_closed()
 
