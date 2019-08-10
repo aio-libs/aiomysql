@@ -61,6 +61,8 @@ target/
 # rope
 .ropeproject
 
+# pyenv
+.python-version
 
 tests/fixtures/my.cnf
 
