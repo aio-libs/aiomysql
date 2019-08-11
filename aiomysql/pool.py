@@ -42,7 +42,7 @@ class Pool(asyncio.AbstractServer):
         self._loop = loop
         self._conn_kwargs = kwargs
         self._acquiring = 0
-        self._free = collections.deque(maxlen=maxsize)
+        self._free = collections.deque(maxlen=maxsize or None)
         self._cond = asyncio.Condition(loop=loop)
         self._used = set()
         self._terminated = set()
@@ -61,7 +61,7 @@ class Pool(asyncio.AbstractServer):
 
     @property
     def maxsize(self):
-        return self._free.maxlen
+        return self._free.maxlen or float("inf")
 
     @property
     def size(self):
