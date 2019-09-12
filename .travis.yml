@@ -1,8 +1,10 @@
+dist: xenial
 language: python
 
 python:
     - 3.5.3
     - 3.6
+    - 3.7
 
 env:
     matrix:
@@ -11,22 +13,27 @@ env:
 
 services:
     - docker
+    - mysql
 
 matrix:
    include:
         - python: 3.6
+          dist: trusty
           env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 5.5
         - python: 3.6
+          dist: trusty
           env: PYTHONASYNCIODEBUG=1
           addons:
               mariadb: 10.0
         - python: 3.6
+          dist: trusty
           env: PYTHONASYNCIODEBUG=
           addons:
               mariadb: 10.1
         - python: 3.6
+          dist: trusty
           env: PYTHONASYNCIODEBUG=
           addons:
               mysql: 5.7
