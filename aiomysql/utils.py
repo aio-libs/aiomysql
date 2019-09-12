@@ -70,9 +70,19 @@ class _PoolContextManager(_ContextManager):
 
 
 class _SAConnectionContextManager(_ContextManager):
-    async def __aiter__(self):
-        result = await self._coro
-        return result
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self._obj is None:
+            self._obj = await self._coro
+
+        try:
+            return (await self._obj.__anext__())
+        except StopAsyncIteration:
+            await self._obj.close()
+            self._obj = None
+            raise
 
 
 class _TransactionContextManager(_ContextManager):
