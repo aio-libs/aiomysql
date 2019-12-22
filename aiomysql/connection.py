@@ -299,6 +299,15 @@ class Connection:
         self._writer = None
         self._reader = None
 
+    async def close_async(self):
+        """Close socket connection"""
+        if self._writer:
+            self._writer.close()
+            await self._writer.wait_closed()
+
+        self._writer = None
+        self._reader = None
+
     async def ensure_closed(self):
         """Send quit command and then close socket connection"""
         if self._writer is None:

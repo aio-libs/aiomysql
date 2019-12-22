@@ -114,7 +114,7 @@ class Pool(asyncio.AbstractServer):
 
         while self._free:
             conn = self._free.popleft()
-            conn.close()
+            await conn.close_async()
 
         async with self._cond:
             while self.size > self.freesize:
