@@ -167,6 +167,11 @@ class Connection:
         self._port = port
         self._user = user or DEFAULT_USER
         self._password = password or ""
+
+        # Unsure why, but user/password appears to become a tuple at some point. This fixes that.
+        self._user = self._user[0] if isinstance(self._user, tuple) else self._user
+        self._password = self._password[0] if isinstance(self._password, tuple) else self._password
+
         self._db = db
         self._no_delay = no_delay
         self._echo = echo
@@ -711,15 +716,11 @@ class Connection:
             )
 
         charset_id = charset_by_name(self.charset).id
-        # Unsure why, but user appears to become a tuple at some point. This fixes that.
-        if isinstance(self.user, tuple):
-            _user = self.user[0]
-            self.user = _user
+
+        _user, _password = self.user, self._password
         
-        if isinstance(self.user, str):
-            _user = self.user.encode(self.encoding)
-        else:
-            _user = self.user
+        if isinstance(_user, str):
+            _user = _user.encode(self.encoding)
 
         data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
                                 charset_id, b'')
@@ -735,23 +736,23 @@ class Connection:
 
         if auth_plugin in ('', 'mysql_native_password'):
             authresp = _auth.scramble_native_password(
-                self._password.encode('latin1'), self.salt)
+                _password.encode('latin1'), self.salt)
         elif auth_plugin == 'caching_sha2_password':
-            if self._password:
+            if _password:
                 authresp = _auth.scramble_caching_sha2(
-                    self._password.encode('latin1'), self.salt
+                    _password.encode('latin1'), self.salt
                 )
             # Else: empty password
         elif auth_plugin == 'sha256_password':
             if self._ssl_context and self.server_capabilities & CLIENT.SSL:
-                authresp = self._password.encode('latin1') + b'\0'
-            elif self._password:
+                authresp = _password.encode('latin1') + b'\0'
+            elif _password:
                 authresp = b'\1'  # request public key
             else:
                 authresp = b'\0'  # empty password
 
         elif auth_plugin in ('', 'mysql_clear_password'):
-            authresp = self._password.encode('latin1') + b'\0'
+            authresp = _password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
             data += lenenc_int(len(authresp)) + authresp
