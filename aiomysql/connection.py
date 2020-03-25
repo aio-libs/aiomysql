@@ -711,6 +711,11 @@ class Connection:
             )
 
         charset_id = charset_by_name(self.charset).id
+        # Unsure why, but user appears to become a tuple at some point. This fixes that.
+        if isinstance(self.user, tuple):
+            _user = self.user[0]
+            self.user = _user
+        
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
         else:
