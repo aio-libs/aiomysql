@@ -103,7 +103,15 @@ class SAConnection:
                     "and execution with parameters"
                 )
         elif isinstance(query, ClauseElement):
-            compiled = query.compile(dialect=self._dialect)
+            if self._compiled_cache is not None:
+                key = query
+                compiled = self._compiled_cache.get(key)
+                if not compiled:
+                    compiled = query.compile(dialect=self._dialect)
+                    self._compiled_cache[key] = compiled
+            else:
+                compiled = query.compile(dialect=self._dialect)
+
             params = []
             is_update = isinstance(query, UpdateBase)
             for dp in dps:
@@ -151,7 +159,6 @@ class SAConnection:
                     compiled = query.compile(dialect=self._dialect)
                     if dp and dp.keys() == compiled.params.keys() \
                             or not (dp or compiled.params):
-                        # we only want queries with bound params in cache
                         self._compiled_cache[key] = compiled
             else:
                 compiled = query.compile(dialect=self._dialect)
