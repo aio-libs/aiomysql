@@ -34,22 +34,27 @@ def pytest_generate_tests(metafunc):
     if 'loop_type' in metafunc.fixturenames:
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
-
-    if 'mysql_tag' in metafunc.fixturenames:
-        tags = set(metafunc.config.option.mysql_tag)
-        if not tags:
-            tags = ['5.6', '8.0']
-        elif 'all' in tags:
-            tags = ['5.6', '5.7', '8.0']
-        else:
-            tags = list(tags)
-        metafunc.parametrize("mysql_tag", tags, scope='session')
+    #
+    # if 'mysql_tag' in metafunc.fixturenames:
+    #     tags = set(metafunc.config.option.mysql_tag)
+    #     if not tags:
+    #         tags = ['5.6', '8.0']
+    #     elif 'all' in tags:
+    #         tags = ['5.6', '5.7', '8.0']
+    #     else:
+    #         tags = list(tags)
+    #     metafunc.parametrize("mysql_tag", tags, scope='session')
 
 
 # This is here unless someone fixes the generate_tests bit
 @pytest.yield_fixture(scope='session')
 def mysql_tag():
-    return '5.6'
+    return os.environ.get('DBTAG', '10.5')
+
+
+@pytest.yield_fixture(scope='session')
+def mysql_image():
+    return os.environ.get('DB', 'mariadb')
 
 
 @pytest.yield_fixture
@@ -119,12 +124,10 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def mysql_params():
-    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
-              "port": int(os.environ.get('MYSQL_PORT', 3306)),
-              "user": os.environ.get('MYSQL_USER', 'root'),
+def mysql_params(mysql_server):
+    params = {**mysql_server['conn_params'],
               "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
+              # "password": os.environ.get('MYSQL_PASSWORD', ''),
               "local_infile": True,
               "use_unicode": True,
               }
@@ -227,11 +230,11 @@ def ensure_mysql_verison(request, mysql_tag):
 
 
 @pytest.fixture(scope='session')
-def mysql_server(unused_port, docker, session_id, mysql_tag, request):
+def mysql_server(unused_port, docker, session_id, mysql_image, mysql_tag, request):
     print('\nSTARTUP CONTAINER - {0}\n'.format(mysql_tag))
 
     if not request.config.option.no_pull:
-        docker.pull('mysql:{}'.format(mysql_tag))
+        docker.pull('{}:{}'.format(mysql_image, mysql_tag))
 
     # bound IPs do not work on OSX
     host = "127.0.0.1"
