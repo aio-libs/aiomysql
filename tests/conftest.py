@@ -230,7 +230,8 @@ def ensure_mysql_verison(request, mysql_tag):
 
 
 @pytest.fixture(scope='session')
-def mysql_server(unused_port, docker, session_id, mysql_image, mysql_tag, request):
+def mysql_server(unused_port, docker, session_id,
+                 mysql_image, mysql_tag, request):
     print('\nSTARTUP CONTAINER - {0}\n'.format(mysql_tag))
 
     if not request.config.option.no_pull:
