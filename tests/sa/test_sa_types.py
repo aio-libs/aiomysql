@@ -1,12 +1,10 @@
-import asyncio
-from aiomysql import connect, sa
 from enum import IntEnum
-
-import os
-import unittest
 from unittest import mock
 
+import pytest
 from sqlalchemy import MetaData, Table, Column, Integer, TypeDecorator
+
+from aiomysql import sa
 
 
 class UserDefinedEnum(IntEnum):
@@ -45,27 +43,10 @@ tbl = Table('sa_test_type_tbl', meta,
             Column('val', IntEnumField(enum_class=UserDefinedEnum)))
 
 
-class TestSATypes(unittest.TestCase):
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(None)
-        self.host = os.environ.get('MYSQL_HOST', 'localhost')
-        self.port = int(os.environ.get('MYSQL_PORT', 3306))
-        self.user = os.environ.get('MYSQL_USER', 'root')
-        self.db = os.environ.get('MYSQL_DB', 'test_pymysql')
-        self.password = os.environ.get('MYSQL_PASSWORD', '')
-
-    def tearDown(self):
-        self.loop.close()
-
-    async def connect(self, **kwargs):
-        conn = await connect(db=self.db,
-                             user=self.user,
-                             password=self.password,
-                             host=self.host,
-                             loop=self.loop,
-                             port=self.port,
-                             **kwargs)
+@pytest.fixture()
+def sa_connect(connection_creator):
+    async def connect(**kwargs):
+        conn = await connection_creator()
         await conn.autocommit(True)
         cur = await conn.cursor()
         await cur.execute("DROP TABLE IF EXISTS sa_test_type_tbl")
@@ -75,20 +56,18 @@ class TestSATypes(unittest.TestCase):
         engine = mock.Mock()
         engine.dialect = sa.engine._dialect
         return sa.SAConnection(conn, engine)
+    return connect
 
-    def test_values(self):
-        async def go():
-            conn = await self.connect()
 
-            await conn.execute(tbl.insert().values(
-                val=UserDefinedEnum.Value1)
-            )
-            result = await conn.execute(tbl.select().where(
-                tbl.c.val == UserDefinedEnum.Value1)
-            )
-            data = await result.fetchone()
-            self.assertEqual(
-                data['val'], UserDefinedEnum.Value1
-            )
+@pytest.mark.run_loop
+async def test_values(sa_connect):
+    conn = await sa_connect()
 
-        self.loop.run_until_complete(go())
+    await conn.execute(tbl.insert().values(
+        val=UserDefinedEnum.Value1)
+    )
+    result = await conn.execute(tbl.select().where(
+        tbl.c.val == UserDefinedEnum.Value1)
+    )
+    data = await result.fetchone()
+    assert data['val'] == UserDefinedEnum.Value1

@@ -34,16 +34,6 @@ def pytest_generate_tests(metafunc):
     if 'loop_type' in metafunc.fixturenames:
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
-    #
-    # if 'mysql_tag' in metafunc.fixturenames:
-    #     tags = set(metafunc.config.option.mysql_tag)
-    #     if not tags:
-    #         tags = ['5.6', '8.0']
-    #     elif 'all' in tags:
-    #         tags = ['5.6', '5.7', '8.0']
-    #     else:
-    #         tags = list(tags)
-    #     metafunc.parametrize("mysql_tag", tags, scope='session')
 
 
 # This is here unless someone fixes the generate_tests bit
@@ -172,7 +162,10 @@ def connection_creator(mysql_params, loop):
     yield f
 
     for conn in connections:
-        loop.run_until_complete(conn.ensure_closed())
+        try:
+            loop.run_until_complete(conn.ensure_closed())
+        except ConnectionResetError:
+            pass
 
 
 @pytest.yield_fixture
@@ -248,13 +241,13 @@ def mysql_server(unused_port, docker, session_id,
     tls_cnf = os.path.join(os.path.dirname(__file__),
                            'ssl_resources', 'tls.cnf')
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     ctx.check_hostname = False
     ctx.load_verify_locations(cafile=ca_file)
     # ctx.verify_mode = ssl.CERT_NONE
 
     container_args = dict(
-        image='mysql:{}'.format(mysql_tag),
+        image='{}:{}'.format(mysql_image, mysql_tag),
         name='aiomysql-test-server-{}-{}'.format(mysql_tag, session_id),
         ports=[3306],
         detach=True,
