@@ -1,4 +1,4 @@
-dist: bionic
+dist: xenial
 language: python
 
 python:
@@ -37,7 +37,7 @@ matrix:
 
 before_script:
     - "sudo apt update && sudo apt install -y mariadb-client"
-    - "for i in `seq 1 600`; do if mysqladmin ping; then break; else sleep 1; fi; done"
+    - "for i in `seq 1 10`; do if mysqladmin ping; then break; else sleep 1; fi; done"
     - "mysql -e 'SELECT VERSION()'"
     - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql; create database test_pymysql  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
     - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql2; create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
