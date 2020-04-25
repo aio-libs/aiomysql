@@ -76,7 +76,7 @@ async def test_issue_8(connection):
     c = await conn.cursor()
     await c.execute("drop table if exists test")
     await c.execute("""CREATE TABLE `test` (
-        `station` int(10) NOT NULL DEFAULT '0', 
+        `station` int(10) NOT NULL DEFAULT '0',
         `dh` datetime NOT NULL DEFAULT '2020-04-25 22:39:12',
         `echeance` int(1) NOT NULL DEFAULT '0', `me` double DEFAULT NULL,
         `mo` double DEFAULT NULL, PRIMARY
