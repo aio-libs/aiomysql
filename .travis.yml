@@ -13,6 +13,7 @@ env:
 
 services:
     - docker
+    - mysql
 
 matrix:
    include:
