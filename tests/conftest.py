@@ -329,7 +329,7 @@ def mysql_server(unused_port, docker, session_id,
                         cursor.execute('FLUSH PRIVILEGES')
 
                 break
-            except Exception as err:
+            except Exception:
                 time.sleep(delay)
                 delay *= 2
         else:
