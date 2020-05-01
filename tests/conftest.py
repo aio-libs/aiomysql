@@ -216,8 +216,8 @@ def docker():
 
 @pytest.fixture(autouse=True)
 def ensure_mysql_verison(request, mysql_tag):
-    if request.node.get_marker('mysql_verison'):
-        if request.node.get_marker('mysql_verison').args[0] != mysql_tag:
+    if request.node.get_closest_marker('mysql_verison'):
+        if request.node.get_closest_marker('mysql_verison').args[0] != mysql_tag:
             pytest.skip('Not applicable for '
                         'MySQL version: {0}'.format(mysql_tag))
 
