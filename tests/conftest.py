@@ -216,10 +216,9 @@ def docker():
 
 @pytest.fixture(autouse=True)
 def ensure_mysql_verison(request, mysql_tag):
-    if request.node.get_closest_marker('mysql_verison'):
-        if request.node.get_closest_marker('mysql_verison').args[0] != mysql_tag:
-            pytest.skip('Not applicable for '
-                        'MySQL version: {0}'.format(mysql_tag))
+    mysql_version = request.node.get_closest_marker('mysql_verison')
+    if mysql_version and mysql_version.args[0] != mysql_tag:
+        pytest.skip('Not applicable for MySQL version: {0}'.format(mysql_tag))
 
 
 @pytest.fixture(scope='session')
@@ -277,7 +276,7 @@ def mysql_server(unused_port, docker, session_id,
             'ssl': ctx
         }
         delay = 0.001
-        for i in range(100):
+        for _ in range(100):
             try:
                 connection = pymysql.connect(
                     db='mysql',
