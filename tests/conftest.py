@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 
+from distutils.version import StrictVersion
 from docker import APIClient
 
 import aiomysql
@@ -216,7 +217,11 @@ def docker():
 
 @pytest.fixture(autouse=True)
 def ensure_mysql_verison(request, mysql_tag):
-    mysql_version = request.node.get_closest_marker('mysql_verison')
+    if StrictVersion(pytest.__version__) >= StrictVersion('4.0.0'):
+        mysql_version = request.node.get_closest_marker('mysql_verison')
+    else:
+        mysql_version = request.node.get_marker('mysql_verison')
+
     if mysql_version and mysql_version.args[0] != mysql_tag:
         pytest.skip('Not applicable for MySQL version: {0}'.format(mysql_tag))
 
