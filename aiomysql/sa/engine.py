@@ -12,11 +12,29 @@ from ..cursors import (
 
 try:
     from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
+    from sqlalchemy.dialects.mysql.mysqldb import MySQLCompiler_mysqldb
 except ImportError:  # pragma: no cover
     raise ImportError('aiomysql.sa requires sqlalchemy')
 
 
+class MySQLCompiler_pymysql(MySQLCompiler_mysqldb):
+    def construct_params(self, params=None, _group_number=None, _check=True):
+        pd = super().construct_params(params, _group_number, _check)
+
+        for column in self.prefetch:
+            pd[column.key] = self._exec_default(column.default)
+
+        return pd
+
+    def _exec_default(self, default):
+        if default.is_callable:
+            return default.arg(self.dialect)
+        else:
+            return default.arg
+
+
 _dialect = MySQLDialect_pymysql(paramstyle='pyformat')
+_dialect.statement_compiler = MySQLCompiler_pymysql
 _dialect.default_paramstyle = 'pyformat'
 
 
