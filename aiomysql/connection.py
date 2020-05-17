@@ -487,8 +487,7 @@ class Connection:
                     asyncio.wait_for(
                         asyncio.open_connection(
                             self._host,
-                            self._port,
-                            loop=self._loop),
+                            self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
