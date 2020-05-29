@@ -455,3 +455,14 @@ async def test_create_table(sa_connect):
 
     res = await conn.execute("SELECT * FROM sa_tbl")
     assert 0 == len(await res.fetchall())
+
+
+@pytest.mark.run_loop
+async def test_async_iter(sa_connect):
+    conn = await sa_connect()
+    await conn.execute(tbl.insert().values(name="second"))
+
+    ret = []
+    async for row in conn.execute(tbl.select()):
+        ret.append(row)
+    assert [(1, "first"), (2, "second")] == ret
