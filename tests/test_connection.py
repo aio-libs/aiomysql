@@ -219,6 +219,7 @@ async def test_connection_double_ensure_closed(connection_creator):
 
 
 @pytest.mark.run_loop
+@pytest.mark.usefixtures("disable_gc")
 async def test___del__(connection_creator):
     conn = await connection_creator()
     with pytest.warns(ResourceWarning):

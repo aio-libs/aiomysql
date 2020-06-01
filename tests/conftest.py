@@ -22,6 +22,18 @@ else:
     uvloop = None
 
 
+@pytest.fixture
+def disable_gc():
+    gc_enabled = gc.isenabled()
+    if gc_enabled:
+        gc.disable()
+        gc.collect()
+    yield
+    if gc_enabled:
+        gc.collect()
+        gc.enable()
+
+
 @pytest.fixture(scope='session')
 def unused_port():
     def f():

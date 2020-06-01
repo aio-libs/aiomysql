@@ -131,7 +131,11 @@ async def test_create_pool_deprecations(mysql_params, loop):
             warnings.simplefilter("always")
             async with pool.get() as conn:
                 pass
-    assert issubclass(w[-1].category, DeprecationWarning)
+    # The first warning emitted is expected to be DeprecationWarning:
+    # in the past, we used to check for the last one but this assumption
+    # breaks under Python 3.7 that also emits a `ResourceWarning` when
+    # executed with `PYTHONASYNCIODEBUG=1`.
+    assert issubclass(w[0].category, DeprecationWarning)
     assert conn.closed
 
     async with create_pool(loop=loop, **mysql_params) as pool:
@@ -149,9 +153,10 @@ async def test_sa_connection(table, mysql_params, loop):
         connection = await engine.acquire()
         assert not connection.closed
         async with connection:
-            ret = []
-            async for i in connection.execute(tbl.select()):
-                ret.append(i)
+            async with connection.execute(tbl.select()) as cursor:
+                ret = []
+                async for i in cursor:
+                    ret.append(i)
             assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
         assert connection.closed
 
@@ -194,10 +199,11 @@ async def test_sa_transaction_rollback(loop, mysql_params, table):
 async def test_create_engine(loop, mysql_params, table):
     async with sa.create_engine(loop=loop, **mysql_params) as engine:
         async with engine.acquire() as conn:
-            ret = []
-            async for i in conn.execute(tbl.select()):
-                ret.append(i)
-            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+            async with conn.execute(tbl.select()) as cursor:
+                ret = []
+                async for i in cursor:
+                    ret.append(i)
+                assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
 
 @pytest.mark.run_loop
@@ -205,10 +211,11 @@ async def test_engine(loop, mysql_params, table):
     engine = await sa.create_engine(loop=loop, **mysql_params)
     async with engine:
         async with engine.acquire() as conn:
-            ret = []
-            async for i in conn.execute(tbl.select()):
-                ret.append(i)
-            assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
+            async with conn.execute(tbl.select()) as cursor:
+                ret = []
+                async for i in cursor:
+                    ret.append(i)
+                assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
 
 
 @pytest.mark.run_loop
@@ -218,7 +225,7 @@ async def test_transaction_context_manager(loop, mysql_params, table):
             async with conn.begin() as tr:
                 async with conn.execute(tbl.select()) as cursor:
                     ret = []
-                    async for i in conn.execute(tbl.select()):
+                    async for i in cursor:
                         ret.append(i)
                     assert [(1, 'a'), (2, 'b'), (3, 'c')] == ret
                 assert cursor.closed
