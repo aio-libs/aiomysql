@@ -128,19 +128,15 @@ async def test_pool(table, pool_creator, loop):
 async def test_create_pool_deprecations(mysql_params, loop):
     async with create_pool(loop=loop, **mysql_params) as pool:
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter("always", category=DeprecationWarning)
             async with pool.get() as conn:
                 pass
-    # The first warning emitted is expected to be DeprecationWarning:
-    # in the past, we used to check for the last one but this assumption
-    # breaks under Python 3.7 that also emits a `ResourceWarning` when
-    # executed with `PYTHONASYNCIODEBUG=1`.
-    assert issubclass(w[0].category, DeprecationWarning)
+    assert issubclass(w[-1].category, DeprecationWarning)
     assert conn.closed
 
     async with create_pool(loop=loop, **mysql_params) as pool:
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+            warnings.simplefilter("always", category=DeprecationWarning)
             with await pool as conn:
                 pass
     assert issubclass(w[-1].category, DeprecationWarning)
