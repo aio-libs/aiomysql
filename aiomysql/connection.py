@@ -605,7 +605,7 @@ class Connection:
     async def _read_bytes(self, num_bytes):
         try:
             data = await self._reader.readexactly(num_bytes)
-        except asyncio.streams.IncompleteReadError as e:
+        except asyncio.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
             raise OperationalError(2013, msg) from e
         except (IOError, OSError) as e:

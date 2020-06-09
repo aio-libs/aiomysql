@@ -239,6 +239,7 @@ def mysql_server_is(server_version, version_tuple):
 async def test_json(connection_creator, table_cleanup):
     connection = await connection_creator(
         charset="utf8mb4", autocommit=True)
+    # TODO do better
     server_info = connection.get_server_info()
     if not mysql_server_is(server_info, (5, 7, 0)):
         raise pytest.skip("JSON type is not supported on MySQL <= 5.6")

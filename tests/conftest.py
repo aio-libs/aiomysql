@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 
+from distutils.version import StrictVersion
 from docker import APIClient
 
 import aiomysql
@@ -19,6 +20,18 @@ if PY_35:
     import uvloop
 else:
     uvloop = None
+
+
+@pytest.fixture
+def disable_gc():
+    gc_enabled = gc.isenabled()
+    if gc_enabled:
+        gc.disable()
+        gc.collect()
+    yield
+    if gc_enabled:
+        gc.collect()
+        gc.enable()
 
 
 @pytest.fixture(scope='session')
@@ -35,21 +48,16 @@ def pytest_generate_tests(metafunc):
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
 
-    if 'mysql_tag' in metafunc.fixturenames:
-        tags = set(metafunc.config.option.mysql_tag)
-        if not tags:
-            tags = ['5.6', '8.0']
-        elif 'all' in tags:
-            tags = ['5.6', '5.7', '8.0']
-        else:
-            tags = list(tags)
-        metafunc.parametrize("mysql_tag", tags, scope='session')
-
 
 # This is here unless someone fixes the generate_tests bit
 @pytest.yield_fixture(scope='session')
 def mysql_tag():
-    return '5.6'
+    return os.environ.get('DBTAG', '10.5')
+
+
+@pytest.yield_fixture(scope='session')
+def mysql_image():
+    return os.environ.get('DB', 'mariadb')
 
 
 @pytest.yield_fixture
@@ -119,12 +127,10 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def mysql_params():
-    params = {"host": os.environ.get('MYSQL_HOST', 'localhost'),
-              "port": int(os.environ.get('MYSQL_PORT', 3306)),
-              "user": os.environ.get('MYSQL_USER', 'root'),
+def mysql_params(mysql_server):
+    params = {**mysql_server['conn_params'],
               "db": os.environ.get('MYSQL_DB', 'test_pymysql'),
-              "password": os.environ.get('MYSQL_PASSWORD', ''),
+              # "password": os.environ.get('MYSQL_PASSWORD', ''),
               "local_infile": True,
               "use_unicode": True,
               }
@@ -169,7 +175,10 @@ def connection_creator(mysql_params, loop):
     yield f
 
     for conn in connections:
-        loop.run_until_complete(conn.ensure_closed())
+        try:
+            loop.run_until_complete(conn.ensure_closed())
+        except ConnectionResetError:
+            pass
 
 
 @pytest.yield_fixture
@@ -220,18 +229,22 @@ def docker():
 
 @pytest.fixture(autouse=True)
 def ensure_mysql_verison(request, mysql_tag):
-    if request.node.get_marker('mysql_verison'):
-        if request.node.get_marker('mysql_verison').args[0] != mysql_tag:
-            pytest.skip('Not applicable for '
-                        'MySQL version: {0}'.format(mysql_tag))
+    if StrictVersion(pytest.__version__) >= StrictVersion('4.0.0'):
+        mysql_version = request.node.get_closest_marker('mysql_verison')
+    else:
+        mysql_version = request.node.get_marker('mysql_verison')
+
+    if mysql_version and mysql_version.args[0] != mysql_tag:
+        pytest.skip('Not applicable for MySQL version: {0}'.format(mysql_tag))
 
 
 @pytest.fixture(scope='session')
-def mysql_server(unused_port, docker, session_id, mysql_tag, request):
+def mysql_server(unused_port, docker, session_id,
+                 mysql_image, mysql_tag, request):
     print('\nSTARTUP CONTAINER - {0}\n'.format(mysql_tag))
 
     if not request.config.option.no_pull:
-        docker.pull('mysql:{}'.format(mysql_tag))
+        docker.pull('{}:{}'.format(mysql_image, mysql_tag))
 
     # bound IPs do not work on OSX
     host = "127.0.0.1"
@@ -244,13 +257,13 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
     tls_cnf = os.path.join(os.path.dirname(__file__),
                            'ssl_resources', 'tls.cnf')
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     ctx.check_hostname = False
     ctx.load_verify_locations(cafile=ca_file)
     # ctx.verify_mode = ssl.CERT_NONE
 
     container_args = dict(
-        image='mysql:{}'.format(mysql_tag),
+        image='{}:{}'.format(mysql_image, mysql_tag),
         name='aiomysql-test-server-{}-{}'.format(mysql_tag, session_id),
         ports=[3306],
         detach=True,
@@ -280,7 +293,7 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
             'ssl': ctx
         }
         delay = 0.001
-        for i in range(100):
+        for _ in range(100):
             try:
                 connection = pymysql.connect(
                     db='mysql',
@@ -332,7 +345,7 @@ def mysql_server(unused_port, docker, session_id, mysql_tag, request):
                         cursor.execute('FLUSH PRIVILEGES')
 
                 break
-            except Exception as err:
+            except Exception:
                 time.sleep(delay)
                 delay *= 2
         else:
