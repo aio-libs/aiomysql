@@ -346,17 +346,23 @@ class Connection:
         """Begin transaction."""
         await self._execute_command(COMMAND.COM_QUERY, "BEGIN")
         await self._read_ok_packet()
-
+        if self._echo:
+            logger.info("BEGIN)
+            
     async def commit(self):
         """Commit changes to stable storage."""
         await self._execute_command(COMMAND.COM_QUERY, "COMMIT")
         await self._read_ok_packet()
-
+        if self._echo:
+            logger.info("COMMIT)
+                        
     async def rollback(self):
         """Roll back the current transaction."""
         await self._execute_command(COMMAND.COM_QUERY, "ROLLBACK")
         await self._read_ok_packet()
-
+        if self._echo:
+            logger.info("ROLLBACK")
+                        
     async def select_db(self, db):
         """Set current db"""
         await self._execute_command(COMMAND.COM_INIT_DB, db)
