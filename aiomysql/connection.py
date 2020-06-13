@@ -387,7 +387,7 @@ class Connection:
             return s.replace("'", "''")
         return escape_string(s)
 
-    def cursor(self, echo=None, *cursors):
+    def cursor(self, echo=False, *cursors):
         """Instantiates and returns a cursor
 
         By default, :class:`Cursor` is returned. It is possible to also give a
