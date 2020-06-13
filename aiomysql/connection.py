@@ -661,7 +661,7 @@ class Connection:
             sql = sql.encode(self._encoding)
 
         if self._echo:
-            logger.debug("COMMAND", extra={"sql": sql, "command": command})
+            logger.debug("ECHO: " + str(sql), extra={"command": command})
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 
