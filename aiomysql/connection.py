@@ -971,6 +971,38 @@ class Connection:
         pkt.check_error()
         return pkt
 
+    async def prepare(self, sql):
+        await self._execute_command(COMMAND.COM_STMT_PREPARE, sql)
+        packet = await self._read_packet()
+        if not packet.is_ok_packet():
+            raise Error("Unexpected error")
+
+        # status
+        packet.advance(1)
+        statement_id = packet.read_uint32()
+        num_columns = packet.read_uint16()
+        num_params = packet.read_uint16()
+        # reserved
+        packet.advance(1)
+        # warning count
+        packet.read_uint16()
+        params = []
+        columns = []
+        if num_params > 0:
+            for _ in range(num_params):
+                params.append(await self._read_packet(FieldDescriptorPacket))
+            if self.client_flag | CLIENT.PROTOCOL_41:
+                # EOF
+                await self._read_packet()
+        if num_columns > 0:
+            for _ in range(num_columns):
+                columns.append(await self._read_packet(FieldDescriptorPacket))
+            if self.client_flag | CLIENT.PROTOCOL_41:
+                # EOF
+                await self._read_packet()
+
+        return PreparedStatement(self, statement_id, params, columns)
+
     # _mysql support
     def thread_id(self):
         return self.server_thread_id[0]
@@ -1338,3 +1370,76 @@ class LoadLocalFile(object):
         finally:
             # send the empty packet to signify we are done sending data
             conn.write_packet(b"")
+
+
+class PreparedStatement(object):
+    def __init__(self, connection, stmt_id, params, columns):
+        self.connection = connection
+        self.stmt_id = stmt_id
+        self.params = params
+        self.columns = columns
+
+    async def execute(self, *args):
+        if len(args) != len(self.params):
+            raise Error("argument count doesn't match")
+        self.connection._next_seq_id = 0
+        data = struct.pack("!B", COMMAND.COM_STMT_EXECUTE)
+        data += struct.pack("<I", self.stmt_id)
+        # CURSOR_TYPE_NO_CURSOR
+        data += struct.pack("!B", 0)
+        # iteration count, always 1
+        data += struct.pack("<I", 1)
+        # TODO: params
+        self.connection.write_packet(data)
+
+        return await self._read_result()
+
+    async def _read_result(self):
+        # noinspection PyProtectedMember
+        packet = await self.connection._read_packet()
+        columns = []
+        columns_num = packet.read_uint8()
+        # read column definitions
+        for _ in range(columns_num):
+            # noinspection PyProtectedMember
+            columns.append(await self.connection._read_packet(FieldDescriptorPacket))
+        # noinspection PyProtectedMember
+        packet = await self.connection._read_packet()
+        if not packet.is_eof_packet():
+            raise Error("expecting EOF packet")
+        result = []
+        while True:
+            # noinspection PyProtectedMember
+            packet = await self.connection._read_packet(BinaryResultSetPacket)
+            if packet.is_eof_packet():
+                return result
+            packet.set_columns(columns)
+            result.append(packet.get_result())
+
+
+class BinaryResultSetPacket(MysqlPacket):
+    def __init__(self, data, encoding):
+        super().__init__(data, encoding)
+        self._columns = []
+
+    def get_result(self):
+        if self.is_eof_packet():
+            return []
+        # header
+        self.advance(1)
+        # parse binary result row
+        # https://dev.mysql.com/doc/internals/en/binary-protocol-resultset-row.html
+        null_bitmap_len = (len(self._columns) + 7 + 2) >> 3
+        null_bitmap = self.read(null_bitmap_len)
+        result = []
+        for i, c in enumerate(self._columns):
+            if null_bitmap[(i + 2) >> 3] & (1 << (i + 2)):
+                result.append(None)
+                continue
+            if c.type_code == FIELD_TYPE.LONGLONG:
+                result.append(self.read_struct("<q")[0])
+                continue
+        return result
+
+    def set_columns(self, columns):
+        self._columns = columns
