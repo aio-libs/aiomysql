@@ -1,4 +1,5 @@
 import datetime
+import json
 import struct
 
 from pymysql.connections import (FieldDescriptorPacket, MysqlPacket)
@@ -12,6 +13,9 @@ class PreparedStatement(object):
         self.stmt_id = stmt_id
         self.params = params
         self.columns = columns
+        self._rows = None
+        self._rownumber = 0
+        self._rowcount = 0
 
     async def execute(self, *args):
         if len(args) != len(self.params):
@@ -26,7 +30,38 @@ class PreparedStatement(object):
         # TODO: params
         self.connection.write_packet(data)
 
-        return await self._read_result()
+        self._rows = await self._read_result()
+        self._rowcount = len(self._rows)
+        return self._rowcount
+
+    async def fetchone(self):
+        if self._rows is None:
+            return None
+
+        result = self._rows[self._rownumber]
+        self._rownumber += 1
+        return result
+
+    async def fetchmany(self, size=1):
+        if self._rows is None:
+            return []
+
+        end = self._rownumber + size
+        result = self._rows[self._rownumber:end]
+        self._rownumber = min(end, len(self._rows))
+
+        return result
+
+    async def fetchall(self):
+        if self._rows is None:
+            return []
+
+        if self._rownumber:
+            result = self._rows[self._rownumber:]
+        else:
+            result = self._rows
+        self._rownumber = len(self._rows)
+        return result
 
     async def _read_result(self):
         # noinspection PyProtectedMember
@@ -55,7 +90,7 @@ class PreparedStatement(object):
 _string_types = {
     FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING, FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB,
     FIELD_TYPE.BLOB, FIELD_TYPE.TINY_BLOB, FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT,
-    FIELD_TYPE.DECIMAL, FIELD_TYPE.NEWDECIMAL,
+    FIELD_TYPE.DECIMAL, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.JSON,
 }
 _date_types = {
     FIELD_TYPE.DATE, FIELD_TYPE.DATETIME, FIELD_TYPE.TIMESTAMP,
@@ -89,8 +124,13 @@ class BinaryResultSetPacket(MysqlPacket):
                 if is_none:
                     result.append(None)
                     continue
+                data = self.read(n).decode(self._encoding)
+                if c.type_code == FIELD_TYPE.JSON:
+                    result.append(json.loads(data))
+                    continue
                 converter = self._decoders.get(c.type_code)
-                result.append(converter(self.read(n).decode(self._encoding)))
+                result.append(converter(data))
+                continue
             if c.type_code == FIELD_TYPE.LONGLONG:
                 result.append(self.read_struct("<q")[0])
                 continue
