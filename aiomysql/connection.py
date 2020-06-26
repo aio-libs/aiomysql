@@ -15,7 +15,6 @@ from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
-from pymysql.constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
@@ -25,7 +24,7 @@ from pymysql.err import (Warning, Error,
                          IntegrityError, InternalError, NotSupportedError,
                          ProgrammingError)
 
-from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
+from pymysql.connections import MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
 from pymysql.connections import pack_int24
@@ -39,7 +38,7 @@ from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import _ConnectionContextManager, _ContextManager, _decide_encoding
 from .log import logger
 from .prepared_statement import PreparedStatement
 
@@ -1277,30 +1276,8 @@ class MySQLResult:
                 FieldDescriptorPacket)
             self.fields.append(field)
             description.append(field.description())
-            field_type = field.type_code
-            if use_unicode:
-                if field_type == FIELD_TYPE.JSON:
-                    # When SELECT from JSON column: charset = binary
-                    # When SELECT CAST(... AS JSON): charset = connection
-                    # encoding
-                    # This behavior is different from TEXT / BLOB.
-                    # We should decode result by connection encoding
-                    # regardless charsetnr.
-                    # See https://github.com/PyMySQL/PyMySQL/issues/488
-                    encoding = conn_encoding  # SELECT CAST(... AS JSON)
-                elif field_type in TEXT_TYPES:
-                    if field.charsetnr == 63:  # binary
-                        # TEXTs with charset=binary means BINARY types.
-                        encoding = None
-                    else:
-                        encoding = conn_encoding
-                else:
-                    # Integers, Dates and Times, and other basic data
-                    # is encoded in ascii
-                    encoding = 'ascii'
-            else:
-                encoding = None
-            converter = self.connection.decoders.get(field_type)
+            encoding = _decide_encoding(use_unicode, conn_encoding, field)
+            converter = self.connection.decoders.get(field.type_code)
             if converter is through:
                 converter = None
             self.converters.append((encoding, converter))

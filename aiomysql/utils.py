@@ -1,5 +1,8 @@
 from collections.abc import Coroutine
 
+from pymysql.connections import TEXT_TYPES
+from pymysql.constants import FIELD_TYPE
+
 
 class _ContextManager(Coroutine):
 
@@ -149,3 +152,30 @@ class _PoolConnectionContextManager:
         finally:
             self._pool = None
             self._conn = None
+
+
+def _decide_encoding(use_unicode, conn_encoding, field):
+    field_type = field.type_code
+    if use_unicode:
+        if field_type == FIELD_TYPE.JSON:
+            # When SELECT from JSON column: charset = binary
+            # When SELECT CAST(... AS JSON): charset = connection
+            # encoding
+            # This behavior is different from TEXT / BLOB.
+            # We should decode result by connection encoding
+            # regardless charsetnr.
+            # See https://github.com/PyMySQL/PyMySQL/issues/488
+            encoding = conn_encoding  # SELECT CAST(... AS JSON)
+        elif field_type in TEXT_TYPES:
+            if field.charsetnr == 63:  # binary
+                # TEXTs with charset=binary means BINARY types.
+                encoding = None
+            else:
+                encoding = conn_encoding
+        else:
+            # Integers, Dates and Times, and other basic data
+            # is encoded in ascii
+            encoding = 'ascii'
+    else:
+        encoding = None
+    return encoding

@@ -4,7 +4,10 @@ import struct
 
 from pymysql.connections import (FieldDescriptorPacket, MysqlPacket)
 from pymysql.constants import (COMMAND, FIELD_TYPE)
+from pymysql.converters import through
 from pymysql.err import Error
+
+from .utils import _decide_encoding
 
 
 class PreparedStatement(object):
@@ -76,6 +79,14 @@ class PreparedStatement(object):
         packet = await self.connection._read_packet()
         if not packet.is_eof_packet():
             raise Error("expecting EOF packet")
+        converters = []
+        for c in columns:
+            encoding = _decide_encoding(
+                self.connection.use_unicode, self.connection.encoding, c)
+            converter = self.connection.decoders.get(c.type_code)
+            if converter is through:
+                converter = None
+            converters.append((encoding, converter))
         result = []
         while True:
             # noinspection PyProtectedMember
@@ -83,14 +94,15 @@ class PreparedStatement(object):
             if packet.is_eof_packet():
                 return result
             packet.set_columns(columns)
-            packet.set_decoders(self.connection.decoders)
+            packet.set_converters(converters)
             result.append(packet.get_result())
 
 
 _string_types = {
-    FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING, FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB,
-    FIELD_TYPE.BLOB, FIELD_TYPE.TINY_BLOB, FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT,
-    FIELD_TYPE.DECIMAL, FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.JSON,
+    FIELD_TYPE.STRING, FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING, FIELD_TYPE.ENUM,
+    FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB, FIELD_TYPE.MEDIUM_BLOB, FIELD_TYPE.BLOB,
+    FIELD_TYPE.TINY_BLOB, FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT, FIELD_TYPE.DECIMAL,
+    FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.JSON,
 }
 _date_types = {
     FIELD_TYPE.DATE, FIELD_TYPE.DATETIME, FIELD_TYPE.TIMESTAMP,
@@ -101,8 +113,7 @@ class BinaryResultSetPacket(MysqlPacket):
     def __init__(self, data, encoding):
         super().__init__(data, encoding)
         self._columns = []
-        self._encoding = encoding
-        self._decoders = {}
+        self._converters = {}
 
     def get_result(self):
         if self.is_eof_packet():
@@ -115,7 +126,7 @@ class BinaryResultSetPacket(MysqlPacket):
         null_bitmap = self.read(null_bitmap_len)
         result = []
         for i, c in enumerate(self._columns):
-            if null_bitmap[(i + 2) >> 3] & (1 << (i + 2)):
+            if null_bitmap[(i + 2) >> 3] & (1 << ((i + 2) % 8)):
                 result.append(None)
                 continue
             # https://dev.mysql.com/doc/internals/en/binary-protocol-value.html
@@ -124,20 +135,21 @@ class BinaryResultSetPacket(MysqlPacket):
                 if is_none:
                     result.append(None)
                     continue
-                data = self.read(n).decode(self._encoding)
-                if c.type_code == FIELD_TYPE.JSON:
-                    result.append(json.loads(data))
-                    continue
-                converter = self._decoders.get(c.type_code)
-                result.append(converter(data))
+                data = self.read(n)
+                encoding, converter = self._converters[i]
+                if encoding is not None:
+                    data = data.decode(encoding)
+                if converter is not None:
+                    data = converter(data)
+                result.append(data)
                 continue
             if c.type_code == FIELD_TYPE.LONGLONG:
                 result.append(self.read_struct("<q")[0])
                 continue
-            if c.type_code == FIELD_TYPE.LONG:
+            if c.type_code in {FIELD_TYPE.LONG, FIELD_TYPE.INT24}:
                 result.append(self.read_struct("<i")[0])
                 continue
-            if c.type_code == FIELD_TYPE.SHORT:
+            if c.type_code in {FIELD_TYPE.SHORT, FIELD_TYPE.YEAR}:
                 result.append(self.read_struct("<h")[0])
                 continue
             if c.type_code == FIELD_TYPE.TINY:
@@ -201,8 +213,8 @@ class BinaryResultSetPacket(MysqlPacket):
     def set_columns(self, columns):
         self._columns = columns
 
-    def set_decoders(self, decoders):
-        self._decoders = decoders
+    def set_converters(self, converters):
+        self._converters = converters
 
     def _read_length_encoded_integer(self):
         n = self.read_uint8()
