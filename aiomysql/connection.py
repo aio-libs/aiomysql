@@ -2,6 +2,7 @@
 # http://dev.mysql.com/doc/internals/en/client-server-protocol.html
 
 import asyncio
+import datetime
 import os
 import socket
 import struct
@@ -1414,13 +1415,26 @@ class PreparedStatement(object):
             if packet.is_eof_packet():
                 return result
             packet.set_columns(columns)
+            packet.set_decoders(self.connection.decoders)
             result.append(packet.get_result())
+
+
+_string_types = {
+    FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING, FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB,
+    FIELD_TYPE.BLOB, FIELD_TYPE.TINY_BLOB, FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT,
+    FIELD_TYPE.DECIMAL, FIELD_TYPE.NEWDECIMAL,
+}
+_date_types = {
+    FIELD_TYPE.DATE, FIELD_TYPE.DATETIME, FIELD_TYPE.TIMESTAMP,
+}
 
 
 class BinaryResultSetPacket(MysqlPacket):
     def __init__(self, data, encoding):
         super().__init__(data, encoding)
         self._columns = []
+        self._encoding = encoding
+        self._decoders = {}
 
     def get_result(self):
         if self.is_eof_packet():
@@ -1436,10 +1450,97 @@ class BinaryResultSetPacket(MysqlPacket):
             if null_bitmap[(i + 2) >> 3] & (1 << (i + 2)):
                 result.append(None)
                 continue
+            # https://dev.mysql.com/doc/internals/en/binary-protocol-value.html
+            if c.type_code in _string_types:
+                n, is_none = self._read_length_encoded_integer()
+                if is_none:
+                    result.append(None)
+                    continue
+                converter = self._decoders.get(c.type_code)
+                result.append(converter(self.read(n).decode(self._encoding)))
             if c.type_code == FIELD_TYPE.LONGLONG:
                 result.append(self.read_struct("<q")[0])
                 continue
-        return result
+            if c.type_code == FIELD_TYPE.LONG:
+                result.append(self.read_struct("<i")[0])
+                continue
+            if c.type_code == FIELD_TYPE.SHORT:
+                result.append(self.read_struct("<h")[0])
+                continue
+            if c.type_code == FIELD_TYPE.TINY:
+                result.append(self.read_struct("<b")[0])
+                continue
+            if c.type_code == FIELD_TYPE.DOUBLE:
+                result.append(self.read_struct("<d")[0])
+                continue
+            if c.type_code == FIELD_TYPE.FLOAT:
+                result.append(self.read_struct("<f")[0])
+                continue
+            if c.type_code in _date_types:
+                n = self.read_uint8()
+                if n == 0:
+                    result.append(None)
+                    continue
+                if n not in {4, 7, 11}:
+                    raise Error("unexpected data")
+                year = self.read_uint16()
+                month = self.read_uint8()
+                day = self.read_uint8()
+                if n == 4:
+                    result.append(datetime.date(year, month, day))
+                    continue
+                hour = self.read_uint8()
+                minute = self.read_uint8()
+                second = self.read_uint8()
+                if n == 7:
+                    result.append(
+                        datetime.datetime(year, month, day, hour, minute, second))
+                    continue
+                microsecond = self.read_uint32()
+                if n == 11:
+                    result.append(
+                        datetime.datetime(
+                            year, month, day, hour, minute, second, microsecond))
+                    continue
+            if c.type_code == FIELD_TYPE.TIME:
+                n = self.read_uint8()
+                if n == 0:
+                    result.append(None)
+                    continue
+                if n not in {8, 12}:
+                    raise Error("unexpected data")
+                negate = -1 if self.read_uint8() == 1 else 1
+                days = self.read_uint32()
+                hour = self.read_uint8()
+                minute = self.read_uint8()
+                second = self.read_uint8()
+                time_delta = datetime.timedelta(
+                    days=days, seconds=second, minutes=minute, hours=hour) * negate
+                if n == 8:
+                    result.append(time_delta)
+                    continue
+                time_delta += datetime.timedelta(microseconds=self.read_uint32())
+                result.append(time_delta)
+                continue
+
+        return tuple(result)
 
     def set_columns(self, columns):
         self._columns = columns
+
+    def set_decoders(self, decoders):
+        self._decoders = decoders
+
+    def _read_length_encoded_integer(self):
+        n = self.read_uint8()
+        if n < 0xfb:
+            return n, False
+        if n == 0xfb:
+            return 0, True
+        if n == 0xfc:
+            return self.read_uint16(), False
+        if n == 0xfd:
+            return self.read_uint24(), False
+        if n == 0xfe:
+            return self.read_uint64(), False
+        raise Error("unexpected value")
