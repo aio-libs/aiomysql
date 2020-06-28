@@ -1,5 +1,6 @@
 from decimal import Decimal
 import datetime
+import json
 
 import pytest
 
@@ -88,7 +89,7 @@ async def test(connection):
         r[4].decode('utf-8')
     assert r[5] == b'\x01'
     assert r[6] == Decimal("123")
-    assert r[7] == '{"a":"b"}'
+    assert json.loads(r[7]) == json.loads('{"a":"b"}')
     assert r[8] == 123
     assert r[9] == 123
     assert r[10] == 123
