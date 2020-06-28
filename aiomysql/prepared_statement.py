@@ -57,22 +57,28 @@ class PreparedStatement(object):
             elif isinstance(arg, Decimal):
                 type_data += bytes([FIELD_TYPE.STRING, 0])
                 data = str(arg).encode('utf-8')
-                value_data += self._get_encoded_integer_on_length(len(data)) + data
+                value_data += \
+                    self._get_encoded_integer_on_length(len(data)) + data
             elif isinstance(arg, bytes):
                 type_data += bytes([FIELD_TYPE.STRING, 0])
-                value_data += self._get_encoded_integer_on_length(len(arg)) + arg
+                value_data += \
+                    self._get_encoded_integer_on_length(len(arg)) + arg
             elif isinstance(arg, str):
                 type_data += bytes([FIELD_TYPE.STRING, 0])
                 data = arg.encode("utf-8")
-                value_data += self._get_encoded_integer_on_length(len(data)) + data
+                value_data += \
+                    self._get_encoded_integer_on_length(len(data)) + data
             elif isinstance(arg, (datetime.date, datetime.datetime)):
                 type_data += bytes([FIELD_TYPE.STRING, 0])
                 data = arg.strftime("%Y-%m-%d %H:%M:%S.%f").encode('utf-8')
-                value_data += self._get_encoded_integer_on_length(len(data)) + data
+                value_data += \
+                    self._get_encoded_integer_on_length(len(data)) + data
                 continue
             else:
                 raise Error("unsupported type " + str(type(arg)))
-        return bytes(null_bitmap) + new_params_bound_flag + type_data + value_data
+        return (
+            bytes(null_bitmap) + new_params_bound_flag + type_data + value_data
+        )
 
     async def fetchone(self):
         if self._rows is None:
@@ -113,7 +119,8 @@ class PreparedStatement(object):
         # read column definitions
         for _ in range(columns_num):
             # noinspection PyProtectedMember
-            columns.append(await self.connection._read_packet(FieldDescriptorPacket))
+            columns.append(
+                await self.connection._read_packet(FieldDescriptorPacket))
         # noinspection PyProtectedMember
         packet = await self.connection._read_packet()
         if not packet.is_eof_packet():
@@ -149,9 +156,10 @@ class PreparedStatement(object):
 
 
 _string_types = {
-    FIELD_TYPE.STRING, FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING, FIELD_TYPE.ENUM,
-    FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB, FIELD_TYPE.MEDIUM_BLOB, FIELD_TYPE.BLOB,
-    FIELD_TYPE.TINY_BLOB, FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT, FIELD_TYPE.DECIMAL,
+    FIELD_TYPE.STRING, FIELD_TYPE.VARCHAR, FIELD_TYPE.VAR_STRING,
+    FIELD_TYPE.ENUM, FIELD_TYPE.SET, FIELD_TYPE.LONG_BLOB,
+    FIELD_TYPE.MEDIUM_BLOB, FIELD_TYPE.BLOB, FIELD_TYPE.TINY_BLOB,
+    FIELD_TYPE.GEOMETRY, FIELD_TYPE.BIT, FIELD_TYPE.DECIMAL,
     FIELD_TYPE.NEWDECIMAL, FIELD_TYPE.JSON,
 }
 _date_types = {
@@ -229,13 +237,15 @@ class BinaryResultSetPacket(MysqlPacket):
                 second = self.read_uint8()
                 if n == 7:
                     result.append(
-                        datetime.datetime(year, month, day, hour, minute, second))
+                        datetime.datetime(
+                            year, month, day, hour, minute, second))
                     continue
                 microsecond = self.read_uint32()
                 if n == 11:
                     result.append(
                         datetime.datetime(
-                            year, month, day, hour, minute, second, microsecond))
+                            year, month, day, hour, minute, second, microsecond
+                        ))
                     continue
             if c.type_code == FIELD_TYPE.TIME:
                 n = self.read_uint8()
@@ -250,11 +260,13 @@ class BinaryResultSetPacket(MysqlPacket):
                 minute = self.read_uint8()
                 second = self.read_uint8()
                 time_delta = datetime.timedelta(
-                    days=days, seconds=second, minutes=minute, hours=hour) * negate
+                    days=days, seconds=second, minutes=minute, hours=hour
+                ) * negate
                 if n == 8:
                     result.append(time_delta)
                     continue
-                time_delta += datetime.timedelta(microseconds=self.read_uint32())
+                time_delta += \
+                    datetime.timedelta(microseconds=self.read_uint32())
                 result.append(time_delta)
                 continue
 

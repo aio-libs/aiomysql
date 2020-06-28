@@ -65,13 +65,13 @@ async def test(connection):
             coldatetime,
             coltime,
             colint2
-        ) VALUES 
+        ) VALUES
         (?,?,?,?,ST_GeomFromText('POINT(1 1)'),?,?,?,?,?,?,?,?,?,?,?,?,?)
         """
     )
     await prepared.execute(
-        "123", "a", b"\x01\x02", "b", 1, Decimal("123"), '{"a":"b"}', 123, 123, 123,
-        123, 123.45, 123.45, datetime.date(2020, 6, 1),
+        "123", "a", b"\x01\x02", "b", 1, Decimal("123"), '{"a":"b"}', 123, 123,
+        123, 123, 123.45, 123.45, datetime.date(2020, 6, 1),
         datetime.datetime(2020, 6, 1, 1, 23, 45, 678),
         datetime.datetime(1, 1, 1, 1, 23, 45), None)
 
