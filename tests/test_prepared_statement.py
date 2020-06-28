@@ -31,14 +31,6 @@ async def prepare(conn):
             colint2 integer
         )"""
     )
-    data = [
-        "123", "a", b"\x01\x02", "b", 1, Decimal("123"), '{"a":"b"}', 123,
-        123, 123, 123, 123.45, 123.45, '2020-06-01', '2020-06-01 01:23:45', '01:23:45',
-        None,
-    ]
-    await c.execute("insert into everytype values "
-                        "(%s,%s,%s,%s,ST_GeomFromText('POINT(1 1)'),%s,%s,%s,%s,%s,%s,"
-                        "%s,%s,%s,%s,%s,%s,%s)", data)
 
 
 @pytest.mark.run_loop
@@ -50,8 +42,39 @@ async def test_simple(connection):
 
 
 @pytest.mark.run_loop
-async def test_result(connection):
+async def test(connection):
     await prepare(connection)
+    prepared = await connection.prepare(
+        """
+        INSERT INTO everytype (
+            colchar,
+            colset,
+            colblob,
+            colenum,
+            colgeometry,
+            colbit,
+            coldecimal,
+            coljson,
+            collong,
+            colint,
+            colshort,
+            coltiny,
+            coldouble,
+            colfloat,
+            coldate,
+            coldatetime,
+            coltime,
+            colint2
+        ) VALUES 
+        (?,?,?,?,ST_GeomFromText('POINT(1 1)'),?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """
+    )
+    await prepared.execute(
+        "123", "a", b"\x01\x02", "b", 1, Decimal("123"), '{"a":"b"}', 123, 123, 123,
+        123, 123.45, 123.45, datetime.date(2020, 6, 1),
+        datetime.datetime(2020, 6, 1, 1, 23, 45, 678),
+        datetime.datetime(1, 1, 1, 1, 23, 45), None)
+
     prepared = await connection.prepare("SELECT * FROM everytype")
     await prepared.execute()
     r = await prepared.fetchone()

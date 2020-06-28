@@ -1,5 +1,5 @@
 import datetime
-import json
+from decimal import Decimal
 import struct
 
 from pymysql.connections import (FieldDescriptorPacket, MysqlPacket)
@@ -30,12 +30,49 @@ class PreparedStatement(object):
         data += struct.pack("!B", 0)
         # iteration count, always 1
         data += struct.pack("<I", 1)
-        # TODO: params
+        data += self._encode_params(args)
         self.connection.write_packet(data)
 
         self._rows = await self._read_result()
         self._rowcount = len(self._rows)
         return self._rowcount
+
+    def _encode_params(self, args):
+        if len(args) == 0:
+            return b''
+        null_bitmap = [0] * ((len(args) + 7) // 8)
+        new_params_bound_flag = b'\x01'
+        type_data = b''
+        value_data = b''
+        for i, arg in enumerate(args):
+            if arg is None:
+                null_bitmap[i // 8] |= 1 << (i % 8)
+                type_data += bytes([FIELD_TYPE.NULL, 0])
+            elif isinstance(arg, int):
+                type_data += bytes([FIELD_TYPE.LONGLONG, 0])
+                value_data += struct.pack("<q", arg)
+            elif isinstance(arg, float):
+                type_data += bytes([FIELD_TYPE.DOUBLE, 0])
+                value_data += struct.pack("<d", arg)
+            elif isinstance(arg, Decimal):
+                type_data += bytes([FIELD_TYPE.STRING, 0])
+                data = str(arg).encode('utf-8')
+                value_data += self._get_encoded_integer_on_length(len(data)) + data
+            elif isinstance(arg, bytes):
+                type_data += bytes([FIELD_TYPE.STRING, 0])
+                value_data += self._get_encoded_integer_on_length(len(arg)) + arg
+            elif isinstance(arg, str):
+                type_data += bytes([FIELD_TYPE.STRING, 0])
+                data = arg.encode("utf-8")
+                value_data += self._get_encoded_integer_on_length(len(data)) + data
+            elif isinstance(arg, (datetime.date, datetime.datetime)):
+                type_data += bytes([FIELD_TYPE.STRING, 0])
+                data = arg.strftime("%Y-%m-%d %H:%M:%S.%f").encode('utf-8')
+                value_data += self._get_encoded_integer_on_length(len(data)) + data
+                continue
+            else:
+                raise Error("unsupported type " + str(type(arg)))
+        return bytes(null_bitmap) + new_params_bound_flag + type_data + value_data
 
     async def fetchone(self):
         if self._rows is None:
@@ -69,6 +106,8 @@ class PreparedStatement(object):
     async def _read_result(self):
         # noinspection PyProtectedMember
         packet = await self.connection._read_packet()
+        if packet.is_ok_packet():
+            return []
         columns = []
         columns_num = packet.read_uint8()
         # read column definitions
@@ -96,6 +135,17 @@ class PreparedStatement(object):
             packet.set_columns(columns)
             packet.set_converters(converters)
             result.append(packet.get_result())
+
+    def _get_encoded_integer_on_length(self, size):
+        if size <= 250:
+            return bytes([size])
+        elif size <= 0xffff:
+            return b"\xfc" + struct.pack("<H", size)
+        elif size <= 0xffffff:
+            return b"\xfd" + struct.pack("<BH", size & 0xff, size >> 8)
+        elif size <= 0xffffffff:
+            return b"\xfe" + struct.pack("<L", size)
+        raise Error("size too long")
 
 
 _string_types = {
