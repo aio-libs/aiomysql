@@ -24,6 +24,7 @@ class PreparedStatement(object):
         if len(args) != len(self.params):
             raise Error("argument count doesn't match")
         self.connection._next_seq_id = 0
+        self._rownumber = 0
         data = struct.pack("!B", COMMAND.COM_STMT_EXECUTE)
         data += struct.pack("<I", self.stmt_id)
         # CURSOR_TYPE_NO_CURSOR
