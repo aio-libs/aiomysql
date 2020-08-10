@@ -9,5 +9,5 @@ PyMySQL==0.10.0
 docker==4.2.2
 sphinx==3.2.0
 sphinxcontrib-asyncio==0.2.0
-sqlalchemy>1.2.12,<=1.3.16
+sqlalchemy==1.3.18
 uvloop>=0.11.2,<=0.14.0; python_version >= '3.5'
