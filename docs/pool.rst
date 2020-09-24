@@ -45,6 +45,9 @@ The basic usage is::
     :param kwargs: The function accepts all parameters that
         :func:`aiomysql.connect` does plus optional keyword-only parameters
         *loop*, *minsize*, *maxsize*.
+    :param float pool_recycle: number of seconds after which connection is
+         recycled, helps to deal with stale connections in pool, default
+         value is -1, means recycling logic is disabled.
     :returns: :class:`Pool` instance.
 
 
