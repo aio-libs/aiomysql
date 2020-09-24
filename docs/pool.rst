@@ -47,7 +47,7 @@ The basic usage is::
         *loop*, *minsize*, *maxsize*.
     :returns: :class:`Pool` instance.
     :param float pool_recycle: number of seconds after which connection is
-        recycled, helpts to deal with stale connections in pool, default
+        recycled, helps to deal with stale connections in pool, default
         value is -1, means recycling logic is disabled.
 
 
