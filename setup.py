@@ -47,6 +47,8 @@ classifiers = [
     'Framework :: AsyncIO',
 ]
 
+keywords = ["mysql", "asyncio", "aiomysql"]
+
 
 setup(name='aiomysql',
       version=read_version(),
@@ -62,4 +64,5 @@ setup(name='aiomysql',
       packages=find_packages(exclude=['tests', 'tests.*']),
       install_requires=install_requires,
       extras_require=extras_require,
+      keywords=keywords,
       include_package_data=True)
