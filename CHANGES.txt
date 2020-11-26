@@ -1,7 +1,7 @@
 Changes
 -------
 
-0.0.21 (2020-1X-XX)
+0.0.21 (2020-11-26)
 ^^^^^^^^^^^^^^^^^^^
 
 * Allow to use custom Cursor subclasses #374
