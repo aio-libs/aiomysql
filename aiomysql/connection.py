@@ -224,7 +224,7 @@ class Connection:
         #: specified autocommit mode. None means use server default.
         self.autocommit_mode = autocommit
 
-        self.encoders = encoders  # Need for MySQLdb compatibility.
+        self.encoders = conv  # Need for MySQLdb compatibility.
         self.decoders = conv
         self.sql_mode = sql_mode
         self.init_command = init_command
@@ -375,7 +375,7 @@ class Connection:
             return "'" + self.escape_string(obj) + "'"
         if isinstance(obj, bytes):
             return escape_bytes_prefixed(obj)
-        return escape_item(obj, self._charset)
+        return escape_item(obj, self._charset, mapping=self.encoders)
 
     def literal(self, obj):
         """Alias for escape()"""
