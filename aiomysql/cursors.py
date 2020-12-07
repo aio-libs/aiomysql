@@ -274,7 +274,7 @@ class Cursor:
 
         m = RE_INSERT_VALUES.match(query)
         if m:
-            q_prefix = m.group(1)
+            q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
             q_postfix = m.group(3) or ''
             assert q_values[0] == '(' and q_values[-1] == ')'
