@@ -67,3 +67,4 @@ target/
 tests/fixtures/my.cnf
 
 .pytest_cache
+/tests/test_reconnect.py

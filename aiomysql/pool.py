@@ -5,6 +5,9 @@ import asyncio
 import collections
 import warnings
 
+from pymysql import OperationalError
+
+from .log import logger
 from .connection import connect
 from .utils import (_PoolContextManager, _PoolConnectionContextManager,
                     _PoolAcquireContextManager)
@@ -152,8 +155,7 @@ class Pool(asyncio.AbstractServer):
                 self._free.pop()
                 conn.close()
 
-            elif (self._recycle > -1 and
-                  self._loop.time() - conn.last_usage > self._recycle):
+            elif (self._recycle > -1 and self._loop.time() - conn.last_usage > self._recycle):
                 self._free.pop()
                 conn.close()
 
@@ -162,28 +164,41 @@ class Pool(asyncio.AbstractServer):
             n += 1
 
         while self.size < self.minsize:
-            self._acquiring += 1
-            try:
-                conn = await connect(echo=self._echo, loop=self._loop,
-                                     **self._conn_kwargs)
-                # raise exception if pool is closing
-                self._free.append(conn)
-                self._cond.notify()
-            finally:
-                self._acquiring -= 1
+            await self.__create_new_connection()
+
         if self._free:
             return
 
         if override_min and self.size < self.maxsize:
-            self._acquiring += 1
+            await self.__create_new_connection()
+
+    async def __create_new_connection(self):
+        self._acquiring += 1
+        try:
             try:
-                conn = await connect(echo=self._echo, loop=self._loop,
-                                     **self._conn_kwargs)
-                # raise exception if pool is closing
-                self._free.append(conn)
-                self._cond.notify()
-            finally:
-                self._acquiring -= 1
+                conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
+
+            except OperationalError as e:
+                sleep_time_list = [3] * 10
+                for attempt, sleep_time in enumerate(sleep_time_list):
+                    try:
+                        logger.warning('Connect to MySQL failed. Attempt %d of 10', attempt + 1)
+                        conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
+                        break
+
+                    except OperationalError:
+                        await asyncio.sleep(sleep_time)
+
+                else:
+                    logger.error('Connect to MySQL failed')
+                    raise e
+
+            # raise exception if pool is closing
+            self._free.append(conn)
+            self._cond.notify()
+
+        finally:
+            self._acquiring -= 1
 
     async def _wakeup(self):
         async with self._cond:
