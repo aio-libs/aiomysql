@@ -244,12 +244,11 @@ class Cursor:
             raise
 
         except InternalError as e:
-            # TODO dodac log w listener ze jest internalERROR
-            sleep_time_list = [3] * 10
+            sleep_time_list = [3] * 20
             sleep_time_list.insert(0, 1)
             for attempt, sleep_time in enumerate(sleep_time_list):
                 try:
-                    logger.warning('Reconnecting to MySQL. Attempt %d of 11 for connection %s', attempt + 1, id(conn))
+                    logger.warning('%s - Reconnecting to MySQL. Attempt %d of 21 for connection %s', conn._db, attempt + 1, id(conn))
                     await conn.ping()
                     await self._query(query)
                     break
@@ -258,13 +257,14 @@ class Cursor:
                     await asyncio.sleep(sleep_time)
 
             else:
-                logger.error('Reconnecting to MySQL failed for connection %s', id(conn))
+                logger.error('%s - Reconnecting to MySQL failed for connection %s', conn._db, id(conn))
                 raise e
 
         self._executed = query
         if self._echo:
             logger.info(query)
             logger.info("%r", args)
+
         return self._rowcount
 
     async def executemany(self, query, args):
