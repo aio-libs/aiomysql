@@ -243,7 +243,7 @@ class Cursor:
         except asyncio.CancelledError:
             raise
 
-        except InternalError as e:
+        except (InternalError, OperationalError) as e:
             sleep_time_list = [3] * 20
             sleep_time_list.insert(0, 1)
             for attempt, sleep_time in enumerate(sleep_time_list):
@@ -253,7 +253,7 @@ class Cursor:
                     await self._query(query)
                     break
 
-                except OperationalError:
+                except (InternalError, OperationalError):
                     await asyncio.sleep(sleep_time)
 
             else:
