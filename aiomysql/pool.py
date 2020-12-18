@@ -141,6 +141,10 @@ class Pool(asyncio.AbstractServer):
 
     def acquire_with_transaction(self):
         """Acquire free connection from the pool for transaction"""
+        o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.Task.current_task())
+        if o_transaction_context_manager:
+            return o_transaction_context_manager
+
         coro = self._acquire()
         return TaskTransactionContextManager(coro, self)
 
@@ -171,7 +175,7 @@ class Pool(asyncio.AbstractServer):
                 self._free.pop()
                 conn.close()
 
-            elif (self._recycle > -1 and self._loop.time() - conn.last_usage > self._recycle):
+            elif self._recycle > -1 and self._loop.time() - conn.last_usage > self._recycle:
                 logger.debug('%s - Connection (%d) is removed from pool because of recycle time %d', self._db, id(conn), self._recycle)
                 self._free.pop()
                 conn.close()
