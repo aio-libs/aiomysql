@@ -201,8 +201,8 @@ class Pool(asyncio.AbstractServer):
             try:
                 conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
 
-            except OperationalError as e:
-                logger.error(e)
+            except OperationalError as error:
+                logger.error(error)
                 sleep_time_list = [3] * 20
                 for attempt, sleep_time in enumerate(sleep_time_list):
                     try:
@@ -210,12 +210,13 @@ class Pool(asyncio.AbstractServer):
                         conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
                         break
 
-                    except OperationalError:
+                    except OperationalError as e:
+                        logger.error(e)
                         await asyncio.sleep(sleep_time)
 
                 else:
                     logger.error('%s - Connect to MySQL failed', self._db)
-                    raise e
+                    raise error
 
             # raise exception if pool is closing
             self._free.append(conn)

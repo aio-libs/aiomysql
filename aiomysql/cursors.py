@@ -243,8 +243,8 @@ class Cursor:
         except asyncio.CancelledError:
             raise
 
-        except (InternalError, OperationalError) as e:
-            logger.error(e)
+        except (InternalError, OperationalError) as error:
+            logger.error(error)
             sleep_time_list = [3] * 20
             sleep_time_list.insert(0, 1)
             for attempt, sleep_time in enumerate(sleep_time_list):
@@ -254,12 +254,13 @@ class Cursor:
                     await self._query(query)
                     break
 
-                except (InternalError, OperationalError):
+                except (InternalError, OperationalError) as e:
+                    logger.error(e)
                     await asyncio.sleep(sleep_time)
 
             else:
                 logger.error('%s - Reconnecting to MySQL failed for connection %s', conn._db, id(conn))
-                raise e
+                raise error
 
         self._executed = query
         if self._echo:
