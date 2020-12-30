@@ -202,6 +202,7 @@ class Pool(asyncio.AbstractServer):
                 conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
 
             except OperationalError as e:
+                logger.error(e)
                 sleep_time_list = [3] * 20
                 for attempt, sleep_time in enumerate(sleep_time_list):
                     try:

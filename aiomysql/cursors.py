@@ -244,6 +244,7 @@ class Cursor:
             raise
 
         except (InternalError, OperationalError) as e:
+            logger.error(e)
             sleep_time_list = [3] * 20
             sleep_time_list.insert(0, 1)
             for attempt, sleep_time in enumerate(sleep_time_list):
