@@ -23,6 +23,14 @@ RE_INSERT_VALUES = re.compile(
     r"(\s*(?:ON DUPLICATE.*)?);?\s*\Z",
     re.IGNORECASE | re.DOTALL)
 
+ERROR_CODES_FOR_RECONNECTING = [
+    1927,  # ER_CONNECTION_KILLED
+    1184,  # ER_NEW_ABORTING_CONNECTION
+    1152,  # ER_ABORTING_CONNECTION,
+    2003,  # Can't connect to MySQL server
+    2013,  # Lost connection to MySQL server during query
+]
+
 
 class Cursor:
     """Cursor is used to interact with the database."""
@@ -243,24 +251,34 @@ class Cursor:
         except asyncio.CancelledError:
             raise
 
-        except (InternalError, OperationalError) as error:
-            logger.error(error)
+        except Exception as main_error:
+            if not hasattr(main_error, 'args') or main_error.args[0] not in ERROR_CODES_FOR_RECONNECTING:
+                raise main_error
+
+            logger.error(main_error)
             sleep_time_list = [3] * 20
             sleep_time_list.insert(0, 1)
             for attempt, sleep_time in enumerate(sleep_time_list):
                 try:
                     logger.warning('%s - Reconnecting to MySQL. Attempt %d of 21 for connection %s', conn._db, attempt + 1, id(conn))
                     await conn.ping()
+                    logger.info('%s - Successfully reconnected to MySQL after error for connection %s', conn._db, id(conn))
                     await self._query(query)
                     break
 
-                except (InternalError, OperationalError) as e:
+                except asyncio.CancelledError:
+                    raise
+
+                except Exception as e:
+                    if not hasattr(e, 'args') or e.args[0] not in ERROR_CODES_FOR_RECONNECTING:
+                        break
+
                     logger.error(e)
                     await asyncio.sleep(sleep_time)
 
             else:
                 logger.error('%s - Reconnecting to MySQL failed for connection %s', conn._db, id(conn))
-                raise error
+                raise main_error
 
         self._executed = query
         if self._echo:

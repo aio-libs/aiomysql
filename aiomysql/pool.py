@@ -208,6 +208,7 @@ class Pool(asyncio.AbstractServer):
                     try:
                         logger.warning('%s - Connect to MySQL failed. Attempt %d of 20', self._db, attempt + 1)
                         conn = await connect(echo=self._echo, loop=self._loop, **self._conn_kwargs)
+                        logger.info('%s - Successfully connect to MySQL after error', self._db)
                         break
 
                     except OperationalError as e:
