@@ -16,7 +16,6 @@ from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
 from pymysql.constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
 from pymysql.err import (Warning, Error,
@@ -28,18 +27,17 @@ from pymysql.err import (Warning, Error,
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
-from pymysql.connections import pack_int24
 
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
-from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import (_ConnectionContextManager, _ContextManager,
+                    int2byte, byte2int, pack_int24, lenenc_int)
 from .log import logger
 
 DEFAULT_USER = getpass.getuser()
