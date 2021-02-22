@@ -10,5 +10,5 @@ docker==4.4.3
 sphinx==3.5.1
 sphinxcontrib-asyncio==0.3.0
 sqlalchemy==1.3.23
-uvloop>=0.11.2,<=0.14.0; python_version >= '3.5'
+uvloop==0.15.2; python_version >= '3.5'
 pyroma==2.6
