@@ -5,7 +5,7 @@ ipython==7.21.0
 pytest==6.2.2
 pytest-cov==2.11.1
 pytest-sugar==0.9.4
-PyMySQL>=0.9,<=0.9.3
+PyMySQL==1.0.2
 docker>=3.5.1,<=4.2.0
 sphinx>=1.8.1, <=3.0.3
 sphinxcontrib-asyncio==0.2.0
