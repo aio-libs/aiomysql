@@ -26,23 +26,22 @@ Cursor
 
         loop = asyncio.get_event_loop()
 
-        @asyncio.coroutine
         def test_example():
-            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+            conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                                user='root', password='',
                                                db='mysql', loop=loop)
 
             # create default cursor
-            cursor = yield from conn.cursor()
+            cursor = await conn.cursor()
 
             # execute sql query
-            yield from cursor.execute("SELECT Host, User FROM user")
+            await cursor.execute("SELECT Host, User FROM user")
 
             # fetch all results
-            r = yield from cursor.fetchall()
+            r = await cursor.fetchall()
 
             # detach cursor from connection
-            yield from cursor.close()
+            await cursor.close()
 
             # close connection
             conn.close()
@@ -137,7 +136,7 @@ Cursor
 
         For example, getting all rows where id is 5::
 
-            yield from cursor.execute("SELECT * FROM t1 WHERE id=%s", (5,))
+            await cursor.execute("SELECT * FROM t1 WHERE id=%s", (5,))
 
         :param str query: sql statement
         :param list args: tuple or list of arguments for sql query
@@ -157,7 +156,7 @@ Cursor
                ]
             stmt = "INSERT INTO employees (name, phone)
                 VALUES ('%s','%s')"
-            yield from cursor.executemany(stmt, data)
+            await cursor.executemany(stmt, data)
 
         `INSERT` statements are optimized by batching the data, that is
         using the MySQL multiple rows syntax.
@@ -183,22 +182,22 @@ Cursor
         query using :meth:`Cursor.execute()` to get any OUT or INOUT values.
         Basic usage example::
 
-            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+            conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                                user='root', password='',
                                                db='mysql', loop=self.loop)
 
-            cur = yield from conn.cursor()
-            yield from cur.execute("""CREATE PROCEDURE myinc(p1 INT)
+            cur = await conn.cursor()
+            await cur.execute("""CREATE PROCEDURE myinc(p1 INT)
                                    BEGIN
                                        SELECT p1 + 1;
                                    END
                                    """)
 
-            yield from cur.callproc('myinc', [1])
-            (ret, ) = yield from cur.fetchone()
+            await cur.callproc('myinc', [1])
+            (ret, ) = await cur.fetchone()
             assert 2, ret
 
-            yield from cur.close()
+            await cur.close()
             conn.close()
 
         Compatibility warning: The act of calling a stored procedure
@@ -229,15 +228,15 @@ Cursor
         due to the specified number of rows not being available, fewer rows
         may be returned ::
 
-            cursor = yield from connection.cursor()
-            yield from cursor.execute("SELECT * FROM test;")
+            cursor = await connection.cursor()
+            await cursor.execute("SELECT * FROM test;")
             r = cursor.fetchmany(2)
             print(r)
             # [(1, 100, "abc'def"), (2, None, 'dada')]
-            r = yield from cursor.fetchmany(2)
+            r = await cursor.fetchmany(2)
             print(r)
             # [(3, 42, 'bar')]
-            r = yield from cursor.fetchmany(2)
+            r = await cursor.fetchmany(2)
             print(r)
             # []
 
@@ -248,8 +247,8 @@ Cursor
 
         :ref:`Coroutine <coroutine>` returns all rows of a query result set::
 
-         yield from cursor.execute("SELECT * FROM test;")
-         r = yield from cursor.fetchall()
+         await cursor.execute("SELECT * FROM test;")
+         r = await cursor.fetchall()
          print(r)
          # [(1, 100, "abc'def"), (2, None, 'dada'), (3, 42, 'bar')]
 
@@ -274,7 +273,7 @@ Cursor
             probably to catch both exceptions in your code::
 
                 try:
-                    yield from cur.scroll(1000 * 1000)
+                    await cur.scroll(1000 * 1000)
                 except (ProgrammingError, IndexError), exc:
                     deal_with_it(exc)
 
@@ -292,21 +291,20 @@ Cursor
 
         loop = asyncio.get_event_loop()
 
-        @asyncio.coroutine
-        def test_example():
-            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+        async def test_example():
+            conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                                user='root', password='',
                                                db='mysql', loop=loop)
 
             # create dict cursor
-            cursor = yield from conn.cursor(aiomysql.DictCursor)
+            cursor = await conn.cursor(aiomysql.DictCursor)
 
             # execute sql query
-            yield from cursor.execute(
+            await cursor.execute(
                 "SELECT * from people where name='bob'")
 
             # fetch all results
-            r = yield from cursor.fetchone()
+            r = await cursor.fetchone()
             print(r)
             # {'age': 20, 'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56),
             # 'name': 'bob'}
@@ -332,21 +330,20 @@ Cursor
 
         loop = asyncio.get_event_loop()
 
-        @asyncio.coroutine
-        def test_example():
-            conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+        async def test_example():
+            conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                                user='root', password='',
                                                db='mysql', loop=loop)
 
             # create your dict cursor
-            cursor = yield from conn.cursor(AttrDictCursor)
+            cursor = await conn.cursor(AttrDictCursor)
 
             # execute sql query
-            yield from cursor.execute(
+            await cursor.execute(
                 "SELECT * from people where name='bob'")
 
             # fetch all results
-            r = yield from cursor.fetchone()
+            r = await cursor.fetchone()
             print(r)
             # {'age': 20, 'DOB': datetime.datetime(1990, 2, 6, 23, 4, 56),
             # 'name': 'bob'}
