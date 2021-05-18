@@ -1,263 +1,263 @@
 import asyncio
 import gc
 import os
-import sys
-import unittest
+
+import pytest
+
 import aiomysql
-from tests._testutils import run_until_complete
-from tests.base import AIOPyMySQLTestCase
 
 
-PY_341 = sys.version_info >= (3, 4, 1)
+@pytest.fixture()
+def fill_my_cnf(mysql_params):
+    tests_root = os.path.abspath(os.path.dirname(__file__))
+    path1 = os.path.join(tests_root, 'fixtures/my.cnf.tmpl')
+    path2 = os.path.join(tests_root, 'fixtures/my.cnf')
+    with open(path1) as f1:
+        tmpl = f1.read()
+    with open(path2, 'w') as f2:
+        f2.write(tmpl.format_map(mysql_params))
 
 
-class TestConnection(AIOPyMySQLTestCase):
+@pytest.mark.run_loop
+async def test_connect_timeout(connection_creator):
+    # All exceptions are caught and raised as operational errors
+    with pytest.raises(aiomysql.OperationalError):
+        await connection_creator(connect_timeout=0.000000000001)
 
-    def fill_my_cnf(self):
-        tests_root = os.path.abspath(os.path.dirname(__file__))
-        path1 = os.path.join(tests_root, 'fixtures/my.cnf.tmpl')
-        path2 = os.path.join(tests_root, 'fixtures/my.cnf')
-        with open(path1) as f1:
-            tmpl = f1.read()
-        with open(path2, 'w') as f2:
-            f2.write(tmpl.format_map(self.__dict__))
 
-    @run_until_complete
-    def test_connect_timeout(self):
-        # All exceptions are caught and raised as operational errors
-        with self.assertRaises(aiomysql.OperationalError):
-            yield from self.connect(connect_timeout=0.000000000001)
+@pytest.mark.run_loop
+async def test_config_file(fill_my_cnf, connection_creator, mysql_params):
+    tests_root = os.path.abspath(os.path.dirname(__file__))
+    path = os.path.join(tests_root, 'fixtures/my.cnf')
+    conn = await connection_creator(read_default_file=path)
 
-    @run_until_complete
-    def test_config_file(self):
-        self.fill_my_cnf()
-        tests_root = os.path.abspath(os.path.dirname(__file__))
-        path = os.path.join(tests_root, 'fixtures/my.cnf')
-        conn = yield from self.connect(read_default_file=path)
+    assert conn.host == mysql_params['host']
+    assert conn.port == mysql_params['port']
+    assert conn.user, mysql_params['user']
 
-        self.assertEqual(conn.host, self.host)
-        self.assertEqual(conn.port, self.port)
-        self.assertEqual(conn.user, self.user)
+    # make sure connection is working
+    cur = await conn.cursor()
+    await cur.execute('SELECT 42;')
+    (r, ) = await cur.fetchone()
+    assert r == 42
+    conn.close()
 
-        # make sure connection is working
-        cur = yield from conn.cursor()
-        yield from cur.execute('SELECT 42;')
-        (r, ) = yield from cur.fetchone()
-        self.assertEqual(r, 42)
-        conn.close()
 
-    @run_until_complete
-    def test_config_file_with_different_group(self):
-        self.fill_my_cnf()
-        # same test with config file but actual settings
-        # located in not default group.
-        tests_root = os.path.abspath(os.path.dirname(__file__))
-        path = os.path.join(tests_root, 'fixtures/my.cnf')
-        group = 'client_with_unix_socket'
-        conn = yield from self.connect(read_default_file=path,
-                                       read_default_group=group)
+@pytest.mark.run_loop
+async def test_config_file_with_different_group(fill_my_cnf,
+                                                connection_creator,
+                                                mysql_params):
+    # same test with config file but actual settings
+    # located in not default group.
+    tests_root = os.path.abspath(os.path.dirname(__file__))
+    path = os.path.join(tests_root, 'fixtures/my.cnf')
+    group = 'client_with_unix_socket'
+    conn = await connection_creator(read_default_file=path,
+                                    read_default_group=group)
 
-        self.assertEqual(conn.charset, 'utf8')
-        self.assertEqual(conn.user, 'root')
-        self.assertEqual(conn.unix_socket, '/var/run/mysqld/mysqld.sock')
+    assert conn.charset == 'utf8'
+    assert conn.user == 'root'
 
-        # make sure connection is working
-        cur = yield from conn.cursor()
-        yield from cur.execute('SELECT 42;')
-        (r, ) = yield from cur.fetchone()
-        self.assertEqual(r, 42)
-        conn.close()
+    # make sure connection is working
+    cur = await conn.cursor()
+    await cur.execute('SELECT 42;')
+    (r, ) = await cur.fetchone()
+    assert r == 42
+    conn.close()
 
-    @run_until_complete
-    def test_connect_using_unix_socket(self):
-        sock = '/var/run/mysqld/mysqld.sock'
-        conn = yield from self.connect(unix_socket=sock)
-        self.assertEqual(conn.unix_socket, sock)
 
-        cur = yield from conn.cursor()
-        yield from cur.execute('SELECT 42;')
-        (r, ) = yield from cur.fetchone()
-        self.assertEqual(r, 42)
-        conn.close()
+@pytest.mark.run_loop
+async def test_utf8mb4(connection_creator):
+    """This test requires MySQL >= 5.5"""
+    charset = 'utf8mb4'
+    conn = await connection_creator(charset=charset)
+    assert conn.charset == charset
+    conn.close()
 
-    @run_until_complete
-    def test_utf8mb4(self):
-        """This test requires MySQL >= 5.5"""
-        charset = 'utf8mb4'
-        conn = yield from self.connect(charset=charset)
-        self.assertEqual(conn.charset, charset)
-        conn.close()
 
-    @run_until_complete
-    def test_largedata(self):
-        """Large query and response (>=16MB)"""
-        cur = yield from self.connections[0].cursor()
-        yield from cur.execute("SELECT @@max_allowed_packet")
-        r = yield from cur.fetchone()
-        if r[0] < 16 * 1024 * 1024 + 10:
-            self.skipTest('Set max_allowed_packet to bigger than 17MB')
-        else:
-            t = 'a' * (16 * 1024 * 1024)
-            yield from cur.execute("SELECT '" + t + "'")
-            r = yield from cur.fetchone()
-            self.assertEqual(r[0], t)
+@pytest.mark.run_loop
+async def test_largedata(connection_creator):
+    """Large query and response (>=16MB)"""
+    conn = await connection_creator()
+    cur = await conn.cursor()
+    await cur.execute("SELECT @@max_allowed_packet")
+    r = await cur.fetchone()
+    if r[0] < 16 * 1024 * 1024 + 10:
+        pytest.skip('Set max_allowed_packet to bigger than 17MB')
+    else:
+        t = 'a' * (16 * 1024 * 1024)
+        await cur.execute("SELECT '" + t + "'")
+        r = await cur.fetchone()
+        assert r[0] == t
 
-    @run_until_complete
-    def test_escape_string(self):
-        con = self.connections[0]
-        cur = yield from con.cursor()
 
-        self.assertEqual(con.escape("foo'bar"), "'foo\\'bar'")
-        # literal is alias for escape
-        self.assertEqual(con.literal("foo'bar"), "'foo\\'bar'")
-        yield from cur.execute("SET sql_mode='NO_BACKSLASH_ESCAPES'")
-        self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
+@pytest.mark.run_loop
+async def test_escape_string(connection_creator):
+    con = await connection_creator()
+    cur = await con.cursor()
 
-    @run_until_complete
-    def test_sql_mode_param(self):
-        con = yield from self.connect(sql_mode='NO_BACKSLASH_ESCAPES')
-        self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
+    assert con.escape("foo'bar") == "'foo\\'bar'"
+    # literal is alias for escape
+    assert con.literal("foo'bar") == "'foo\\'bar'"
+    await cur.execute("SET sql_mode='NO_BACKSLASH_ESCAPES'")
+    assert con.escape("foo'bar") == "'foo''bar'"
 
-    @run_until_complete
-    def test_init_param(self):
-        init_command = "SET sql_mode='NO_BACKSLASH_ESCAPES';"
-        con = yield from self.connect(init_command=init_command)
-        self.assertEqual(con.escape("foo'bar"), "'foo''bar'")
 
-    @run_until_complete
-    def test_autocommit(self):
-        con = self.connections[0]
-        self.assertFalse(con.get_autocommit())
+@pytest.mark.run_loop
+async def test_sql_mode_param(connection_creator):
+    con = await connection_creator(sql_mode='NO_BACKSLASH_ESCAPES')
+    assert con.escape("foo'bar") == "'foo''bar'"
 
-        cur = yield from con.cursor()
-        yield from cur.execute("SET AUTOCOMMIT=1")
-        self.assertTrue(con.get_autocommit())
 
-        yield from con.autocommit(False)
-        self.assertFalse(con.get_autocommit())
-        yield from cur.execute("SELECT @@AUTOCOMMIT")
-        r = yield from cur.fetchone()
-        self.assertEqual(r[0], 0)
+@pytest.mark.run_loop
+async def test_init_param(connection_creator):
+    init_command = "SET sql_mode='NO_BACKSLASH_ESCAPES';"
+    con = await connection_creator(init_command=init_command)
+    assert con.escape("foo'bar") == "'foo''bar'"
 
-    @run_until_complete
-    def test_select_db(self):
-        con = self.connections[0]
-        current_db = self.db
-        other_db = self.other_db
-        cur = yield from con.cursor()
-        yield from cur.execute('SELECT database()')
-        r = yield from cur.fetchone()
-        self.assertEqual(r[0], current_db)
 
-        yield from con.select_db(other_db)
-        yield from cur.execute('SELECT database()')
-        r = yield from cur.fetchone()
-        self.assertEqual(r[0], other_db)
+@pytest.mark.run_loop
+async def test_autocommit(connection_creator):
+    con = await connection_creator()
+    assert con.get_autocommit() is False
 
-    @run_until_complete
-    def test_connection_gone_away(self):
-        # test
-        # http://dev.mysql.com/doc/refman/5.0/en/gone-away.html
-        # http://dev.mysql.com/doc/refman/5.0/en/error-messages-client.html
-        # error_cr_server_gone_error
-        conn = yield from self.connect()
-        cur = yield from conn.cursor()
-        yield from cur.execute("SET wait_timeout=1")
-        yield from asyncio.sleep(2, loop=self.loop)
-        with self.assertRaises(aiomysql.OperationalError) as cm:
-            yield from cur.execute("SELECT 1+1")
-        # error occures while reading, not writing because of socket buffer.
-        # self.assertEqual(cm.exception.args[0], 2006)
-        self.assertIn(cm.exception.args[0], (2006, 2013))
-        conn.close()
+    cur = await con.cursor()
+    await cur.execute("SET AUTOCOMMIT=1")
+    assert con.get_autocommit() is True
 
-    @run_until_complete
-    def test_connection_info_methods(self):
-        conn = yield from self.connect()
-        # trhead id is int
-        self.assertIsInstance(conn.thread_id(), int)
-        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
-        self.assertTrue(str(conn.port) in conn.get_host_info())
-        self.assertIsInstance(conn.get_server_info(), str)
-        # protocol id is int
-        self.assertIsInstance(conn.get_proto_info(), int)
-        conn.close()
+    await con.autocommit(False)
+    assert con.get_autocommit() is False
+    await cur.execute("SELECT @@AUTOCOMMIT")
+    r = await cur.fetchone()
+    assert r[0] == 0
 
-    @run_until_complete
-    def test_connection_set_charset(self):
-        conn = yield from self.connect()
-        self.assertIn(conn.character_set_name(), ('latin1', 'utf8mb4'))
-        yield from conn.set_charset('utf8')
-        self.assertEqual(conn.character_set_name(), 'utf8')
 
-    @run_until_complete
-    def test_connection_ping(self):
-        conn = yield from self.connect()
-        yield from conn.ping()
-        self.assertEqual(conn.closed, False)
-        conn.close()
-        yield from conn.ping()
-        self.assertEqual(conn.closed, False)
+@pytest.mark.run_loop
+async def test_select_db(connection_creator):
+    con = await connection_creator()
+    current_db = 'test_pymysql'
+    other_db = 'test_pymysql2'
+    cur = await con.cursor()
+    await cur.execute('SELECT database()')
+    r = await cur.fetchone()
+    assert r[0] == current_db
 
-    @run_until_complete
-    def test_connection_properties(self):
-        conn = yield from self.connect()
-        self.assertEqual(conn.host, self.host)
-        self.assertEqual(conn.port, self.port)
-        self.assertEqual(conn.user, self.user)
-        self.assertEqual(conn.db, self.db)
-        self.assertEqual(conn.echo, False)
-        conn.close()
+    await con.select_db(other_db)
+    await cur.execute('SELECT database()')
+    r = await cur.fetchone()
+    assert r[0] == other_db
 
-    @run_until_complete
-    def test_connection_double_ensure_closed(self):
-        conn = yield from self.connect()
-        self.assertFalse(conn.closed)
-        yield from conn.ensure_closed()
-        self.assertTrue(conn.closed)
-        yield from conn.ensure_closed()
-        self.assertTrue(conn.closed)
 
-    @unittest.skipIf(not PY_341,
-                     "Python 3.3 doesnt support __del__ calls from GC")
-    @run_until_complete
-    def test___del__(self):
-        conn = yield from aiomysql.connect(loop=self.loop, host=self.host,
-                                           port=self.port, db=self.db,
-                                           user=self.user,
-                                           password=self.password)
-        with self.assertWarns(ResourceWarning):
-            del conn
-            gc.collect()
+@pytest.mark.run_loop
+async def test_connection_gone_away(connection_creator):
+    # test
+    # http://dev.mysql.com/doc/refman/5.0/en/gone-away.html
+    # http://dev.mysql.com/doc/refman/5.0/en/error-messages-client.html
+    # error_cr_server_gone_error
+    conn = await connection_creator()
+    cur = await conn.cursor()
+    await cur.execute("SET wait_timeout=1")
+    await asyncio.sleep(2)
+    with pytest.raises(aiomysql.OperationalError) as cm:
+        await cur.execute("SELECT 1+1")
+    # error occures while reading, not writing because of socket buffer.
+    # assert cm.exception.args[0] == 2006
+    assert cm.value.args[0] in (2006, 2013)
+    conn.close()
 
-    @run_until_complete
-    def test_no_delay_warning(self):
-        with self.assertWarns(DeprecationWarning):
-            conn = yield from self.connect(no_delay=True)
-        conn.close()
 
-    @run_until_complete
-    def test_no_delay_default_arg(self):
-        conn = yield from self.connect()
-        self.assertTrue(conn._no_delay)
-        conn.close()
+@pytest.mark.run_loop
+async def test_connection_info_methods(connection_creator):
+    conn = await connection_creator()
+    # trhead id is int
+    assert isinstance(conn.thread_id(), int)
+    assert conn.character_set_name() in ('latin1', 'utf8mb4')
+    assert str(conn.port) in conn.get_host_info()
+    assert isinstance(conn.get_server_info(), str)
+    # protocol id is int
+    assert isinstance(conn.get_proto_info(), int)
+    conn.close()
 
-    @run_until_complete
-    def test_previous_cursor_not_closed(self):
-        conn = yield from self.connect()
-        cur1 = yield from conn.cursor()
-        yield from cur1.execute("SELECT 1; SELECT 2")
-        cur2 = yield from conn.cursor()
-        yield from cur2.execute("SELECT 3;")
-        resp = yield from cur2.fetchone()
-        self.assertEqual(resp[0], 3)
 
-    @run_until_complete
-    def test_commit_during_multi_result(self):
-        conn = yield from self.connect()
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT 1; SELECT 2;")
-        yield from conn.commit()
-        yield from cur.execute("SELECT 3;")
-        resp = yield from cur.fetchone()
-        self.assertEqual(resp[0], 3)
+@pytest.mark.run_loop
+async def test_connection_set_charset(connection_creator):
+    conn = await connection_creator()
+    assert conn.character_set_name(), ('latin1' in 'utf8mb4')
+    await conn.set_charset('utf8')
+    assert conn.character_set_name() == 'utf8'
+
+
+@pytest.mark.run_loop
+async def test_connection_ping(connection_creator):
+    conn = await connection_creator()
+    await conn.ping()
+    assert conn.closed is False
+    conn.close()
+    await conn.ping()
+    assert conn.closed is False
+
+
+@pytest.mark.run_loop
+async def test_connection_properties(connection_creator, mysql_params):
+    conn = await connection_creator()
+    assert conn.host == mysql_params['host']
+    assert conn.port == mysql_params['port']
+    assert conn.user == mysql_params['user']
+    assert conn.db == mysql_params['db']
+    assert conn.echo is False
+    conn.close()
+
+
+@pytest.mark.run_loop
+async def test_connection_double_ensure_closed(connection_creator):
+    conn = await connection_creator()
+    assert conn.closed is False
+    await conn.ensure_closed()
+    assert conn.closed is True
+    await conn.ensure_closed()
+    assert conn.closed is True
+
+
+@pytest.mark.run_loop
+@pytest.mark.usefixtures("disable_gc")
+async def test___del__(connection_creator):
+    conn = await connection_creator()
+    with pytest.warns(ResourceWarning):
+        del conn
+        gc.collect()
+
+
+@pytest.mark.run_loop
+async def test_no_delay_warning(connection_creator):
+    with pytest.warns(DeprecationWarning):
+        conn = await connection_creator(no_delay=True)
+    conn.close()
+
+
+@pytest.mark.run_loop
+async def test_no_delay_default_arg(connection_creator):
+    conn = await connection_creator()
+    assert conn._no_delay is True
+    conn.close()
+
+
+@pytest.mark.run_loop
+async def test_previous_cursor_not_closed(connection_creator):
+    conn = await connection_creator()
+    cur1 = await conn.cursor()
+    await cur1.execute("SELECT 1; SELECT 2")
+    cur2 = await conn.cursor()
+    await cur2.execute("SELECT 3;")
+    resp = await cur2.fetchone()
+    assert resp[0] == 3
+
+
+@pytest.mark.run_loop
+async def test_commit_during_multi_result(connection_creator):
+    conn = await connection_creator()
+    cur = await conn.cursor()
+    await cur.execute("SELECT 1; SELECT 2;")
+    await conn.commit()
+    await cur.execute("SELECT 3;")
+    resp = await cur.fetchone()
+    assert resp[0] == 3

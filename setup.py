@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['PyMySQL>=0.9,<=0.9.2']
+install_requires = ['PyMySQL>=0.9,<=0.9.3']
 
 PY_VER = sys.version_info
 
@@ -47,6 +47,8 @@ classifiers = [
     'Framework :: AsyncIO',
 ]
 
+keywords = ["mysql", "asyncio", "aiomysql"]
+
 
 setup(name='aiomysql',
       version=read_version(),
@@ -62,4 +64,5 @@ setup(name='aiomysql',
       packages=find_packages(exclude=['tests', 'tests.*']),
       install_requires=install_requires,
       extras_require=extras_require,
+      keywords=keywords,
       include_package_data=True)

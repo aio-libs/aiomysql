@@ -2,8 +2,14 @@
 
 FLAGS=
 
+checkrst:
+	python setup.py check --restructuredtext
 
-flake:
+pyroma:
+	pyroma -d .
+
+
+flake:checkrst pyroma
 	flake8 aiomysql tests examples
 
 test: flake
@@ -11,6 +17,7 @@ test: flake
 
 vtest:
 	py.test -s -v $(FLAGS) ./tests/
+
 
 cov cover coverage: flake
 	py.test -s -v  --cov-report term --cov-report html --cov aiomysql ./tests

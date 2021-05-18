@@ -1,6 +1,28 @@
 Changes
 -------
 
+0.0.21 (2020-11-26)
+^^^^^^^^^^^^^^^^^^^
+
+* Allow to use custom Cursor subclasses #374
+
+* Fill Connection class with actual client version #388
+
+* Fix legacy __aiter__ methods #403
+
+* Fix & update docs #418 #437
+
+* Ignore pyenv's .python-version file #424
+
+* Replace asyncio.streams.IncompleteReadError with asyncio.IncompleteReadError #460 #454
+
+* Add support for SQLAlchemy default parameters #455 #466
+
+* Update dependencies #485
+
+* Support Python 3.7 & 3.8 #493
+
+
 0.0.20 (2018-12-19)
 ^^^^^^^^^^^^^^^^^^^
 
