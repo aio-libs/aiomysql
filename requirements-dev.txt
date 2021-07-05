@@ -11,4 +11,4 @@ sphinx==4.0.2
 sphinxcontrib-asyncio==0.3.0
 sqlalchemy==1.4.20
 uvloop==0.15.2; python_version >= '3.5'
-pyroma==2.6
+pyroma==3.2
