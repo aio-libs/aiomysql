@@ -4,7 +4,7 @@ ipdb==0.13.9
 ipython==7.26.0
 pytest==6.2.4
 pytest-cov==2.12.1
-pytest-sugar>=0.9.1,<=0.9.3
+pytest-sugar==0.9.4
 PyMySQL>=0.9,<=0.9.3
 docker>=3.5.1,<=4.2.0
 sphinx>=1.8.1, <=3.0.3
