@@ -1,5 +1,15 @@
-aiomysql
-========
+aiomysql-fork
+=============
+
+This is a forked repository of **aiomysql** library, which is not actively maintained. I will fix several issues and try to do some work to support the latest PyMySQL. You can install this package by
+
+.. code:: bash
+
+    pip install aiomysql-fork
+
+The original README of aiomysql
+-------------------------------
+
 .. image:: https://travis-ci.com/aio-libs/aiomysql.svg?branch=master
     :target: https://travis-ci.com/aio-libs/aiomysql
 .. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
