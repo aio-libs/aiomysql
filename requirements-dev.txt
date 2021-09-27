@@ -3,7 +3,7 @@ flake8==3.9.2
 ipdb==0.13.9
 ipython==7.28.0
 pytest==6.2.5
-pytest-cov>=2.6.0,<=2.8.1
+pytest-cov==2.12.1
 pytest-sugar>=0.9.1,<=0.9.3
 PyMySQL>=0.9,<=0.9.3
 docker>=3.5.1,<=4.2.0
