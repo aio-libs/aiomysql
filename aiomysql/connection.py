@@ -10,6 +10,7 @@ import warnings
 import configparser
 import getpass
 from functools import partial
+from pathlib import PurePath
 
 from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
@@ -131,7 +132,7 @@ class Connection:
             when using IAM authentication with Amazon RDS.
             (default: Server Default)
         :param program_name: Program name string to provide when
-            handshaking with MySQL. (default: sys.argv[0])
+            handshaking with MySQL. (default: program name taken from sys.argv[0])
         :param server_public_key: SHA256 authentication plugin public
             key value.
         :param loop: asyncio loop
@@ -186,7 +187,8 @@ class Connection:
         if program_name:
             self._connect_attrs["program_name"] = program_name
         elif sys.argv:
-            self._connect_attrs["program_name"] = sys.argv[0]
+            program_full_path = PurePath(sys.argv[0])    
+            self._connect_attrs["program_name"] = program_full_path.name
 
         self._unix_socket = unix_socket
         if charset:
