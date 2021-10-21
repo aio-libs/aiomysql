@@ -37,20 +37,20 @@ Example::
 
     @asyncio.coroutine
     def go():
-        engine = yield from create_engine(user='root',
+        engine = await create_engine(user='root',
                                           db='test_pymysql',
                                           host='127.0.0.1',
                                           password='')
 
-        with (yield from engine) as conn:
-            yield from conn.execute(tbl.insert().values(val='abc'))
+        async with engine.acquire() as conn:
+            async with conn.begin() as transaction:
+                await conn.execute(tbl.insert().values(val='abc'))
+                await transaction.commit()
 
-            res = yield from conn.execute(tbl.select())
-            for row in res:
-                print(row.id, row.val)
-
-            await conn.commit()
-
+                res = await conn.execute(tbl.select())
+                for row in res:
+                    print(row.id, row.val)
+            
     asyncio.get_event_loop().run_until_complete(go())
 
 
