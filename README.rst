@@ -29,12 +29,6 @@ Documentation
 -------------
 https://aiomysql.readthedocs.io/
 
-
-Mailing List
-------------
-https://groups.google.com/forum/#!forum/aio-libs
-
-
 Basic Example
 -------------
 
