@@ -96,16 +96,16 @@ Please feel free to file an issue on `bug tracker
 <https://github.com/aio-libs/aiomysql/issues>`_ if you have found a bug
 or have some suggestion for library improvement.
 
-The library uses `Travis <https://travis-ci.org/aio-libs/aiomysql>`_ for
-Continious Integration and `Coveralls
-<https://coveralls.io/r/aio-libs/aiomysql?branch=master>`_ for
+The library uses `GitHub Actions
+<https://github.com/aio-libs/aiomysql/actions>`_ for Continuous Integration
+and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/master>`_ for
 coverage reports.
 
 
 Dependencies
 ------------
 
-- Python 3.5.3+
+- Python 3.7+
 - :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 
