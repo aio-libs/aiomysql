@@ -681,9 +681,11 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
+        charset_id = charset_by_name(self.charset).id
+
         if self._ssl_context:
-            # capablities, max packet, charset
-            data = struct.pack('<IIB', self.client_flag, 16777216, 33)
+            # capabilities, max packet, charset
+            data = struct.pack('<IIB', self.client_flag, 16777216, charset_id)
             data += b'\x00' * (32 - len(data))
 
             self.write_packet(data)
@@ -708,7 +710,6 @@ class Connection:
                 server_hostname=self._host
             )
 
-        charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
         else:
