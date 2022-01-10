@@ -15,6 +15,7 @@ from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
+from pymysql.constants import CR
 from pymysql.constants import FIELD_TYPE
 from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
@@ -468,7 +469,7 @@ class Connection:
 
     async def _connect(self):
         # TODO: Set close callback
-        # raise OperationalError(2006,
+        # raise OperationalError(CR.CR_SERVER_GONE_ERROR,
         # "MySQL server has gone away (%r)" % (e,))
         try:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
@@ -567,6 +568,13 @@ class Connection:
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
+                if packet_number == 0:
+                    # MySQL 8.0 sends error packet with seqno==0 when shutdown
+                    self.close()
+                    raise OperationalError(
+                        CR.CR_SERVER_LOST,
+                        "Lost connection to MySQL server during query")
+
                 raise InternalError(
                     "Packet sequence number wrong - got %d expected %d" %
                     (packet_number, self._next_seq_id))
@@ -594,10 +602,12 @@ class Connection:
             data = await self._reader.readexactly(num_bytes)
         except asyncio.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         except (IOError, OSError) as e:
             msg = "Lost connection to MySQL server during query (%s)" % (e,)
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         return data
 
     def _write_bytes(self, data):

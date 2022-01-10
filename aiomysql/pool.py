@@ -143,12 +143,17 @@ class Pool(asyncio.AbstractServer):
                     await self._cond.wait()
 
     async def _fill_free_pool(self, override_min):
-        # iterate over free connections and remove timeouted ones
+        # iterate over free connections and remove timed out ones
         free_size = len(self._free)
         n = 0
         while n < free_size:
             conn = self._free[-1]
             if conn._reader.at_eof() or conn._reader.exception():
+                self._free.pop()
+                conn.close()
+
+            # TODO: fixme, we should not use internal attributes
+            elif conn._reader._eof:
                 self._free.pop()
                 conn.close()
 
