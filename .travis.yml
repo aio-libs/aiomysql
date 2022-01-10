@@ -1,53 +1,9 @@
 language: python
 
-python:
-    - 3.6
-    - 3.7
-    - 3.8
-
 env:
     matrix:
         - PYTHONASYNCIODEBUG=1
         - PYTHONASYNCIODEBUG=
-
-services:
-    - docker
-
-matrix:
-   include:
-        - python: 3.6
-          env:
-            - PYTHONASYNCIODEBUG=
-            - DB=mariadb
-            - DBTAG=5.5
-        - python: 3.6
-          env:
-            - PYTHONASYNCIODEBUG=1
-            - DB=mariadb
-            - DBTAG=10.0
-          addons:
-              mariadb: '10.0'
-        - python: 3.6
-          env:
-            - PYTHONASYNCIODEBUG=
-            - DB=mariadb
-            - DBTAG=10.5
-        - python: 3.6
-          env:
-            - PYTHONASYNCIODEBUG=
-            - DB=mysql
-            - DBTAG=5.7
-
-
-#before_script:
-#    - "mysql -e 'SELECT VERSION()'"
-#    - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql; create database test_pymysql  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
-#    - "mysql -e 'DROP DATABASE IF EXISTS test_pymysql2; create database test_pymysql2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;'"
-
-install:
-    - pip install -Ur requirements-dev.txt
-    - pip install .
-    - pip install codecov
 
 deploy:
     provider: pypi
@@ -60,9 +16,3 @@ deploy:
         repo: aio-libs/aiomysql
         all_branches: true
         python: 3.6
-
-script:
-    - make cov
-
-after_success:
-    - codecov

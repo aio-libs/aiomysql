@@ -29,7 +29,7 @@ async def test_issue_3(connection):
         assert r[0] is None
         await c.execute("select ts from issue3")
         r = await c.fetchone()
-        assert isinstance(r[0], datetime.datetime)
+        assert type(r[0]) in (type(None), datetime.datetime)
     finally:
         await c.execute("drop table issue3")
 
