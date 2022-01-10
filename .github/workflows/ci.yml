@@ -38,10 +38,6 @@ jobs:
           - 'mariadb:10.6'
           - 'mariadb:10.7'
           - 'mariadb:latest'
-        # better readability on matrix job names than setting the env var content directly
-        asynciodebug:
-         - aiodebug
-         - no aiodebug
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -132,22 +128,20 @@ jobs:
 
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
         timeout --preserve-status --signal=INT --verbose 5m \
-          py.test --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov  aiomysql ./tests
+          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov  aiomysql ./tests
       env:
         PYTHONUNBUFFERED: 1
-        PYTHONASYNCIODEBUG: "${{ matrix.asynciodebug == 'aiodebug' && '1' || '' }}"
         MATRIX_DB: '${{ matrix.db }}'
       timeout-minutes: 6
 
     - name: Build coverage flag
       run: |
-        COVERAGE_FLAG="${MATRIX_OS}_${MATRIX_PY}_${MATRIX_DB//:/-}_${MATRIX_AIODEBUG// /-}"
+        COVERAGE_FLAG="${MATRIX_OS}_${MATRIX_PY}_${MATRIX_DB//:/-}"
         echo "COVERAGE_FLAG=$COVERAGE_FLAG" | tee -a "$GITHUB_ENV"
       env:
         MATRIX_OS: '${{ matrix.os }}'
         MATRIX_PY: '${{ matrix.py }}'
         MATRIX_DB: '${{ matrix.db }}'
-        MATRIX_AIODEBUG: "${{ matrix.asynciodebug }}"
 
     - name: Upload coverage
       uses: codecov/codecov-action@v2.1.0
