@@ -435,6 +435,8 @@ async def test_drop_connection_if_timedout(pool_creator,
     conn = await connection_creator()
     await _set_global_conn_timeout(conn, 2)
     await conn.ensure_closed()
+
+    pool = conn = None
     try:
         pool = await pool_creator(minsize=3, maxsize=3)
         # sleep, more then connection timeout
@@ -444,9 +446,21 @@ async def test_drop_connection_if_timedout(pool_creator,
         # query should not throw exception OperationalError
         await cur.execute('SELECT 1;')
         pool.release(conn)
+        conn = None
         pool.close()
         await pool.wait_closed()
     finally:
+        # TODO: this could probably be done better
+        #       if this isn't closed it blocks forever
+        try:
+            if conn is not None:
+                pool.release(conn)
+            if pool is not None:
+                pool.close()
+                await pool.wait_closed()
+        except Exception:
+            pass
+
         # setup default timeouts
         conn = await connection_creator()
         await _set_global_conn_timeout(conn, 28800)
