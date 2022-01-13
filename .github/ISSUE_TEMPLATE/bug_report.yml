@@ -74,6 +74,22 @@ body:
       $ python -m pip show aiomysql
   validations:
     required: true
+- type: textarea
+  attributes:
+    label: PyMySQL Version
+    description: Attach your version of PyMySQL.
+    render: console
+    value: |
+      $ python -m pip show PyMySQL
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: SQLAlchemy Version
+    description: Attach your version of SQLAlchemy if you're using it.
+    render: console
+    value: |
+      $ python -m pip show sqlalchemy
 
 - type: textarea
   attributes:
