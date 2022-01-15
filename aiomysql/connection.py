@@ -77,6 +77,41 @@ async def _connect(*args, **kwargs):
     return conn
 
 
+async def _open_connection(host=None, port=None, **kwds):
+    """This is based on asyncio.open_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_connection(
+        lambda: protocol, host, port, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
+class _StreamReader(asyncio.StreamReader):
+    """This StreamReader exposes whether EOF was received, allowing us to
+    discard the associated connection instead of returning it from the pool
+    when checking free connections in Pool._fill_free_pool().
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    def __init__(self, loop=None):
+        self._eof_received = False
+        super().__init__(loop=loop)
+
+    def feed_eof(self) -> None:
+        self._eof_received = True
+        super().feed_eof()
+
+    @property
+    def eof_received(self):
+        return self._eof_received
+
+
 class Connection:
     """Representation of a socket with a mysql server.
 
@@ -483,7 +518,7 @@ class Connection:
             else:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_connection(
+                        _open_connection(
                             self._host,
                             self._port),
                         timeout=self.connect_timeout)
@@ -711,7 +746,7 @@ class Connection:
             # TCP connection not at start. Passing in a socket to
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
-            self._reader, self._writer = await asyncio.open_connection(
+            self._reader, self._writer = await _open_connection(
                 sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )

@@ -152,8 +152,9 @@ class Pool(asyncio.AbstractServer):
                 self._free.pop()
                 conn.close()
 
-            # TODO: fixme, we should not use internal attributes
-            elif conn._reader._eof:
+            # On MySQL 8.0 a timed out connection sends an error packet before
+            # closing the connection, preventing us from relying on at_eof().
+            elif conn._reader.eof_received:
                 self._free.pop()
                 conn.close()
 
