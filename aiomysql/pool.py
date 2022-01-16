@@ -154,6 +154,8 @@ class Pool(asyncio.AbstractServer):
 
             # On MySQL 8.0 a timed out connection sends an error packet before
             # closing the connection, preventing us from relying on at_eof().
+            # This relies on our custom StreamReader, as eof_received is not
+            # present in asyncio.StreamReader.
             elif conn._reader.eof_received:
                 self._free.pop()
                 conn.close()

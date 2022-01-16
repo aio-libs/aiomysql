@@ -92,6 +92,22 @@ async def _open_connection(host=None, port=None, **kwds):
     return reader, writer
 
 
+async def _open_unix_connection(path=None, **kwds):
+    """This is based on asyncio.open_unix_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_unix_connection(
+        lambda: protocol, path, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
 class _StreamReader(asyncio.StreamReader):
     """This StreamReader exposes whether EOF was received, allowing us to
     discard the associated connection instead of returning it from the pool
@@ -510,7 +526,7 @@ class Connection:
             if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_unix_connection(
+                        _open_unix_connection(
                             self._unix_socket),
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
