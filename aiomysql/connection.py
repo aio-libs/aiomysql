@@ -619,9 +619,9 @@ class Connection:
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
+                self.close()
                 if packet_number == 0:
                     # MySQL 8.0 sends error packet with seqno==0 when shutdown
-                    self.close()
                     raise OperationalError(
                         CR.CR_SERVER_LOST,
                         "Lost connection to MySQL server during query")
