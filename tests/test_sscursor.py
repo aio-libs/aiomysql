@@ -132,6 +132,7 @@ async def test_sscursor_scroll_absolute(connection):
 @pytest.mark.run_loop
 async def test_sscursor_scroll_errors(connection):
     conn = connection
+    await _prepare(conn)
     cursor = await conn.cursor(SSCursor)
 
     await cursor.execute('SELECT * FROM tz_data;')
@@ -151,7 +152,7 @@ async def test_sscursor_scroll_errors(connection):
 async def test_sscursor_cancel(connection):
     conn = connection
     cur = await conn.cursor(SSCursor)
-    # Prepare ALOT of data
+    # Prepare A LOT of data
 
     await cur.execute('DROP TABLE IF EXISTS long_seq;')
     await cur.execute(
