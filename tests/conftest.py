@@ -31,6 +31,17 @@ def pytest_generate_tests(metafunc):
         mysql_addresses = []
         ids = []
 
+        opt_mysql_unix_socket = \
+            list(metafunc.config.getoption("mysql_unix_socket"))
+        for i in range(len(opt_mysql_unix_socket)):
+            if "=" in opt_mysql_unix_socket[i]:
+                label, path = opt_mysql_unix_socket[i].split("=", 1)
+                mysql_addresses.append(path)
+                ids.append(label)
+            else:
+                mysql_addresses.append(opt_mysql_unix_socket[i])
+                ids.append("unix{}".format(i))
+
         opt_mysql_address = list(metafunc.config.getoption("mysql_address"))
         for i in range(len(opt_mysql_address)):
             if "=" in opt_mysql_address[i]:
@@ -143,6 +154,12 @@ def pytest_addoption(parser):
         default=[],
         help="list of addresses to connect to: [name=]host[:port]",
     )
+    parser.addoption(
+        "--mysql-unix-socket",
+        action="append",
+        default=[],
+        help="list of unix sockets to connect to: [name=]/path/to/socket",
+    )
 
 
 @pytest.fixture
@@ -250,22 +267,29 @@ def ensure_mysql_version(request, mysql_image, mysql_tag):
 
 @pytest.fixture(scope='session')
 def mysql_server(mysql_image, mysql_tag, mysql_address):
-    ssl_directory = os.path.join(os.path.dirname(__file__),
-                                 'ssl_resources', 'ssl')
-    ca_file = os.path.join(ssl_directory, 'ca.pem')
+    unix_socket = type(mysql_address) is str
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-    ctx.check_hostname = False
-    ctx.load_verify_locations(cafile=ca_file)
-    # ctx.verify_mode = ssl.CERT_NONE
+    if not unix_socket:
+        ssl_directory = os.path.join(os.path.dirname(__file__),
+                                     'ssl_resources', 'ssl')
+        ca_file = os.path.join(ssl_directory, 'ca.pem')
+
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ctx.check_hostname = False
+        ctx.load_verify_locations(cafile=ca_file)
+        # ctx.verify_mode = ssl.CERT_NONE
 
     server_params = {
-        'host': mysql_address[0],
-        'port': mysql_address[1],
         'user': 'root',
         'password': os.environ.get("MYSQL_ROOT_PASSWORD"),
-        'ssl': ctx,
     }
+
+    if unix_socket:
+        server_params["unix_socket"] = mysql_address
+    else:
+        server_params["host"] = mysql_address[0]
+        server_params["port"] = mysql_address[1]
+        server_params["ssl"] = ctx
 
     try:
         connection = pymysql.connect(
@@ -275,21 +299,22 @@ def mysql_server(mysql_image, mysql_tag, mysql_address):
             **server_params)
 
         with connection.cursor() as cursor:
-            cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
+            if not unix_socket:
+                cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
 
-            result = cursor.fetchall()
-            result = {item['Variable_name']:
-                      item['Value'] for item in result}
+                result = cursor.fetchall()
+                result = {item['Variable_name']:
+                          item['Value'] for item in result}
 
-            assert result['have_ssl'] == "YES", \
-                "SSL Not Enabled on MySQL"
+                assert result['have_ssl'] == "YES", \
+                    "SSL Not Enabled on MySQL"
 
-            cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
+                cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
 
-            result = cursor.fetchone()
-            # As we connected with TLS, it should start with that :D
-            assert result['Value'].startswith('TLS'), \
-                "Not connected to the database with TLS"
+                result = cursor.fetchone()
+                # As we connected with TLS, it should start with that :D
+                assert result['Value'].startswith('TLS'), \
+                    "Not connected to the database with TLS"
 
             # Drop possibly existing old databases
             cursor.execute('DROP DATABASE IF EXISTS test_pymysql;')
