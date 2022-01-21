@@ -22,7 +22,7 @@ async def test_example_executemany(loop):
         await cur.execute("INSERT INTO music_style VALUES(3,'power metal');")
         await conn.commit()
 
-        # insert 3 row by one long query using *executemane* method
+        # insert 3 row by one long query using *executemany* method
         data = [(4, 'gothic metal'), (5, 'doom metal'), (6, 'post metal')]
         await cur.executemany(
             "INSERT INTO music_style (id, name)"
