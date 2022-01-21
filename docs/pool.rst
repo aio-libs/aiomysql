@@ -16,8 +16,8 @@ The basic usage is::
 
     async def go():
         pool = await aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop, autocommit=False)
+                                          user='root', password='',
+                                          db='mysql', loop=loop, autocommit=False)
 
         async with pool.acquire() as conn:
             cur = await conn.cursor()

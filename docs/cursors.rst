@@ -26,10 +26,10 @@ Cursor
 
         loop = asyncio.get_event_loop()
 
-        def test_example():
+        async def test_example():
             conn = await aiomysql.connect(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop)
+                                          user='root', password='',
+                                          db='mysql', loop=loop)
 
             # create default cursor
             cursor = await conn.cursor()
@@ -183,15 +183,15 @@ Cursor
         Basic usage example::
 
             conn = await aiomysql.connect(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=self.loop)
+                                          user='root', password='',
+                                          db='mysql', loop=self.loop)
 
             cur = await conn.cursor()
             await cur.execute("""CREATE PROCEDURE myinc(p1 INT)
-                                   BEGIN
-                                       SELECT p1 + 1;
-                                   END
-                                   """)
+                              BEGIN
+                                  SELECT p1 + 1;
+                              END
+                              """)
 
             await cur.callproc('myinc', [1])
             (ret, ) = await cur.fetchone()
@@ -293,8 +293,8 @@ Cursor
 
         async def test_example():
             conn = await aiomysql.connect(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop)
+                                          user='root', password='',
+                                          db='mysql', loop=loop)
 
             # create dict cursor
             cursor = await conn.cursor(aiomysql.DictCursor)
@@ -332,8 +332,8 @@ Cursor
 
         async def test_example():
             conn = await aiomysql.connect(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop)
+                                          user='root', password='',
+                                          db='mysql', loop=loop)
 
             # create your dict cursor
             cursor = await conn.cursor(AttrDictCursor)
