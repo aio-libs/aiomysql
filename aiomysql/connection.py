@@ -477,8 +477,7 @@ class Connection:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
                         asyncio.open_unix_connection(
-                            self._unix_socket,
-                            loop=self._loop),
+                            self._unix_socket),
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
@@ -487,8 +486,7 @@ class Connection:
                     asyncio.wait_for(
                         asyncio.open_connection(
                             self._host,
-                            self._port,
-                            loop=self._loop),
+                            self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
@@ -706,7 +704,7 @@ class Connection:
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
             self._reader, self._writer = await asyncio.open_connection(
-                sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
+                sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
 
