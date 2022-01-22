@@ -3,13 +3,13 @@ import json
 import warnings
 import contextlib
 
+from pymysql.constants import FIELD_TYPE
 from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
 
 from .log import logger
-from .connection import FIELD_TYPE
 
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
