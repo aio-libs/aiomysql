@@ -2,7 +2,7 @@ Changes
 -------
 
 To be included in 1.0.0 (unreleased)
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Don't send sys.argv[0] as program_name to MySQL server by default #620
 

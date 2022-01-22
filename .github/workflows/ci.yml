@@ -89,10 +89,6 @@ jobs:
       run: |
         python setup.py check --restructuredtext
 
-    - name: Run pyroma
-      run: |
-        python -m pyroma -d .
-
     # this ensures our database is ready. typically by the time the preparations have completed its first start logic.
     # unfortunately we need this hacky workaround as GitHub Actions service containers can't reference data from our repo.
     - name: Prepare mysql
