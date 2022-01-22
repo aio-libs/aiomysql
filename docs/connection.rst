@@ -88,7 +88,9 @@ Example::
         when using IAM authentication with Amazon RDS.
         (default: Server Default)
     :param program_name: Program name string to provide when
-        handshaking with MySQL. (default: sys.argv[0])
+        handshaking with MySQL. (omitted by default)
+      .. versionchanged:: 1.0
+         ``sys.argv[0]`` is no longer passed by default
     :param server_public_key: SHA256 authenticaiton plugin public key value.
     :param loop: asyncio event loop instance or ``None`` for default one.
     :returns: :class:`Connection` instance.
