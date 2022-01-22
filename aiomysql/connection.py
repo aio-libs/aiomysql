@@ -131,7 +131,7 @@ class Connection:
             when using IAM authentication with Amazon RDS.
             (default: Server Default)
         :param program_name: Program name string to provide when
-            handshaking with MySQL. (default: sys.argv[0])
+            handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
         :param loop: asyncio loop
@@ -185,8 +185,6 @@ class Connection:
         }
         if program_name:
             self._connect_attrs["program_name"] = program_name
-        elif sys.argv:
-            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
