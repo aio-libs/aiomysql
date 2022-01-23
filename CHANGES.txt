@@ -5,6 +5,7 @@ To be included in 1.0.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Don't send sys.argv[0] as program_name to MySQL server by default #620
+* Allow running process as anonymous uid #587
 * Fix timed out MySQL 8.0 connections raising InternalError rather than OperationalError #660
 * Fix timed out MySQL 8.0 connections being returned from Pool #660
 * Ensure connections are properly closed before raising an OperationalError when the server connection is lost #660

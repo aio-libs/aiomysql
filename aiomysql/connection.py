@@ -43,7 +43,10 @@ from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
 from .log import logger
 
-DEFAULT_USER = getpass.getuser()
+try:
+    DEFAULT_USER = getpass.getuser()
+except KeyError:
+    DEFAULT_USER = "unknown"
 
 
 def connect(host="localhost", user=None, password="",
