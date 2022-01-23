@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'master'
+    tags:
+      - 'v*'
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        # service containers are only supported on ubuntu currently
+        os:
+          - ubuntu-latest
+        py:
+          - '3.7'
+          - '3.8'
+          - '3.9'
+          # - '3.10'
+          # - '3.11.0-alpha.3'
+        db:
+          - 'mysql:5.7'
+          - 'mysql:8.0'
+          - 'mariadb:10.2'
+          - 'mariadb:10.3'
+          - 'mariadb:10.4'
+          - 'mariadb:10.5'
+          - 'mariadb:10.6'
+          - 'mariadb:10.7'
+
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    env:
+      MYSQL_ROOT_PASSWORD: rootpw
+
+    services:
+      mysql:
+        image: '${{ matrix.db }}'
+        ports:
+          - 3306:3306
+        options: '--name=mysqld'
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2.4.0
+
+    - name: Setup Python ${{ matrix.py }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.py }}
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"    # - name: Cache
+
+    - name: Cache PyPI
+      uses: actions/cache@v2.1.7
+      with:
+        key: pip-ci-${{ runner.os }}-${{ matrix.py }}
+        path: ${{ steps.pip-cache.outputs.dir }}
+
+    - name: Update pip, wheel, setuptools, build, twine, codecov
+      run: |
+        python -m pip install -U pip wheel setuptools build twine codecov
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade --requirement requirements-dev.txt
+
+    - name: Install aiomysql
+      run: |
+        python -m pip install .
+
+    - name: Check rst
+      run: |
+        python setup.py check --restructuredtext
+
+    # this ensures our database is ready. typically by the time the preparations have completed its first start logic.
+    # unfortunately we need this hacky workaround as GitHub Actions service containers can't reference data from our repo.
+    - name: Prepare mysql
+      run: |
+        # ensure server is started up
+        while :
+        do
+            sleep 1
+            mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e 'select version()' && break
+        done
+
+        # inject tls configuration
+        docker container stop mysqld
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/ssl" mysqld:/etc/mysql/ssl
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/tls.cnf" mysqld:/etc/mysql/conf.d/aiomysql-tls.cnf
+        docker container start mysqld
+
+        # ensure server is started up
+        while :
+        do
+            sleep 1
+            mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e 'select version()' && break
+        done
+
+        mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e "SET GLOBAL local_infile=on"
+
+    - name: Run tests
+      run: |
+        export DB="${MATRIX_DB%%:*}"
+        export DBTAG="${MATRIX_DB##*:}"
+
+        # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
+        timeout --preserve-status --signal=INT --verbose 5m \
+          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov  aiomysql ./tests
+      env:
+        PYTHONUNBUFFERED: 1
+        MATRIX_DB: '${{ matrix.db }}'
+      timeout-minutes: 6
+
+    - name: Build coverage flag
+      run: |
+        COVERAGE_FLAG="${MATRIX_OS}_${MATRIX_PY}_${MATRIX_DB//:/-}"
+        echo "COVERAGE_FLAG=$COVERAGE_FLAG" | tee -a "$GITHUB_ENV"
+      env:
+        MATRIX_OS: '${{ matrix.os }}'
+        MATRIX_PY: '${{ matrix.py }}'
+        MATRIX_DB: '${{ matrix.db }}'
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v2.1.0
+      with:
+        file: ./coverage.xml
+        flags: "${{ env.COVERAGE_FLAG }}"
+        fail_ci_if_error: true

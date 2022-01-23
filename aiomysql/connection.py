@@ -134,7 +134,7 @@ class Connection:
             when using IAM authentication with Amazon RDS.
             (default: Server Default)
         :param program_name: Program name string to provide when
-            handshaking with MySQL. (default: sys.argv[0])
+            handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
         :param loop: asyncio loop
@@ -188,8 +188,6 @@ class Connection:
         }
         if program_name:
             self._connect_attrs["program_name"] = program_name
-        elif sys.argv:
-            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
@@ -480,8 +478,7 @@ class Connection:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
                         asyncio.open_unix_connection(
-                            self._unix_socket,
-                            loop=self._loop),
+                            self._unix_socket),
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
@@ -490,8 +487,7 @@ class Connection:
                     asyncio.wait_for(
                         asyncio.open_connection(
                             self._host,
-                            self._port,
-                            loop=self._loop),
+                            self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
                 self.host_info = "socket %s:%d" % (self._host, self._port)
@@ -709,7 +705,7 @@ class Connection:
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
             self._reader, self._writer = await asyncio.open_connection(
-                sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
+                sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
 
