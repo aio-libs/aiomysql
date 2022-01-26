@@ -1,4 +1,3 @@
-import asyncio
 import os
 import aiomysql
 from tests._testutils import BaseTest
@@ -6,24 +5,23 @@ from tests._testutils import BaseTest
 
 class AIOPyMySQLTestCase(BaseTest):
 
-    @asyncio.coroutine
-    def _connect_all(self):
-        conn1 = yield from aiomysql.connect(loop=self.loop, host=self.host,
-                                            port=self.port, user=self.user,
-                                            db=self.db,
-                                            password=self.password,
-                                            use_unicode=True, echo=True)
-        conn2 = yield from aiomysql.connect(loop=self.loop, host=self.host,
-                                            port=self.port, user=self.user,
-                                            db=self.other_db,
-                                            password=self.password,
-                                            use_unicode=False, echo=True)
-        conn3 = yield from aiomysql.connect(loop=self.loop, host=self.host,
-                                            port=self.port, user=self.user,
-                                            db=self.db,
-                                            password=self.password,
-                                            use_unicode=True, echo=True,
-                                            local_infile=True)
+    async def _connect_all(self):
+        conn1 = await aiomysql.connect(loop=self.loop, host=self.host,
+                                       port=self.port, user=self.user,
+                                       db=self.db,
+                                       password=self.password,
+                                       use_unicode=True, echo=True)
+        conn2 = await aiomysql.connect(loop=self.loop, host=self.host,
+                                       port=self.port, user=self.user,
+                                       db=self.other_db,
+                                       password=self.password,
+                                       use_unicode=False, echo=True)
+        conn3 = await aiomysql.connect(loop=self.loop, host=self.host,
+                                       port=self.port, user=self.user,
+                                       db=self.db,
+                                       password=self.password,
+                                       use_unicode=True, echo=True,
+                                       local_infile=True)
 
         self.connections = [conn1, conn2, conn3]
 
@@ -45,9 +43,9 @@ class AIOPyMySQLTestCase(BaseTest):
         self.doCleanups()
         super(AIOPyMySQLTestCase, self).tearDown()
 
-    @asyncio.coroutine
-    def connect(self, host=None, user=None, password=None,
-                db=None, use_unicode=True, no_delay=None, port=None, **kwargs):
+    async def connect(self, host=None, user=None, password=None,
+                      db=None, use_unicode=True, no_delay=None, port=None,
+                      **kwargs):
         if host is None:
             host = self.host
         if user is None:
@@ -58,18 +56,17 @@ class AIOPyMySQLTestCase(BaseTest):
             db = self.db
         if port is None:
             port = self.port
-        conn = yield from aiomysql.connect(loop=self.loop, host=host,
-                                           user=user, password=password,
-                                           db=db, use_unicode=use_unicode,
-                                           no_delay=no_delay, port=port,
-                                           **kwargs)
+        conn = await aiomysql.connect(loop=self.loop, host=host,
+                                      user=user, password=password,
+                                      db=db, use_unicode=use_unicode,
+                                      no_delay=no_delay, port=port,
+                                      **kwargs)
         self.addCleanup(conn.close)
         return conn
 
-    @asyncio.coroutine
-    def create_pool(self, host=None, user=None, password=None,
-                    db=None, use_unicode=True, no_delay=None,
-                    port=None, **kwargs):
+    async def create_pool(self, host=None, user=None, password=None,
+                          db=None, use_unicode=True, no_delay=None,
+                          port=None, **kwargs):
         if host is None:
             host = self.host
         if user is None:
@@ -80,10 +77,10 @@ class AIOPyMySQLTestCase(BaseTest):
             db = self.db
         if port is None:
             port = self.port
-        pool = yield from aiomysql.create_pool(loop=self.loop, host=host,
-                                               user=user, password=password,
-                                               db=db, use_unicode=use_unicode,
-                                               no_delay=no_delay, port=port,
-                                               **kwargs)
+        pool = await aiomysql.create_pool(loop=self.loop, host=host,
+                                          user=user, password=password,
+                                          db=db, use_unicode=use_unicode,
+                                          no_delay=no_delay, port=port,
+                                          **kwargs)
         self.addCleanup(pool.close)
         return pool

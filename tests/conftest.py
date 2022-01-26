@@ -112,10 +112,8 @@ def mysql_params(mysql_server):
 
 
 # TODO: fix this workaround
-@asyncio.coroutine
-def _cursor_wrapper(conn):
-    cur = yield from conn.cursor()
-    return cur
+async def _cursor_wrapper(conn):
+    return await conn.cursor()
 
 
 @pytest.fixture
@@ -137,12 +135,11 @@ def connection(mysql_params, loop):
 def connection_creator(mysql_params, loop):
     connections = []
 
-    @asyncio.coroutine
-    def f(**kw):
+    async def f(**kw):
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
         _loop = conn_kw.pop('loop', loop)
-        conn = yield from aiomysql.connect(loop=_loop, **conn_kw)
+        conn = await aiomysql.connect(loop=_loop, **conn_kw)
         connections.append(conn)
         return conn
 
@@ -159,12 +156,11 @@ def connection_creator(mysql_params, loop):
 def pool_creator(mysql_params, loop):
     pools = []
 
-    @asyncio.coroutine
-    def f(**kw):
+    async def f(**kw):
         conn_kw = mysql_params.copy()
         conn_kw.update(kw)
         _loop = conn_kw.pop('loop', loop)
-        pool = yield from aiomysql.create_pool(loop=_loop, **conn_kw)
+        pool = await aiomysql.create_pool(loop=_loop, **conn_kw)
         pools.append(pool)
         return pool
 
