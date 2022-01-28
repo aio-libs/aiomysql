@@ -10,6 +10,7 @@ To be included in 1.0.0 (unreleased)
 * Fix timed out MySQL 8.0 connections being returned from Pool #660
 * Ensure connections are properly closed before raising an OperationalError when the server connection is lost #660
 * Ensure connections are properly closed before raising an InternalError when packet sequence numbers are out of sync #660
+* Unix sockets are now internally considered secure, allowing sha256_password and caching_sha2_password auth methods to be used #695
 
 
 0.0.22 (2021-11-14)
