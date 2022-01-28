@@ -711,7 +711,7 @@ class Connection:
         if self._result is not None:
             if self._result.unbuffered_active:
                 warnings.warn("Previous unbuffered result was left incomplete")
-                self._result._finish_unbuffered_query()
+                await self._result._finish_unbuffered_query()
             while self._result.has_next:
                 await self.next_result()
             self._result = None
