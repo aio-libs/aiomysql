@@ -229,6 +229,7 @@ class Connection:
         self._client_auth_plugin = auth_plugin
         self._server_auth_plugin = ""
         self._auth_plugin_used = ""
+        self._secure = False
         self.server_public_key = server_public_key
         self.salt = None
 
@@ -526,7 +527,7 @@ class Connection:
         # raise OperationalError(CR.CR_SERVER_GONE_ERROR,
         # "MySQL server has gone away (%r)" % (e,))
         try:
-            if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
+            if self._unix_socket:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
                         _open_unix_connection(
@@ -534,6 +535,7 @@ class Connection:
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
+                self._secure = True
             else:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
@@ -743,7 +745,7 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
-        if self._ssl_context:
+        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
             # capablities, max packet, charset
             data = struct.pack('<IIB', self.client_flag, 16777216, 33)
             data += b'\x00' * (32 - len(data))
@@ -769,6 +771,8 @@ class Connection:
                 sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
+
+            self._secure = True
 
         charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
@@ -960,7 +964,7 @@ class Connection:
 
         logger.debug("caching sha2: Trying full auth...")
 
-        if self._ssl_context:
+        if self._secure:
             logger.debug("caching sha2: Sending plain "
                          "password via secure connection")
             self.write_packet(self._password.encode('latin1') + b'\0')
@@ -991,7 +995,7 @@ class Connection:
         pkt.check_error()
 
     async def sha256_password_auth(self, pkt):
-        if self._ssl_context:
+        if self._secure:
             logger.debug("sha256: Sending plain password")
             data = self._password.encode('latin1') + b'\0'
             self.write_packet(data)
