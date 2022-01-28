@@ -49,7 +49,7 @@ class SAConnection:
             )
 
         In the case that a plain SQL string is passed, a tuple or
-        individual values in \*multiparams may be passed::
+        individual values in *multiparams may be passed::
 
             await conn.execute(
                 "INSERT INTO table (id, value) VALUES (%d, %s)",

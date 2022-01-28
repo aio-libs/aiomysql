@@ -19,7 +19,7 @@ of :term:`PyMySQL` . **aiomysql** tries to be like awesome aiopg_ library and pr
 same api, look and feel.
 
 Internally **aiomysql** is copy of PyMySQL, underlying io calls switched
-to async, basically ``yield from`` and ``asyncio.coroutine`` added in
+to async, basically ``await`` and ``async def coroutine`` added in
 proper places. :term:`sqlalchemy` support ported from aiopg_.
 
 
@@ -36,7 +36,7 @@ Basics
 ------
 
 **aiomysql** based on :term:`PyMySQL` , and provides same api, you just need
-to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
+to use  ``await conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
 Properties are unchanged, so ``conn.prop`` is correct as well as
@@ -51,18 +51,18 @@ See example:
 
     loop = asyncio.get_event_loop()
 
-    @asyncio.coroutine
-    def test_example():
-        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+
+    async def test_example():
+        conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                            user='root', password='', db='mysql',
                                            loop=loop)
 
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT Host,User FROM user")
+        cur = await conn.cursor()
+        await cur.execute("SELECT Host,User FROM user")
         print(cur.description)
-        r = yield from cur.fetchall()
+        r = await cur.fetchall()
         print(r)
-        yield from cur.close()
+        await cur.close()
         conn.close()
 
     loop.run_until_complete(test_example())
@@ -96,16 +96,16 @@ Please feel free to file an issue on `bug tracker
 <https://github.com/aio-libs/aiomysql/issues>`_ if you have found a bug
 or have some suggestion for library improvement.
 
-The library uses `Travis <https://travis-ci.org/aio-libs/aiomysql>`_ for
-Continious Integration and `Coveralls
-<https://coveralls.io/r/aio-libs/aiomysql?branch=master>`_ for
+The library uses `GitHub Actions
+<https://github.com/aio-libs/aiomysql/actions>`_ for Continuous Integration
+and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/master>`_ for
 coverage reports.
 
 
 Dependencies
 ------------
 
-- Python 3.5.3+
+- Python 3.7+
 - :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 

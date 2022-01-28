@@ -3,16 +3,14 @@
 #
 [client]
 user = {user}
-port = {port}
-host = {host}
+socket = {unix_socket}
 password = {password}
 database = {db}
-socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8
 
 [client_with_unix_socket]
 user = {user}
+socket = {unix_socket}
 password = {password}
 database = {db}
-socket = /var/run/mysqld/mysqld.sock
 default-character-set = utf8

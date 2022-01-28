@@ -43,7 +43,7 @@ class Pool(asyncio.AbstractServer):
         self._conn_kwargs = kwargs
         self._acquiring = 0
         self._free = collections.deque(maxlen=maxsize or None)
-        self._cond = asyncio.Condition(loop=loop)
+        self._cond = asyncio.Condition()
         self._used = set()
         self._terminated = set()
         self._closing = False
@@ -143,12 +143,20 @@ class Pool(asyncio.AbstractServer):
                     await self._cond.wait()
 
     async def _fill_free_pool(self, override_min):
-        # iterate over free connections and remove timeouted ones
+        # iterate over free connections and remove timed out ones
         free_size = len(self._free)
         n = 0
         while n < free_size:
             conn = self._free[-1]
             if conn._reader.at_eof() or conn._reader.exception():
+                self._free.pop()
+                conn.close()
+
+            # On MySQL 8.0 a timed out connection sends an error packet before
+            # closing the connection, preventing us from relying on at_eof().
+            # This relies on our custom StreamReader, as eof_received is not
+            # present in asyncio.StreamReader.
+            elif conn._reader.eof_received:
                 self._free.pop()
                 conn.close()
 

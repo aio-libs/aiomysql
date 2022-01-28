@@ -1,4 +1,5 @@
 import unittest
+
 import sqlalchemy
 
 from aiomysql.sa.connection import _distill_params
