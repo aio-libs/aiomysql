@@ -1,7 +1,7 @@
 aiomysql
 ========
-.. image:: https://travis-ci.com/aio-libs/aiomysql.svg?branch=master
-    :target: https://travis-ci.com/aio-libs/aiomysql
+.. image:: https://github.com/aio-libs/aiomysql/actions/workflows/ci.yml/badge.svg?branch=master
+    :target: https://github.com/aio-libs/aiomysql/actions/workflows/ci.yml
 .. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/aio-libs/aiomysql
     :alt: Code coverage
@@ -28,12 +28,6 @@ proper places)). `sqlalchemy` support ported from aiopg_.
 Documentation
 -------------
 https://aiomysql.readthedocs.io/
-
-
-Mailing List
-------------
-https://groups.google.com/forum/#!forum/aio-libs
-
 
 Basic Example
 -------------
@@ -110,7 +104,7 @@ for aiopg_ user.:
 Requirements
 ------------
 
-* Python_ 3.5.3+
+* Python_ 3.7+
 * PyMySQL_
 
 
