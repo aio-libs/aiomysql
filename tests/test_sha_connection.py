@@ -39,6 +39,13 @@ async def test_sha256_nopw(mysql_server, loop):
 @pytest.mark.mysql_version('mysql', '8.0')
 @pytest.mark.run_loop
 async def test_sha256_pw(mysql_server, loop):
+    # https://dev.mysql.com/doc/refman/8.0/en/sha256-pluggable-authentication.html
+    # Unlike caching_sha2_password, the sha256_password plugin does not treat
+    # shared-memory connections as secure, even though share-memory transport
+    # is secure by default.
+    if "unix_socket" in mysql_server['conn_params']:
+        pytest.skip("sha256_password is not supported on unix sockets")
+
     connection_data = copy.copy(mysql_server['conn_params'])
     connection_data['user'] = 'user_sha256'
     connection_data['password'] = 'pass_sha256'

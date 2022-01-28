@@ -49,6 +49,8 @@ jobs:
         image: "${{ join(matrix.db, ':') }}"
         ports:
           - 3306:3306
+        volumes:
+          - "/tmp/run-${{ join(matrix.db, '-') }}/:/socket-mount/"
         options: '--name=mysqld'
         env:
           MYSQL_ROOT_PASSWORD: rootpw
@@ -104,6 +106,19 @@ jobs:
         docker container stop mysqld
         docker container cp "${{ github.workspace }}/tests/ssl_resources/ssl" mysqld:/etc/mysql/ssl
         docker container cp "${{ github.workspace }}/tests/ssl_resources/tls.cnf" mysqld:/etc/mysql/conf.d/aiomysql-tls.cnf
+
+        # use custom socket path
+        # we need to ensure that the socket path is writable for the user running the DB process in the container
+        sudo chmod 0777 /tmp/run-${{ join(matrix.db, '-') }}
+
+        # mysql 5.7 container overrides the socket path in /etc/mysql/mysql.conf.d/mysqld.cnf
+        if [ "${{ join(matrix.db, '-') }}" = "mysql-5.7" ]
+        then
+          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/mysql.conf.d/zz-aiomysql-socket.cnf
+        else
+          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
+        fi
+
         docker container start mysqld
 
         # ensure server is started up
@@ -119,7 +134,7 @@ jobs:
       run: |
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
         timeout --preserve-status --signal=INT --verbose 5m \
-          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql ./tests --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
+          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
       env:
         PYTHONUNBUFFERED: 1
         DB: '${{ matrix.db[0] }}'

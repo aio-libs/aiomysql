@@ -184,7 +184,7 @@ async def test_issue_17(connection, connection_creator, mysql_params):
 async def test_issue_34(connection_creator):
     try:
         await connection_creator(host="localhost", port=1237,
-                                 user="root")
+                                 user="root", unix_socket=None)
         pytest.fail()
     except aiomysql.OperationalError as e:
         assert 2003 == e.args[0]

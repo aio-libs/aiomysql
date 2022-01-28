@@ -1,0 +1,2 @@
+[mysqld]
+socket          = /socket-mount/mysql.sock
