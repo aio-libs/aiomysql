@@ -27,6 +27,41 @@ def pytest_generate_tests(metafunc):
         loop_type = ['asyncio', 'uvloop'] if uvloop else ['asyncio']
         metafunc.parametrize("loop_type", loop_type)
 
+    if "mysql_address" in metafunc.fixturenames:
+        mysql_addresses = []
+        ids = []
+
+        opt_mysql_address = list(metafunc.config.getoption("mysql_address"))
+        for i in range(len(opt_mysql_address)):
+            if "=" in opt_mysql_address[i]:
+                label, addr = opt_mysql_address[i].split("=", 1)
+                ids.append(label)
+            else:
+                addr = opt_mysql_address[i]
+                ids.append("tcp{}".format(i))
+
+            if ":" in addr:
+                addr = addr.split(":", 1)
+                mysql_addresses.append((addr[0], int(addr[1])))
+            else:
+                mysql_addresses.append((addr, 3306))
+
+        # default to connecting to localhost
+        if len(mysql_addresses) == 0:
+            mysql_addresses = [("127.0.0.1", 3306)]
+            ids = ["tcp-local"]
+
+        assert len(mysql_addresses) == len(set(mysql_addresses)), \
+            "mysql targets are not unique"
+        assert len(ids) == len(set(ids)), \
+            "mysql target names are not unique"
+
+        metafunc.parametrize("mysql_address",
+                             mysql_addresses,
+                             ids=ids,
+                             scope="session",
+                             )
+
 
 # This is here unless someone fixes the generate_tests bit
 @pytest.fixture(scope='session')
@@ -98,6 +133,15 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "mysql_version(db, version): run only on specific database versions"
+    )
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--mysql-address",
+        action="append",
+        default=[],
+        help="list of addresses to connect to: [name=]host[:port]",
     )
 
 
@@ -205,7 +249,7 @@ def ensure_mysql_version(request, mysql_image, mysql_tag):
 
 
 @pytest.fixture(scope='session')
-def mysql_server(mysql_image, mysql_tag):
+def mysql_server(mysql_image, mysql_tag, mysql_address):
     ssl_directory = os.path.join(os.path.dirname(__file__),
                                  'ssl_resources', 'ssl')
     ca_file = os.path.join(ssl_directory, 'ca.pem')
@@ -216,8 +260,8 @@ def mysql_server(mysql_image, mysql_tag):
     # ctx.verify_mode = ssl.CERT_NONE
 
     server_params = {
-        'host': '127.0.0.1',
-        'port': 3306,
+        'host': mysql_address[0],
+        'port': mysql_address[1],
         'user': 'root',
         'password': os.environ.get("MYSQL_ROOT_PASSWORD"),
         'ssl': ctx,
