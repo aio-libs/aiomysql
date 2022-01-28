@@ -28,14 +28,14 @@ jobs:
           # - '3.10'
           # - '3.11.0-alpha.3'
         db:
-          - 'mysql:5.7'
-          - 'mysql:8.0'
-          - 'mariadb:10.2'
-          - 'mariadb:10.3'
-          - 'mariadb:10.4'
-          - 'mariadb:10.5'
-          - 'mariadb:10.6'
-          - 'mariadb:10.7'
+          - [mysql, '5.7']
+          - [mysql, '8.0']
+          - [mariadb, '10.2']
+          - [mariadb, '10.3']
+          - [mariadb, '10.4']
+          - [mariadb, '10.5']
+          - [mariadb, '10.6']
+          - [mariadb, '10.7']
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -46,7 +46,7 @@ jobs:
 
     services:
       mysql:
-        image: '${{ matrix.db }}'
+        image: "${{ join(matrix.db, ':') }}"
         ports:
           - 3306:3306
         options: '--name=mysqld'
@@ -117,29 +117,18 @@ jobs:
 
     - name: Run tests
       run: |
-        export DB="${MATRIX_DB%%:*}"
-        export DBTAG="${MATRIX_DB##*:}"
-
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
         timeout --preserve-status --signal=INT --verbose 5m \
-          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov  aiomysql ./tests
+          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql ./tests
       env:
         PYTHONUNBUFFERED: 1
-        MATRIX_DB: '${{ matrix.db }}'
+        DB: '${{ matrix.db[0] }}'
+        DBTAG: '${{ matrix.db[1] }}'
       timeout-minutes: 6
-
-    - name: Build coverage flag
-      run: |
-        COVERAGE_FLAG="${MATRIX_OS}_${MATRIX_PY}_${MATRIX_DB//:/-}"
-        echo "COVERAGE_FLAG=$COVERAGE_FLAG" | tee -a "$GITHUB_ENV"
-      env:
-        MATRIX_OS: '${{ matrix.os }}'
-        MATRIX_PY: '${{ matrix.py }}'
-        MATRIX_DB: '${{ matrix.db }}'
 
     - name: Upload coverage
       uses: codecov/codecov-action@v2.1.0
       with:
         file: ./coverage.xml
-        flags: "${{ env.COVERAGE_FLAG }}"
+        flags: "${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}"
         fail_ci_if_error: true
