@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from pymysql import NotSupportedError, InternalError
+from pymysql import NotSupportedError
 
 from aiomysql import ProgrammingError, InterfaceError
 from aiomysql.cursors import SSCursor
@@ -190,11 +190,6 @@ async def test_sscursor_cancel(connection):
         await conn.cursor(SSCursor)
 
 
-@pytest.mark.xfail(
-    reason="https://github.com/aio-libs/aiomysql/issues/635",
-    raises=InternalError,
-    strict=True,
-)
 @pytest.mark.run_loop
 async def test_sscursor_discarded_result(connection):
     conn = connection
@@ -203,4 +198,4 @@ async def test_sscursor_discarded_result(connection):
         await cursor.execute("select 1")
         await cursor.execute("select 2")
         ret = await cursor.fetchone()
-    assert (1,) == ret
+    assert (2,) == ret

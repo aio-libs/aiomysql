@@ -12,6 +12,7 @@ To be included in 1.0.0 (unreleased)
 * Ensure connections are properly closed before raising an InternalError when packet sequence numbers are out of sync #660
 * Unix sockets are now internally considered secure, allowing sha256_password and caching_sha2_password auth methods to be used #695
 * Test suite now also tests unix socket connections #696
+* Fix SSCursor raising InternalError when last result was not fully retrieved #635
 
 
 0.0.22 (2021-11-14)
