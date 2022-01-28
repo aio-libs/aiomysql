@@ -547,3 +547,12 @@ async def test_pool_maxsize_unlimited(pool_creator, loop):
     async with pool.acquire() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')
+
+
+@pytest.mark.run_loop
+async def test_pool_maxsize_unlimited_minsize_1(pool_creator, loop):
+    pool = await pool_creator(minsize=1, maxsize=0)
+
+    async with pool.acquire() as conn:
+        cur = await conn.cursor()
+        await cur.execute('SELECT 1;')
