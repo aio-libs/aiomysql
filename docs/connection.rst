@@ -45,7 +45,7 @@ Example::
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=False, autocommit=False, echo=False,
+            autocommit=False, echo=False
             ssl=None, auth_plugin='', program_name='',
             server_public_key=None, loop=None)
 
@@ -79,7 +79,6 @@ Example::
         when connecting.
     :param str read_default_group: Group to read from in the configuration
         file.
-    :param bool no_delay: disable Nagle's algorithm on the socket
     :param autocommit: Autocommit mode. None means use server default.
         (default: ``False``)
     :param ssl: Optional SSL Context to force SSL

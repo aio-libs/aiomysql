@@ -44,7 +44,7 @@ class AIOPyMySQLTestCase(BaseTest):
         super(AIOPyMySQLTestCase, self).tearDown()
 
     async def connect(self, host=None, user=None, password=None,
-                      db=None, use_unicode=True, no_delay=None, port=None,
+                      db=None, use_unicode=True, port=None,
                       **kwargs):
         if host is None:
             host = self.host
@@ -59,13 +59,13 @@ class AIOPyMySQLTestCase(BaseTest):
         conn = await aiomysql.connect(loop=self.loop, host=host,
                                       user=user, password=password,
                                       db=db, use_unicode=use_unicode,
-                                      no_delay=no_delay, port=port,
+                                      port=port,
                                       **kwargs)
         self.addCleanup(conn.close)
         return conn
 
     async def create_pool(self, host=None, user=None, password=None,
-                          db=None, use_unicode=True, no_delay=None,
+                          db=None, use_unicode=True,
                           port=None, **kwargs):
         if host is None:
             host = self.host
@@ -80,7 +80,7 @@ class AIOPyMySQLTestCase(BaseTest):
         pool = await aiomysql.create_pool(loop=self.loop, host=host,
                                           user=user, password=password,
                                           db=db, use_unicode=use_unicode,
-                                          no_delay=no_delay, port=port,
+                                          port=port,
                                           **kwargs)
         self.addCleanup(pool.close)
         return pool

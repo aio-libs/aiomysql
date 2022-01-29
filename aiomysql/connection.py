@@ -55,7 +55,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=None, autocommit=False, echo=False,
+            autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
             program_name='', server_public_key=None):
     """See connections.Connection.__init__() for information about
@@ -68,7 +68,7 @@ def connect(host="localhost", user=None, password="",
                     init_command=init_command,
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
-                    no_delay=no_delay, autocommit=autocommit, echo=echo,
+                    autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
                     auth_plugin=auth_plugin, program_name=program_name)
     return _ConnectionContextManager(coro)
@@ -144,7 +144,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,
+                 autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
                  program_name='', server_public_key=None):
         """
@@ -175,7 +175,6 @@ class Connection:
             when connecting.
         :param read_default_group: Group to read from in the configuration
             file.
-        :param no_delay: Disable Nagle's algorithm on the socket
         :param autocommit: Autocommit mode. None means use server default.
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
@@ -211,19 +210,11 @@ class Connection:
             port = int(_config("port", fallback=port))
             charset = _config("default-character-set", fallback=charset)
 
-        # pymysql port
-        if no_delay is not None:
-            warnings.warn("no_delay option is deprecated", DeprecationWarning)
-            no_delay = bool(no_delay)
-        else:
-            no_delay = True
-
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
         self._password = password or ""
         self._db = db
-        self._no_delay = no_delay
         self._echo = echo
         self._last_usage = self._loop.time()
         self._client_auth_plugin = auth_plugin
@@ -544,11 +535,8 @@ class Connection:
                             self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
-                self.host_info = "socket %s:%d" % (self._host, self._port)
-
-            # do not set no delay in case of unix_socket
-            if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
+                self.host_info = "socket %s:%d" % (self._host, self._port)
 
             self._next_seq_id = 0
 
