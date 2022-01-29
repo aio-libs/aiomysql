@@ -28,18 +28,15 @@ from pymysql.err import (Warning, Error,
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
-from pymysql.connections import _pack_int24
-
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
-from pymysql.connections import _lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import _pack_int24, _lenenc_int, _ConnectionContextManager, _ContextManager
 from .log import logger
 
 try:
