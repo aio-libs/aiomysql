@@ -423,7 +423,7 @@ async def test_issue_175(connection):
 async def test_issue_323(mysql_server, loop, recwarn):
     async with aiomysql.create_pool(**mysql_server['conn_params'],
                                     loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 drop_db = "DROP DATABASE IF EXISTS bugtest;"
                 await cur.execute(drop_db)

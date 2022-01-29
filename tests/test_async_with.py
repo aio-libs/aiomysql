@@ -1,5 +1,3 @@
-import warnings
-
 import aiomysql
 import pytest
 
@@ -127,24 +125,9 @@ async def test_pool(table, pool_creator, loop):
 @pytest.mark.run_loop
 async def test_create_pool_deprecations(mysql_params, loop):
     async with create_pool(loop=loop, **mysql_params) as pool:
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            async with pool.get() as conn:
+        with pytest.raises(RuntimeError):
+            with await pool:
                 pass
-    # The first warning emitted is expected to be DeprecationWarning:
-    # in the past, we used to check for the last one but this assumption
-    # breaks under Python 3.7 that also emits a `ResourceWarning` when
-    # executed with `PYTHONASYNCIODEBUG=1`.
-    assert issubclass(w[0].category, DeprecationWarning)
-    assert conn.closed
-
-    async with create_pool(loop=loop, **mysql_params) as pool:
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            with await pool as conn:
-                pass
-    assert issubclass(w[-1].category, DeprecationWarning)
-    assert conn.closed
 
 
 @pytest.mark.run_loop

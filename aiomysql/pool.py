@@ -3,7 +3,6 @@
 
 import asyncio
 import collections
-import warnings
 
 from .connection import connect
 from .utils import (_PoolContextManager, _PoolConnectionContextManager,
@@ -223,12 +222,6 @@ class Pool(asyncio.AbstractServer):
             fut = self._loop.create_task(self._wakeup())
         return fut
 
-    def get(self):
-        warnings.warn("pool.get deprecated use pool.acquire instead",
-                      DeprecationWarning,
-                      stacklevel=2)
-        return _PoolConnectionContextManager(self, None)
-
     def __enter__(self):
         raise RuntimeError(
             '"yield from" should be used as context manager expression')
@@ -255,11 +248,9 @@ class Pool(asyncio.AbstractServer):
         return _PoolConnectionContextManager(self, conn)
 
     def __await__(self):
-        msg = "with await pool as conn deprecated, use" \
-              "async with pool.acquire() as conn instead"
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        conn = yield from self.acquire()
-        return _PoolConnectionContextManager(self, conn)
+        msg = "\"with await pool\" is no longer supported, use " \
+            "\"async with pool.acquire() as conn\" instead"
+        raise RuntimeError(msg)
 
     async def __aenter__(self):
         return self

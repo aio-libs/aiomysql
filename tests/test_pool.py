@@ -79,7 +79,7 @@ async def test_bad_context_manager_usage(pool_creator):
 @pytest.mark.run_loop
 async def test_context_manager(pool_creator):
     pool = await pool_creator(minsize=10, maxsize=10)
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         assert isinstance(conn, Connection)
         assert 9 == pool.freesize
         assert {conn} == pool._used
@@ -101,7 +101,7 @@ async def test_initial_empty(pool_creator):
     assert 0 == pool.size
     assert 0 == pool.freesize
 
-    async with pool.get():
+    async with pool.acquire():
         assert 1 == pool.size
         assert 0 == pool.freesize
     assert 1 == pool.size
@@ -236,7 +236,7 @@ async def test_release_with_invalid_status_wait_release(pool_creator):
 @pytest.mark.run_loop
 async def test__fill_free(pool_creator, loop):
     pool = await pool_creator(minsize=1)
-    async with pool.get():
+    async with pool.acquire():
         assert 0 == pool.freesize
         assert 1 == pool.size
 
@@ -256,7 +256,7 @@ async def test_connect_from_acquire(pool_creator):
     pool = await pool_creator(minsize=0)
     assert 0 == pool.freesize
     assert 0 == pool.size
-    async with pool.get():
+    async with pool.acquire():
         assert 1 == pool.size
         assert 0 == pool.freesize
     assert 1 == pool.size
@@ -352,7 +352,7 @@ async def test_echo(pool_creator):
     pool = await pool_creator(echo=True)
     assert pool.echo
 
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         assert conn.echo
 
 
@@ -481,7 +481,7 @@ async def test_cancelled_connection(pool_creator, loop):
     pool = await pool_creator(minsize=0, maxsize=1)
 
     try:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             curs = await conn.cursor()
             # Cancel a cursor in the middle of execution, before it
             # could read even the first packet (SLEEP assures the
@@ -494,7 +494,7 @@ async def test_cancelled_connection(pool_creator, loop):
     except asyncio.CancelledError:
         pass
 
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         cur2 = await conn.cursor()
         res = await cur2.execute("SELECT 2 as value, 0 as xxx")
         names = [x[0] for x in cur2.description]
@@ -508,7 +508,7 @@ async def test_cancelled_connection(pool_creator, loop):
 @pytest.mark.run_loop
 async def test_pool_with_connection_recycling(pool_creator, loop):
     pool = await pool_creator(minsize=1, maxsize=1, pool_recycle=3)
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')
         val = await cur.fetchone()
@@ -517,7 +517,7 @@ async def test_pool_with_connection_recycling(pool_creator, loop):
     await asyncio.sleep(5)
 
     assert 1 == pool.freesize
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')
         val = await cur.fetchone()
@@ -528,13 +528,13 @@ async def test_pool_with_connection_recycling(pool_creator, loop):
 async def test_pool_drops_connection_with_exception(pool_creator, loop):
     pool = await pool_creator(minsize=1, maxsize=1)
 
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')
 
     connection, = pool._free
     connection._writer._protocol.connection_lost(IOError())
 
-    async with pool.get() as conn:
+    async with pool.acquire() as conn:
         cur = await conn.cursor()
         await cur.execute('SELECT 1;')
