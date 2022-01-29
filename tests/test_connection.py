@@ -243,20 +243,6 @@ async def test___del__(connection_creator):
 
 
 @pytest.mark.run_loop
-async def test_no_delay_warning(connection_creator):
-    with pytest.warns(DeprecationWarning):
-        conn = await connection_creator(no_delay=True)
-    conn.close()
-
-
-@pytest.mark.run_loop
-async def test_no_delay_default_arg(connection_creator):
-    conn = await connection_creator()
-    assert conn._no_delay is True
-    conn.close()
-
-
-@pytest.mark.run_loop
 async def test_previous_cursor_not_closed(connection_creator):
     conn = await connection_creator()
     cur1 = await conn.cursor()
