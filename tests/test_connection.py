@@ -10,7 +10,13 @@ import aiomysql
 @pytest.fixture()
 def fill_my_cnf(mysql_params):
     tests_root = os.path.abspath(os.path.dirname(__file__))
-    path1 = os.path.join(tests_root, 'fixtures/my.cnf.tmpl')
+
+    if "unix_socket" in mysql_params:
+        tmpl_path = "fixtures/my.cnf.unix.tmpl"
+    else:
+        tmpl_path = "fixtures/my.cnf.tcp.tmpl"
+
+    path1 = os.path.join(tests_root, tmpl_path)
     path2 = os.path.join(tests_root, 'fixtures/my.cnf')
     with open(path1) as f1:
         tmpl = f1.read()
@@ -31,8 +37,11 @@ async def test_config_file(fill_my_cnf, connection_creator, mysql_params):
     path = os.path.join(tests_root, 'fixtures/my.cnf')
     conn = await connection_creator(read_default_file=path)
 
-    assert conn.host == mysql_params['host']
-    assert conn.port == mysql_params['port']
+    if "unix_socket" in mysql_params:
+        assert conn.unix_socket == mysql_params["unix_socket"]
+    else:
+        assert conn.host == mysql_params['host']
+        assert conn.port == mysql_params['port']
     assert conn.user, mysql_params['user']
 
     # make sure connection is working
@@ -167,12 +176,15 @@ async def test_connection_gone_away(connection_creator):
 
 
 @pytest.mark.run_loop
-async def test_connection_info_methods(connection_creator):
+async def test_connection_info_methods(connection_creator, mysql_params):
     conn = await connection_creator()
     # trhead id is int
     assert isinstance(conn.thread_id(), int)
     assert conn.character_set_name() in ('latin1', 'utf8mb4')
-    assert str(conn.port) in conn.get_host_info()
+    if "unix_socket" in mysql_params:
+        assert mysql_params["unix_socket"] in conn.get_host_info()
+    else:
+        assert str(conn.port) in conn.get_host_info()
     assert isinstance(conn.get_server_info(), str)
     # protocol id is int
     assert isinstance(conn.get_proto_info(), int)
@@ -200,8 +212,11 @@ async def test_connection_ping(connection_creator):
 @pytest.mark.run_loop
 async def test_connection_properties(connection_creator, mysql_params):
     conn = await connection_creator()
-    assert conn.host == mysql_params['host']
-    assert conn.port == mysql_params['port']
+    if "unix_socket" in mysql_params:
+        assert conn.unix_socket == mysql_params["unix_socket"]
+    else:
+        assert conn.host == mysql_params['host']
+        assert conn.port == mysql_params['port']
     assert conn.user == mysql_params['user']
     assert conn.db == mysql_params['db']
     assert conn.echo is False

@@ -14,20 +14,19 @@ The basic usage is::
 
     loop = asyncio.get_event_loop()
 
-    @asyncio.coroutine
-    def go():
-        pool = yield from aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                               user='root', password='',
-                                               db='mysql', loop=loop, autocommit=False)
+    async def go():
+        pool = await aiomysql.create_pool(host='127.0.0.1', port=3306,
+                                          user='root', password='',
+                                          db='mysql', loop=loop, autocommit=False)
 
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
-            yield from cur.execute("SELECT 10")
+        async with pool.acquire() as conn:
+            cur = await conn.cursor()
+            await cur.execute("SELECT 10")
             # print(cur.description)
-            (r,) = yield from cur.fetchone()
+            (r,) = await cur.fetchone()
             assert r == 10
         pool.close()
-        yield from pool.wait_closed()
+        await pool.wait_closed()
 
     loop.run_until_complete(go())
 
@@ -45,6 +44,9 @@ The basic usage is::
     :param kwargs: The function accepts all parameters that
         :func:`aiomysql.connect` does plus optional keyword-only parameters
         *loop*, *minsize*, *maxsize*.
+    :param float pool_recycle: number of seconds after which connection is
+         recycled, helps to deal with stale connections in pool, default
+         value is -1, means recycling logic is disabled.
     :returns: :class:`Pool` instance.
 
 
@@ -62,8 +64,8 @@ The basic usage is::
 
     The most important way to use it is getting connection in *with statement*::
 
-        with (yield from pool) as conn:
-            cur = yield from conn.cursor()
+        async with pool.acquire() as conn:
+            cur = await conn.cursor()
 
 
     See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring

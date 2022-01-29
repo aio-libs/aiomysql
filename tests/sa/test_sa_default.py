@@ -22,12 +22,19 @@ table = Table('sa_tbl_default_test', meta,
 @pytest.fixture()
 def make_engine(mysql_params, connection):
     async def _make_engine(**kwargs):
+        if "unix_socket" in mysql_params:
+            conn_args = {"unix_socket": mysql_params["unix_socket"]}
+        else:
+            conn_args = {
+                "host": mysql_params['host'],
+                "port": mysql_params['port'],
+            }
+
         return (await sa.create_engine(db=mysql_params['db'],
                                        user=mysql_params['user'],
                                        password=mysql_params['password'],
-                                       host=mysql_params['host'],
-                                       port=mysql_params['port'],
                                        minsize=10,
+                                       **conn_args,
                                        **kwargs))
 
     return _make_engine

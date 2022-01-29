@@ -94,6 +94,7 @@ async def test_scroll_absolute(connection_creator):
 @pytest.mark.run_loop
 async def test_scroll_errors(connection_creator):
     conn = await connection_creator()
+    await _prepare(conn)
     cur = await conn.cursor()
 
     with pytest.raises(ProgrammingError):

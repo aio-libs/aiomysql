@@ -15,6 +15,7 @@ from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
+from pymysql.constants import CR
 from pymysql.constants import FIELD_TYPE
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
@@ -41,7 +42,10 @@ from .cursors import Cursor
 from .utils import _ConnectionContextManager, _ContextManager
 from .log import logger
 
-DEFAULT_USER = getpass.getuser()
+try:
+    DEFAULT_USER = getpass.getuser()
+except KeyError:
+    DEFAULT_USER = "unknown"
 
 
 def connect(host="localhost", user=None, password="",
@@ -73,6 +77,57 @@ async def _connect(*args, **kwargs):
     conn = Connection(*args, **kwargs)
     await conn._connect()
     return conn
+
+
+async def _open_connection(host=None, port=None, **kwds):
+    """This is based on asyncio.open_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_connection(
+        lambda: protocol, host, port, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
+async def _open_unix_connection(path=None, **kwds):
+    """This is based on asyncio.open_unix_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_unix_connection(
+        lambda: protocol, path, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
+class _StreamReader(asyncio.StreamReader):
+    """This StreamReader exposes whether EOF was received, allowing us to
+    discard the associated connection instead of returning it from the pool
+    when checking free connections in Pool._fill_free_pool().
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    def __init__(self, loop=None):
+        self._eof_received = False
+        super().__init__(loop=loop)
+
+    def feed_eof(self) -> None:
+        self._eof_received = True
+        super().feed_eof()
+
+    @property
+    def eof_received(self):
+        return self._eof_received
 
 
 class Connection:
@@ -130,7 +185,7 @@ class Connection:
             when using IAM authentication with Amazon RDS.
             (default: Server Default)
         :param program_name: Program name string to provide when
-            handshaking with MySQL. (default: sys.argv[0])
+            handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
         :param loop: asyncio loop
@@ -173,6 +228,7 @@ class Connection:
         self._client_auth_plugin = auth_plugin
         self._server_auth_plugin = ""
         self._auth_plugin_used = ""
+        self._secure = False
         self.server_public_key = server_public_key
         self.salt = None
 
@@ -184,8 +240,6 @@ class Connection:
         }
         if program_name:
             self._connect_attrs["program_name"] = program_name
-        elif sys.argv:
-            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
@@ -469,21 +523,22 @@ class Connection:
 
     async def _connect(self):
         # TODO: Set close callback
-        # raise OperationalError(2006,
+        # raise OperationalError(CR.CR_SERVER_GONE_ERROR,
         # "MySQL server has gone away (%r)" % (e,))
         try:
-            if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
+            if self._unix_socket:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_unix_connection(
+                        _open_unix_connection(
                             self._unix_socket),
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
+                self._secure = True
             else:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_connection(
+                        _open_connection(
                             self._host,
                             self._port),
                         timeout=self.connect_timeout)
@@ -568,6 +623,13 @@ class Connection:
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
+                self.close()
+                if packet_number == 0:
+                    # MySQL 8.0 sends error packet with seqno==0 when shutdown
+                    raise OperationalError(
+                        CR.CR_SERVER_LOST,
+                        "Lost connection to MySQL server during query")
+
                 raise InternalError(
                     "Packet sequence number wrong - got %d expected %d" %
                     (packet_number, self._next_seq_id))
@@ -595,10 +657,12 @@ class Connection:
             data = await self._reader.readexactly(num_bytes)
         except asyncio.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         except (IOError, OSError) as e:
             msg = "Lost connection to MySQL server during query (%s)" % (e,)
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         return data
 
     def _write_bytes(self, data):
@@ -646,7 +710,7 @@ class Connection:
         if self._result is not None:
             if self._result.unbuffered_active:
                 warnings.warn("Previous unbuffered result was left incomplete")
-                self._result._finish_unbuffered_query()
+                await self._result._finish_unbuffered_query()
             while self._result.has_next:
                 await self.next_result()
             self._result = None
@@ -680,7 +744,7 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
-        if self._ssl_context:
+        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
             # capablities, max packet, charset
             data = struct.pack('<IIB', self.client_flag, 16777216, 33)
             data += b'\x00' * (32 - len(data))
@@ -702,10 +766,12 @@ class Connection:
             # TCP connection not at start. Passing in a socket to
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
-            self._reader, self._writer = await asyncio.open_connection(
+            self._reader, self._writer = await _open_connection(
                 sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
+
+            self._secure = True
 
         charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
@@ -897,7 +963,7 @@ class Connection:
 
         logger.debug("caching sha2: Trying full auth...")
 
-        if self._ssl_context:
+        if self._secure:
             logger.debug("caching sha2: Sending plain "
                          "password via secure connection")
             self.write_packet(self._password.encode('latin1') + b'\0')
@@ -928,7 +994,7 @@ class Connection:
         pkt.check_error()
 
     async def sha256_password_auth(self, pkt):
-        if self._ssl_context:
+        if self._secure:
             logger.debug("sha256: Sending plain password")
             data = self._password.encode('latin1') + b'\0'
             self.write_packet(data)
