@@ -14,6 +14,7 @@ To be included in 1.0.0 (unreleased)
 * Test suite now also tests unix socket connections #696
 * Fix SSCursor raising InternalError when last result was not fully retrieved #635
 * Remove deprecated no_delay argument #702
+* Support PyMySQL up to version 1.0.2 #643
 
 
 0.0.22 (2021-11-14)
