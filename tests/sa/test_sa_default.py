@@ -88,6 +88,7 @@ async def test_default_fields_isnull(make_engine):
         assert row.created_at == created_at
 
 
+@pytest.mark.run_loop
 async def test_default_fields_edit(make_engine):
     engine = await make_engine()
     await start(engine)
