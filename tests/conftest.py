@@ -1,6 +1,7 @@
 import asyncio
 import gc
 import os
+import re
 import ssl
 
 import aiomysql
@@ -71,17 +72,6 @@ def pytest_generate_tests(metafunc):
                              ids=ids,
                              scope="session",
                              )
-
-
-# This is here unless someone fixes the generate_tests bit
-@pytest.fixture(scope='session')
-def mysql_tag():
-    return os.environ.get('DBTAG', '10.5')
-
-
-@pytest.fixture(scope='session')
-def mysql_image():
-    return os.environ.get('DB', 'mariadb')
 
 
 @pytest.fixture
@@ -246,20 +236,8 @@ def table_cleanup(loop, connection):
         loop.run_until_complete(cursor.execute(sql))
 
 
-@pytest.fixture(autouse=True)
-def ensure_mysql_version(request, mysql_image, mysql_tag):
-    mysql_version = request.node.get_closest_marker('mysql_version')
-
-    if mysql_version and (
-            mysql_version.args[0] != mysql_image
-            or mysql_version.args[1] != mysql_tag):
-
-        pytest.skip('Not applicable for {0} version: {1}'
-                    .format(mysql_image, mysql_tag))
-
-
 @pytest.fixture(scope='session')
-def mysql_server(mysql_image, mysql_tag, mysql_address):
+def mysql_server(mysql_address):
     unix_socket = type(mysql_address) is str
 
     if not unix_socket:
@@ -292,6 +270,23 @@ def mysql_server(mysql_image, mysql_tag, mysql_address):
             **server_params)
 
         with connection.cursor() as cursor:
+            cursor.execute("SELECT VERSION() AS version")
+            server_version = cursor.fetchone()["version"]
+            server_version_tuple = tuple(
+                (int(dig) if dig is not None else 0)
+                for dig in
+                re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", server_version).group(1, 2, 3)
+            )
+            server_version_tuple_short = (server_version_tuple[0],
+                                          server_version_tuple[1])
+            if server_version_tuple_short in [(5, 7), (8, 0)]:
+                db_type = "mysql"
+            elif server_version_tuple[0] == 10:
+                db_type = "mariadb"
+            else:
+                pytest.fail("Unable to determine database type from {!r}"
+                            .format(server_version_tuple))
+
             if not unix_socket:
                 cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
 
@@ -322,7 +317,7 @@ def mysql_server(mysql_image, mysql_tag, mysql_address):
                            'DEFAULT COLLATE utf8_general_ci;')
 
             # Do MySQL8+ Specific Setup
-            if mysql_image == "mysql" and mysql_tag in ('8.0',):
+            if db_type == "mysql" and server_version_tuple_short == (8, 0):
                 # Drop existing users
                 cursor.execute('DROP USER IF EXISTS user_sha256;')
                 cursor.execute('DROP USER IF EXISTS nopass_sha256;')
@@ -347,4 +342,10 @@ def mysql_server(mysql_image, mysql_tag, mysql_address):
     except Exception:
         pytest.fail("Cannot initialize MySQL environment")
 
-    return {'conn_params': server_params}
+    return {
+        "conn_params": server_params,
+        "server_version": server_version,
+        "server_version_tuple": server_version_tuple,
+        "server_version_tuple_short": server_version_tuple_short,
+        "db_type": db_type,
+    }
