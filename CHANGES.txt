@@ -16,6 +16,7 @@ To be included in 1.0.0 (unreleased)
 * Remove deprecated no_delay argument #702
 * Support PyMySQL up to version 1.0.2 #643
 * Bump minimal PyMySQL version to 1.0.0 #713
+* Align % formatting in Cursor.executemany() with Cursor.execute(), literal % now need to be doubled in Cursor.executemany() #714
 
 
 0.0.22 (2021-11-14)
