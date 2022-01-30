@@ -17,7 +17,6 @@ from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
 from pymysql.constants import CR
 from pymysql.constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
 from pymysql.err import (Warning, Error,
@@ -29,18 +28,15 @@ from pymysql.err import (Warning, Error,
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
-from pymysql.connections import pack_int24
-
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
-from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import _pack_int24, _lenenc_int, _ConnectionContextManager, _ContextManager
 from .log import logger
 
 try:
@@ -349,7 +345,7 @@ class Connection:
         if self._writer is None:
             # connection has been closed
             return
-        send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
+        send_data = struct.pack('<i', 1) + bytes([COMMAND.COM_QUIT])
         self._writer.write(send_data)
         await self._writer.drain()
         self.close()
@@ -588,7 +584,7 @@ class Connection:
         """
         # Internal note: when you build packet manually and calls
         # _write_bytes() directly, you should set self._next_seq_id properly.
-        data = pack_int24(len(payload)) + int2byte(self._next_seq_id) + payload
+        data = _pack_int24(len(payload)) + bytes([self._next_seq_id]) + payload
         self._write_bytes(data)
         self._next_seq_id = (self._next_seq_id + 1) % 256
 
@@ -801,7 +797,7 @@ class Connection:
             authresp = self._password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
-            data += lenenc_int(len(authresp)) + authresp
+            data += _lenenc_int(len(authresp)) + authresp
         elif self.server_capabilities & CLIENT.SECURE_CONNECTION:
             data += struct.pack('B', len(authresp)) + authresp
         else:  # pragma: no cover
@@ -1041,7 +1037,7 @@ class Connection:
         packet = await self._read_packet()
         data = packet.get_all_data()
         # logger.debug(dump_packet(data))
-        self.protocol_version = byte2int(data[i:i + 1])
+        self.protocol_version = data[i]
         i += 1
 
         server_end = data.find(b'\0', i)
