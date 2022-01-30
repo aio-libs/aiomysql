@@ -1,21 +1,6 @@
 import asyncio
 import unittest
 
-from functools import wraps
-
-
-def run_until_complete(fun):
-    if not asyncio.iscoroutinefunction(fun):
-        fun = asyncio.coroutine(fun)
-
-    @wraps(fun)
-    def wrapper(test, *args, **kw):
-        loop = test.loop
-        ret = loop.run_until_complete(
-            asyncio.wait_for(fun(test, *args, **kw), 15))
-        return ret
-    return wrapper
-
 
 class BaseTest(unittest.TestCase):
     """Base test case for unittests.

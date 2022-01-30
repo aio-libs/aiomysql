@@ -4,7 +4,6 @@ import re
 import time
 
 import pytest
-from pymysql import util
 from pymysql.err import ProgrammingError
 
 
@@ -42,7 +41,7 @@ async def test_datatypes(connection, cursor, datatype_table):
     await cursor.execute(
         "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
     r = await cursor.fetchone()
-    assert util.int2byte(1) == r[0]
+    assert bytes([1]) == r[0]
     # assert v[1:8] == r[1:8])
     assert v[1:9] == r[1:9]
     # mysql throws away microseconds so we need to check datetimes

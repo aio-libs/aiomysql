@@ -55,6 +55,7 @@ def sa_connect(connection, connection_creator):
     return _connect
 
 
+@pytest.mark.run_loop
 async def test_without_transactions(sa_connect):
     conn1 = await sa_connect()
     await start(conn1)
@@ -71,6 +72,7 @@ async def test_without_transactions(sa_connect):
     await conn2.close()
 
 
+@pytest.mark.run_loop
 async def test_connection_attr(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -79,6 +81,7 @@ async def test_connection_attr(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction(sa_connect):
     conn1 = await sa_connect()
     await start(conn1)
@@ -101,6 +104,7 @@ async def test_root_transaction(sa_connect):
     await conn2.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction_rollback(sa_connect):
     conn1 = await sa_connect()
     await start(conn1)
@@ -122,6 +126,7 @@ async def test_root_transaction_rollback(sa_connect):
     await conn2.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction_close(sa_connect):
     conn1 = await sa_connect()
     await start(conn1)
@@ -143,6 +148,7 @@ async def test_root_transaction_close(sa_connect):
     await conn2.close()
 
 
+@pytest.mark.run_loop
 async def test_rollback_on_connection_close(sa_connect):
     conn1 = await sa_connect()
     await start(conn1)
@@ -163,6 +169,7 @@ async def test_rollback_on_connection_close(sa_connect):
     await conn2.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction_commit_inactive(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -175,6 +182,7 @@ async def test_root_transaction_commit_inactive(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction_rollback_inactive(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -187,6 +195,7 @@ async def test_root_transaction_rollback_inactive(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_root_transaction_double_close(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -199,6 +208,7 @@ async def test_root_transaction_double_close(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_inner_transaction_commit(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -216,6 +226,7 @@ async def test_inner_transaction_commit(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_inner_transaction_rollback(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -233,6 +244,7 @@ async def test_inner_transaction_rollback(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_inner_transaction_close(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -251,6 +263,7 @@ async def test_inner_transaction_close(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_nested_transaction_commit(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -276,6 +289,7 @@ async def test_nested_transaction_commit(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_nested_transaction_commit_twice(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -298,6 +312,7 @@ async def test_nested_transaction_commit_twice(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_nested_transaction_rollback(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -323,6 +338,7 @@ async def test_nested_transaction_rollback(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_nested_transaction_rollback_twice(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -344,6 +360,7 @@ async def test_nested_transaction_rollback_twice(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_twophase_transaction_commit(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -362,6 +379,7 @@ async def test_twophase_transaction_commit(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_twophase_transaction_twice(sa_connect):
     conn = await sa_connect()
     await start(conn)
@@ -375,6 +393,7 @@ async def test_twophase_transaction_twice(sa_connect):
     await conn.close()
 
 
+@pytest.mark.run_loop
 async def test_transactions_sequence(sa_connect):
     conn = await sa_connect()
     await start(conn)

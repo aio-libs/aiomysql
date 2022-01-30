@@ -4,13 +4,13 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['PyMySQL>=0.10.0,<=0.10.1']
+install_requires = ['PyMySQL>=1.0.0,<=1.0.2']
 
 PY_VER = sys.version_info
 
 
-if not PY_VER >= (3, 5, 3):
-    raise RuntimeError("aiomysql doesn't support Python earlier than 3.5.3")
+if not PY_VER >= (3, 7, 0):
+    raise RuntimeError("aiomysql doesn't support Python earlier than 3.7.0")
 
 
 def read(f):
@@ -37,8 +37,10 @@ classifiers = [
     'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
     'Operating System :: POSIX',
     'Environment :: Web Environment',
     'Development Status :: 3 - Alpha',
