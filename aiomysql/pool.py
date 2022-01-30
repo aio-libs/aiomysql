@@ -36,7 +36,7 @@ class Pool(asyncio.AbstractServer):
     def __init__(self, minsize, maxsize, echo, pool_recycle, loop, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
-        if maxsize < minsize:
+        if maxsize < minsize and maxsize != 0:
             raise ValueError("maxsize should be not less than minsize")
         self._minsize = minsize
         self._loop = loop
