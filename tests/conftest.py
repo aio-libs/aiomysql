@@ -2,7 +2,6 @@ import asyncio
 import gc
 import os
 import ssl
-import uuid
 
 import aiomysql
 import pymysql
@@ -245,12 +244,6 @@ def table_cleanup(loop, connection):
         # TODO: probably this is not safe code
         sql = "DROP TABLE IF EXISTS {};".format(t)
         loop.run_until_complete(cursor.execute(sql))
-
-
-@pytest.fixture(scope='session')
-def session_id():
-    """Unique session identifier, random string."""
-    return str(uuid.uuid4())
 
 
 @pytest.fixture(autouse=True)
