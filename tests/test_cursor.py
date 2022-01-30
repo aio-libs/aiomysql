@@ -2,7 +2,10 @@ import asyncio
 
 import pytest
 
+from pymysql.err import OperationalError
+
 from aiomysql import ProgrammingError, Cursor, InterfaceError
+from aiomysql.cursors import RE_INSERT_VALUES
 
 
 async def _prepare(conn):
@@ -318,3 +321,43 @@ async def test_execute_cancel(connection_creator):
 
     with pytest.raises(InterfaceError):
         await conn.cursor()
+
+
+@pytest.mark.run_loop
+async def test_execute_percentage(connection_creator):
+    # %% in column set
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS percent_test")
+        await cur.execute("""\
+            CREATE TABLE percent_test (
+                `A%` INTEGER,
+                `B%` INTEGER)""")
+
+        q = "INSERT INTO percent_test (`A%%`, `B%%`) VALUES (%s, %s)"
+
+        await cur.execute(q, (3, 4))
+
+
+@pytest.mark.xfail(
+    reason="https://github.com/aio-libs/aiomysql/pull/545",
+    raises=OperationalError,
+    strict=True,
+)
+@pytest.mark.run_loop
+async def test_executemany_percentage(connection_creator):
+    # %% in column set
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS percent_test")
+        await cur.execute("""\
+            CREATE TABLE percent_test (
+                `A%` INTEGER,
+                `B%` INTEGER)""")
+
+        q = "INSERT INTO percent_test (`A%%`, `B%%`) VALUES (%s, %s)"
+
+        assert RE_INSERT_VALUES.match(q) is not None
+        await cur.executemany(q, [(3, 4), (5, 6)])
+        assert cur._last_executed.endswith("(3, 4),(5, 6)"), \
+            "executemany with %% not in one query"
