@@ -345,6 +345,7 @@ async def test_wait_closed(pool_creator, loop):
     await asyncio.gather(wait_closed(), do_release(c1), do_release(c2))
     assert ['release', 'release', 'wait_closed'] == ops
     assert 0 == pool.freesize
+    assert pool.closed
 
 
 @pytest.mark.run_loop
