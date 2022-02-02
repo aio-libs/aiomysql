@@ -17,7 +17,6 @@ from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
 from pymysql.constants import CR
 from pymysql.constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
 from pymysql.err import (Warning, Error,
@@ -29,18 +28,15 @@ from pymysql.err import (Warning, Error,
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
-from pymysql.connections import pack_int24
-
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
-from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import _pack_int24, _lenenc_int, _ConnectionContextManager, _ContextManager
 from .log import logger
 
 try:
@@ -55,7 +51,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=None, autocommit=False, echo=False,
+            autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
             program_name='', server_public_key=None):
     """See connections.Connection.__init__() for information about
@@ -68,7 +64,7 @@ def connect(host="localhost", user=None, password="",
                     init_command=init_command,
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
-                    no_delay=no_delay, autocommit=autocommit, echo=echo,
+                    autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
                     auth_plugin=auth_plugin, program_name=program_name)
     return _ConnectionContextManager(coro)
@@ -144,7 +140,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,
+                 autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
                  program_name='', server_public_key=None):
         """
@@ -175,7 +171,6 @@ class Connection:
             when connecting.
         :param read_default_group: Group to read from in the configuration
             file.
-        :param no_delay: Disable Nagle's algorithm on the socket
         :param autocommit: Autocommit mode. None means use server default.
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
@@ -211,19 +206,11 @@ class Connection:
             port = int(_config("port", fallback=port))
             charset = _config("default-character-set", fallback=charset)
 
-        # pymysql port
-        if no_delay is not None:
-            warnings.warn("no_delay option is deprecated", DeprecationWarning)
-            no_delay = bool(no_delay)
-        else:
-            no_delay = True
-
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
         self._password = password or ""
         self._db = db
-        self._no_delay = no_delay
         self._echo = echo
         self._last_usage = self._loop.time()
         self._client_auth_plugin = auth_plugin
@@ -358,7 +345,7 @@ class Connection:
         if self._writer is None:
             # connection has been closed
             return
-        send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
+        send_data = struct.pack('<i', 1) + bytes([COMMAND.COM_QUIT])
         self._writer.write(send_data)
         await self._writer.drain()
         self.close()
@@ -544,11 +531,8 @@ class Connection:
                             self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
-                self.host_info = "socket %s:%d" % (self._host, self._port)
-
-            # do not set no delay in case of unix_socket
-            if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
+                self.host_info = "socket %s:%d" % (self._host, self._port)
 
             self._next_seq_id = 0
 
@@ -600,7 +584,7 @@ class Connection:
         """
         # Internal note: when you build packet manually and calls
         # _write_bytes() directly, you should set self._next_seq_id properly.
-        data = pack_int24(len(payload)) + int2byte(self._next_seq_id) + payload
+        data = _pack_int24(len(payload)) + bytes([self._next_seq_id]) + payload
         self._write_bytes(data)
         self._next_seq_id = (self._next_seq_id + 1) % 256
 
@@ -711,7 +695,7 @@ class Connection:
         if self._result is not None:
             if self._result.unbuffered_active:
                 warnings.warn("Previous unbuffered result was left incomplete")
-                self._result._finish_unbuffered_query()
+                await self._result._finish_unbuffered_query()
             while self._result.has_next:
                 await self.next_result()
             self._result = None
@@ -813,7 +797,7 @@ class Connection:
             authresp = self._password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
-            data += lenenc_int(len(authresp)) + authresp
+            data += _lenenc_int(len(authresp)) + authresp
         elif self.server_capabilities & CLIENT.SECURE_CONNECTION:
             data += struct.pack('B', len(authresp)) + authresp
         else:  # pragma: no cover
@@ -1053,7 +1037,7 @@ class Connection:
         packet = await self._read_packet()
         data = packet.get_all_data()
         # logger.debug(dump_packet(data))
-        self.protocol_version = byte2int(data[i:i + 1])
+        self.protocol_version = data[i]
         i += 1
 
         server_end = data.find(b'\0', i)

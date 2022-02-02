@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ['PyMySQL>=0.9,<=0.9.3']
+install_requires = ['PyMySQL>=1.0.0,<=1.0.2']
 
 PY_VER = sys.version_info
 
@@ -40,6 +40,7 @@ classifiers = [
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
     'Operating System :: POSIX',
     'Environment :: Web Environment',
     'Development Status :: 3 - Alpha',

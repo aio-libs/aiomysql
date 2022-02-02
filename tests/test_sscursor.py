@@ -188,3 +188,14 @@ async def test_sscursor_cancel(connection):
 
     with pytest.raises(InterfaceError):
         await conn.cursor(SSCursor)
+
+
+@pytest.mark.run_loop
+async def test_sscursor_discarded_result(connection):
+    conn = connection
+    await _prepare(conn)
+    async with conn.cursor(SSCursor) as cursor:
+        await cursor.execute("select 1")
+        await cursor.execute("select 2")
+        ret = await cursor.fetchone()
+    assert (2,) == ret

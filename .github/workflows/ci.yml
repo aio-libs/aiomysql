@@ -134,11 +134,9 @@ jobs:
       run: |
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
         timeout --preserve-status --signal=INT --verbose 5m \
-          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
+          pytest --color=yes --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql --cov tests ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
       env:
         PYTHONUNBUFFERED: 1
-        DB: '${{ matrix.db[0] }}'
-        DBTAG: '${{ matrix.db[1] }}'
       timeout-minutes: 6
 
     - name: Upload coverage
