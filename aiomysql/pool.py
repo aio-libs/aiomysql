@@ -61,7 +61,7 @@ class Pool(asyncio.AbstractServer):
 
     @property
     def maxsize(self):
-        return self._free.maxlen or float("inf")
+        return self._free.maxlen
 
     @property
     def size(self):
@@ -182,7 +182,7 @@ class Pool(asyncio.AbstractServer):
         if self._free:
             return
 
-        if override_min and self.size < self.maxsize:
+        if override_min and (not self.maxsize or self.size < self.maxsize):
             self._acquiring += 1
             try:
                 conn = await connect(echo=self._echo, loop=self._loop,
