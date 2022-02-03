@@ -1,4 +1,4 @@
-# copied from aiopg
+# based on aiopg pool
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/pool.py
 
 import asyncio
@@ -78,6 +78,13 @@ class Pool(asyncio.AbstractServer):
                 conn = self._free.popleft()
                 await conn.ensure_closed()
             self._cond.notify()
+
+    @property
+    def closed(self):
+        """
+        The readonly property that returns ``True`` if connections is closed.
+        """
+        return self._closed
 
     def close(self):
         """Close pool.
