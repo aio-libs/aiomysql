@@ -30,27 +30,36 @@ Example::
 
     metadata = sa.MetaData()
 
-    tbl = sa.Table('tbl', metadata,
-                   sa.Column('id', sa.Integer, primary_key=True),
-                   sa.Column('val', sa.String(255)))
+    tbl = sa.Table(
+        "tbl",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("val", sa.String(255)),
+    )
 
 
     async def go():
-        engine = await create_engine(user='root',
-                                          db='test_pymysql',
-                                          host='127.0.0.1',
-                                          password='')
+        engine = await create_engine(
+            user="root",
+            db="test_pymysql",
+            host="127.0.0.1",
+            password="",
+        )
 
         async with engine.acquire() as conn:
-            await conn.execute(tbl.insert().values(val='abc'))
+            async with conn.begin() as transaction:
+                await conn.execute(tbl.insert().values(val="abc"))
+                await transaction.commit()
 
-            res = await conn.execute(tbl.select())
-            for row in res:
-                print(row.id, row.val)
+                res = await conn.execute(tbl.select())
+                async for row in res:
+                    print(row.id, row.val)
 
-            await conn.commit()
+        engine.close()
+        await engine.wait_closed()
 
-    asyncio.get_event_loop().run_until_complete(go())
+
+    asyncio.run(go())
 
 
 So you can execute SQL query built by
