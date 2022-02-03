@@ -1,6 +1,33 @@
 Changes
 -------
 
+To be included in 1.0.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Don't send sys.argv[0] as program_name to MySQL server by default #620
+* Allow running process as anonymous uid #587
+* Fix timed out MySQL 8.0 connections raising InternalError rather than OperationalError #660
+* Fix timed out MySQL 8.0 connections being returned from Pool #660
+* Ensure connections are properly closed before raising an OperationalError when the server connection is lost #660
+* Ensure connections are properly closed before raising an InternalError when packet sequence numbers are out of sync #660
+* Unix sockets are now internally considered secure, allowing sha256_password and caching_sha2_password auth methods to be used #695
+* Test suite now also tests unix socket connections #696
+* Fix SSCursor raising InternalError when last result was not fully retrieved #635
+* Remove deprecated no_delay argument #702
+* Support PyMySQL up to version 1.0.2 #643
+* Bump minimal PyMySQL version to 1.0.0 #713
+* Align % formatting in Cursor.executemany() with Cursor.execute(), literal % now need to be doubled in Cursor.executemany() #714
+* Fixed unlimited Pool size not working, this is now working as documented by passing maxsize=0 to create_pool #119
+* Added Pool.closed property as present in aiopg #463
+* Fixed SQLAlchemy connection context iterator #410
+
+
+0.0.22 (2021-11-14)
+^^^^^^^^^^^^^^^^^^^
+
+* Support python 3.10 #505
+
+
 0.0.21 (2020-11-26)
 ^^^^^^^^^^^^^^^^^^^
 

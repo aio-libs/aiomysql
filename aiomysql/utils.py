@@ -1,5 +1,31 @@
 from collections.abc import Coroutine
 
+import struct
+
+
+def _pack_int24(n):
+    return struct.pack("<I", n)[:3]
+
+
+def _lenenc_int(i):
+    if i < 0:
+        raise ValueError(
+            "Encoding %d is less than 0 - no representation in LengthEncodedInteger" % i
+        )
+    elif i < 0xFB:
+        return bytes([i])
+    elif i < (1 << 16):
+        return b"\xfc" + struct.pack("<H", i)
+    elif i < (1 << 24):
+        return b"\xfd" + struct.pack("<I", i)[:3]
+    elif i < (1 << 64):
+        return b"\xfe" + struct.pack("<Q", i)
+    else:
+        raise ValueError(
+            "Encoding %x is larger than %x - no representation in LengthEncodedInteger"
+            % (i, (1 << 64))
+        )
+
 
 class _ContextManager(Coroutine):
 
@@ -70,9 +96,19 @@ class _PoolContextManager(_ContextManager):
 
 
 class _SAConnectionContextManager(_ContextManager):
-    async def __aiter__(self):
-        result = await self._coro
-        return result
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self._obj is None:
+            self._obj = await self._coro
+
+        try:
+            return await self._obj.__anext__()
+        except StopAsyncIteration:
+            await self._obj.close()
+            self._obj = None
+            raise
 
 
 class _TransactionContextManager(_ContextManager):

@@ -6,7 +6,7 @@ Tutorial
 Python database access modules all have similar interfaces, described by the
 :term:`DBAPI`. Most relational databases use the same synchronous interface,
 *aiomysql* tries to provide same api you just need
-to use  ``yield from conn.f()`` instead of just call ``conn.f()`` for
+to use  ``await conn.f()`` instead of just call ``conn.f()`` for
 every method.
 
 Installation
@@ -29,18 +29,17 @@ Lets start from basic example::
 
     loop = asyncio.get_event_loop()
 
-    @asyncio.coroutine
-    def test_example():
-        conn = yield from aiomysql.connect(host='127.0.0.1', port=3306,
+    async def test_example():
+        conn = await aiomysql.connect(host='127.0.0.1', port=3306,
                                            user='root', password='', db='mysql',
                                            loop=loop)
 
-        cur = yield from conn.cursor()
-        yield from cur.execute("SELECT Host,User FROM user")
+        cur = await conn.cursor()
+        await cur.execute("SELECT Host,User FROM user")
         print(cur.description)
-        r = yield from cur.fetchall()
+        r = await cur.fetchall()
         print(r)
-        yield from cur.close()
+        await cur.close()
         conn.close()
 
     loop.run_until_complete(test_example())
@@ -60,10 +59,10 @@ processing  statements. Example uses cursor to issue a
 ``SELECT Host,User FROM user;`` statement, which returns a list of `host` and
 `user` from :term:`MySQL` system table ``user``::
 
-    cur = yield from conn.cursor()
-    yield from cur.execute("SELECT Host,User FROM user")
+    cur = await conn.cursor()
+    await cur.execute("SELECT Host,User FROM user")
     print(cur.description)
-    r = yield from cur.fetchall()
+    r = await cur.fetchall()
 
 The cursor object's :meth:`Cursor.execute()` method sends the query the server
 and :meth:`Cursor.fetchall()` retrieves rows.
@@ -72,7 +71,7 @@ Finally, the script invokes :meth:`Cursor.close()` coroutine and
 connection object's :meth:`Connection.close()` method to disconnect
 from the server::
 
-    yield from cur.close()
+    await cur.close()
     conn.close()
 
 After that, ``conn`` becomes invalid and should not be used to access the

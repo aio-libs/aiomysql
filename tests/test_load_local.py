@@ -6,7 +6,7 @@ import pytest
 from pymysql.err import OperationalError
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def table_local_file(connection, loop):
 
     async def prepare_table(conn):
