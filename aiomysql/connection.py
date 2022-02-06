@@ -634,7 +634,11 @@ class Connection:
                 break
 
         packet = packet_type(buff, self._encoding)
-        packet.check_error()
+        if packet.is_error_packet():
+            if self._result is not None and \
+               self._result.unbuffered_active is True:
+                self._result.unbuffered_active = False
+            packet.raise_for_error()
         return packet
 
     async def _read_bytes(self, num_bytes):

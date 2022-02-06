@@ -20,6 +20,7 @@ To be included in 1.0.0 (unreleased)
 * Fixed unlimited Pool size not working, this is now working as documented by passing maxsize=0 to create_pool #119
 * Added Pool.closed property as present in aiopg #463
 * Fixed SQLAlchemy connection context iterator #410
+* Fix error packet handling for SSCursor #428
 
 
 0.0.22 (2021-11-14)
