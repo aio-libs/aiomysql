@@ -201,10 +201,6 @@ async def test_sscursor_discarded_result(connection):
     assert (2,) == ret
 
 
-@pytest.mark.skip(
-    reason="see aio-libs/aiomysql#428, "
-    "this gets stuck until aio-libs/aiomysql#646 is merged",
-)
 @pytest.mark.run_loop
 async def test_max_execution_time(mysql_server, connection):
     conn = connection
