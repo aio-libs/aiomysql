@@ -366,9 +366,15 @@ async def test_max_execution_time(mysql_server, connection_creator):
 
         # this will sleep 0.01 seconds per row
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(2000) */ name, sleep(0.01) FROM tbl"
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                  name, sleep(0.01) FROM tbl
+                  """
         else:
-            sql = "SET STATEMENT max_statement_time=2 FOR SELECT name, sleep(0.01) FROM tbl"
+            sql = """
+                  SET STATEMENT max_statement_time=2 FOR
+                  SELECT name, sleep(0.01) FROM tbl
+                  """
 
         await cur.execute(sql)
         # unlike SSCursor, Cursor returns a tuple of tuples here
@@ -379,9 +385,15 @@ async def test_max_execution_time(mysql_server, connection_creator):
         )
 
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(2000) */ name, sleep(0.01) FROM tbl"
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                  name, sleep(0.01) FROM tbl
+                  """
         else:
-            sql = "SET STATEMENT max_statement_time=2 FOR SELECT name, sleep(0.01) FROM tbl"
+            sql = """
+                  SET STATEMENT max_statement_time=2 FOR
+                  SELECT name, sleep(0.01) FROM tbl
+                  """
         await cur.execute(sql)
         assert (await cur.fetchone()) == ("a", 0)
 
@@ -390,9 +402,15 @@ async def test_max_execution_time(mysql_server, connection_creator):
         assert (await cur.fetchone()) == (1,)
 
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(1) */ name, sleep(1) FROM tbl"
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(1) */
+                  name, sleep(1) FROM tbl
+                  """
         else:
-            sql = "SET STATEMENT max_statement_time=0.001 FOR SELECT name, sleep(1) FROM tbl"
+            sql = """
+                  SET STATEMENT max_statement_time=0.001 FOR
+                  SELECT name, sleep(1) FROM tbl
+                  """
         with pytest.raises(OperationalError) as cm:
             # in a buffered cursor this should reliably raise an
             # OperationalError

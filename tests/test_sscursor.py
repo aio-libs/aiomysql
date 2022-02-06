@@ -202,7 +202,8 @@ async def test_sscursor_discarded_result(connection):
 
 
 @pytest.mark.skip(
-    reason="see aio-libs/aiomysql#428, this gets stuck until aio-libs/aiomysql#646 is merged",
+    reason="see aio-libs/aiomysql#428, "
+    "this gets stuck until aio-libs/aiomysql#646 is merged",
 )
 @pytest.mark.run_loop
 async def test_max_execution_time(mysql_server, connection):
@@ -231,9 +232,15 @@ async def test_max_execution_time(mysql_server, connection):
 
         # this will sleep 0.01 seconds per row
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(2000) */ name, sleep(0.01) FROM tbl"
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                  name, sleep(0.01) FROM tbl
+                  """
         else:
-            sql = "SET STATEMENT max_statement_time=2 FOR SELECT name, sleep(0.01) FROM tbl"
+            sql = """
+                  SET STATEMENT max_statement_time=2 FOR
+                  SELECT name, sleep(0.01) FROM tbl
+                  """
 
         await cur.execute(sql)
         # unlike Cursor, SSCursor returns a list of tuples here
@@ -245,9 +252,15 @@ async def test_max_execution_time(mysql_server, connection):
         ]
 
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(2000) */ name, sleep(0.01) FROM tbl"
+            sql = """
+                      SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                      name, sleep(0.01) FROM tbl
+                      """
         else:
-            sql = "SET STATEMENT max_statement_time=2 FOR SELECT name, sleep(0.01) FROM tbl"
+            sql = """
+                      SET STATEMENT max_statement_time=2 FOR
+                      SELECT name, sleep(0.01) FROM tbl
+                      """
         await cur.execute(sql)
         assert (await cur.fetchone()) == ("a", 0)
 
@@ -263,9 +276,15 @@ async def test_max_execution_time(mysql_server, connection):
         assert (await cur.fetchone()) is None
 
         if mysql_server["db_type"] == "mysql":
-            sql = "SELECT /*+ MAX_EXECUTION_TIME(1) */ name, sleep(1) FROM tbl"
+            sql = """
+                      SELECT /*+ MAX_EXECUTION_TIME(1) */
+                      name, sleep(1) FROM tbl
+                      """
         else:
-            sql = "SET STATEMENT max_statement_time=0.001 FOR SELECT name, sleep(1) FROM tbl"
+            sql = """
+                      SET STATEMENT max_statement_time=0.001 FOR
+                      SELECT name, sleep(1) FROM tbl
+                      """
         with pytest.raises(OperationalError) as cm:
             # in an unbuffered cursor the OperationalError may not show up
             # until fetching the entire result
