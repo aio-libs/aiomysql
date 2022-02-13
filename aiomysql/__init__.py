@@ -23,6 +23,11 @@ THE SOFTWARE.
 
 """
 
+try:
+    import pkg_resources
+except ImportError:
+    pass
+
 from pymysql.converters import escape_dict, escape_sequence, escape_string
 from pymysql.err import (Warning, Error, InterfaceError, DataError,
                          DatabaseError, OperationalError, IntegrityError,
@@ -33,7 +38,10 @@ from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
 
-__version__ = '0.0.22'
+try:
+    __version__ = pkg_resources.get_distribution('aiomysql').version
+except Exception:
+    __version__ = 'unknown'
 
 __all__ = [
 

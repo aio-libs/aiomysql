@@ -1,5 +1,10 @@
-include LICENSE
-include CHANGES.txt
-include README.rst
-graft aiomysql
 global-exclude *.pyc *.swp
+exclude .coveragerc
+exclude .flake8
+exclude .github
+exclude .gitignore
+exclude docker-compose.yml
+exclude docs
+exclude examples
+exclude requirements-dev.txt
+exclude tests
