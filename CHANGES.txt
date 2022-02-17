@@ -21,6 +21,7 @@ To be included in 1.0.0 (unreleased)
 * Added Pool.closed property as present in aiopg #463
 * Fixed SQLAlchemy connection context iterator #410
 * Fix error packet handling for SSCursor #428
+* Required python version is now properly documented in python_requires instead of failing on setup.py execution #731
 
 
 0.0.22 (2021-11-14)
