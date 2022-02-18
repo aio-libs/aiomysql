@@ -22,6 +22,7 @@ To be included in 1.0.0 (unreleased)
 * Fixed SQLAlchemy connection context iterator #410
 * Fix error packet handling for SSCursor #428
 * Required python version is now properly documented in python_requires instead of failing on setup.py execution #731
+* Add rsa extras_require depending on PyMySQL[rsa] #557
 
 
 0.0.22 (2021-11-14)
