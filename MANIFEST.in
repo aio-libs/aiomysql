@@ -1,10 +1,9 @@
-global-exclude *.pyc *.swp
 exclude .coveragerc
 exclude .flake8
-exclude .github
 exclude .gitignore
 exclude docker-compose.yml
-exclude docs
-exclude examples
 exclude requirements-dev.txt
-exclude tests
+exclude .github/**
+exclude docs/**
+exclude examples/**
+exclude tests/**
