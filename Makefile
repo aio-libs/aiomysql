@@ -5,11 +5,8 @@ FLAGS=
 checkrst:
 	python setup.py check --restructuredtext
 
-pyroma:
-	pyroma -d .
 
-
-flake:checkrst pyroma
+flake:checkrst
 	flake8 aiomysql tests examples
 
 test: flake
