@@ -289,8 +289,6 @@ jobs:
         python
         -m
         build
-        --sdist
-        --wheel
     - name: Verify that the artifacts with expected names got created
       run: >-
         ls -1
