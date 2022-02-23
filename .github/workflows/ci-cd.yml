@@ -747,8 +747,7 @@ jobs:
           dist/${{ needs.pre-setup.outputs.wheel-artifact-name }}
         artifactContentType: raw  # Because whl and tgz are of different types
         # FIXME: Use Towncrier once it is integrated.
-        body: |
-          https://raw.githubusercontent.com/aio-libs/aiomysql/${{ needs.pre-setup.outputs.git-tag }}/CHANGES.txt
+        bodyFile: CHANGES.txt
         discussionCategory: Announcements
         name: ${{ needs.pre-setup.outputs.git-tag }}
         tag: ${{ needs.pre-setup.outputs.git-tag }}
