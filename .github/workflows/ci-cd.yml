@@ -515,9 +515,7 @@ jobs:
       run: >-
         python -m
         pip install
-        --no-cache-dir
         --user
-        --no-index
         'dist/${{ needs.pre-setup.outputs.wheel-artifact-name }}'
 
     - name: >-
