@@ -1,9 +1,0 @@
-exclude .coveragerc
-exclude .flake8
-exclude .gitignore
-exclude docker-compose.yml
-exclude requirements-dev.txt
-exclude .github/**
-exclude docs/**
-exclude examples/**
-exclude tests/**
