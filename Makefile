@@ -6,7 +6,7 @@ checkrst:
 	python setup.py check --restructuredtext
 
 
-flake:checkrst pyroma
+flake:checkrst
 	flake8 aiomysql tests examples
 
 test: flake
