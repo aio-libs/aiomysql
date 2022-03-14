@@ -63,7 +63,7 @@ jobs:
       wheel-artifact-name: ${{ steps.artifact-name.outputs.wheel }}
     steps:
     - name: Switch to using Python 3.10 by default
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: >-
           3.10
@@ -87,7 +87,7 @@ jobs:
     - name: Check out src from Git
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         ref: ${{ github.event.inputs.release-commitish }}
@@ -217,7 +217,7 @@ jobs:
 
     steps:
     - name: Switch to using Python v3.10
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: >-
           3.10
@@ -257,7 +257,7 @@ jobs:
         build
 
     - name: Grab the source from Git
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: >-
           ${{
@@ -321,7 +321,7 @@ jobs:
 
     steps:
     - name: Switch to using Python 3.10 by default
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: >-
           3.10
@@ -354,7 +354,7 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Grab the source from Git
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
@@ -438,7 +438,7 @@ jobs:
 
     steps:
     - name: Setup Python ${{ matrix.py }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.py }}
 
@@ -494,7 +494,7 @@ jobs:
         pip
 
     - name: Grab the source from Git
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
@@ -691,7 +691,7 @@ jobs:
 
     steps:
     - name: Fetch the src snapshot
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
