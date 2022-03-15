@@ -32,8 +32,9 @@ from pymysql.err import (Warning, Error, InterfaceError, DataError,
 from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
+from ._version import version
 
-__version__ = '0.0.22'
+__version__ = version
 
 __all__ = [
 
