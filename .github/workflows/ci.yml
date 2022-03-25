@@ -83,13 +83,17 @@ jobs:
       run: |
         python -m pip install --upgrade --requirement requirements-dev.txt
 
+    - name: Build distribution packages
+      run: |
+        python -m build
+
+    - name: Check package description
+      run: |
+        python -m twine check --strict dist/*
+
     - name: Install aiomysql
       run: |
         python -m pip install .
-
-    - name: Check rst
-      run: |
-        python setup.py check --restructuredtext
 
     # this ensures our database is ready. typically by the time the preparations have completed its first start logic.
     # unfortunately we need this hacky workaround as GitHub Actions service containers can't reference data from our repo.
