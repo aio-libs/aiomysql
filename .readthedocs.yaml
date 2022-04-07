@@ -19,5 +19,7 @@ formats:
 - epub
 
 python:
-   install:
-   - requirements: requirements-dev.txt
+  install:
+  - requirements: requirements-dev.txt
+  - method: pip
+    path: .
