@@ -45,6 +45,7 @@ stop_mysql:
 	docker-compose -f docker-compose.yml stop mysql
 
 doc:
+	git fetch --tags --all
 	make -C docs html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 
