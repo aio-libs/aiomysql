@@ -113,7 +113,8 @@ jobs:
           "::set-output name=files-hash-key::${{
               hashFiles(
                 'requirements-dev.txt',
-                'setup.py'
+                'setup.cfg',
+                'pyproject.toml'
               )
           }}",
         )
@@ -358,6 +359,12 @@ jobs:
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
+    - name: Download all the dists
+      uses: actions/download-artifact@v2
+      with:
+        name: python-package-distributions
+        path: dist/
+
     - name: Install build tools
       run: >-
         python -m
@@ -372,6 +379,9 @@ jobs:
         path: aiomysql
         args: tests examples
 
+    - name: Check package description
+      run: |
+        python -m twine check --strict dist/*
 
   tests:
     name: >-
@@ -545,10 +555,6 @@ jobs:
         + repr(ssl.OPENSSL_VERSION_INFO)
         + '\nOPENSSL_VERSION_NUMBER: '
         + repr(ssl.OPENSSL_VERSION_NUMBER))"
-
-    - name: Check rst
-      run: |
-        python setup.py check --restructuredtext
 
     # this ensures our database is ready. typically by the time the preparations have completed its first start logic.
     # unfortunately we need this hacky workaround as GitHub Actions service containers can't reference data from our repo.
