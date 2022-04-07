@@ -508,6 +508,10 @@ jobs:
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
+    - name: Remove aiomysql source to avoid accidentally using it
+      run: >-
+        rm -rf aiomysql
+
     - name: Download all the dists
       uses: actions/download-artifact@v2
       with:
