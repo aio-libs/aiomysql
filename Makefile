@@ -3,7 +3,7 @@
 FLAGS=
 
 checkrst:
-	python setup.py check --restructuredtext
+	python -m twine check --strict dist/*
 
 
 flake:checkrst
