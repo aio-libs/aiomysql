@@ -51,25 +51,33 @@ We expect you to use a python virtual environment to run our tests.
 
 There are several ways to make a virtual environment.
 
-If you like to use *virtualenv* please run::
+If you like to use *virtualenv* please run:
+
+.. code-block:: sh
 
    $ cd aiomysql
-   $ virtualenv --python=`which python3` venv
+   $ virtualenv --python="$(which python3)" venv
 
-For standard python *venv*::
+For standard python *venv*:
+
+.. code-block:: sh
 
    $ cd aiomysql
    $ python3 -m venv venv
 
-For *virtualenvwrapper*::
+For *virtualenvwrapper*:
+
+.. code-block:: sh
 
    $ cd aiomysql
-   $ mkvirtualenv --python=`which python3` aiomysql
+   $ mkvirtualenv --python="$(which python3)" aiomysql
 
 There are other tools like *pyvenv* but you know the rule of thumb
 now: create a python3 virtual environment and activate it.
 
-After that please install libraries required for development::
+After that please install libraries required for development:
+
+.. code-block:: sh
 
    $ pip install -r requirements-dev.txt
 
@@ -83,7 +91,7 @@ use this values by default. But you always can override host/port, user and
 password in `aiomysql/tests/base.py` file or install corresponding environment
 variables. Tests require two databases to be created before running suit:
 
-::
+.. code-block:: sh
 
    $ mysql -u root
    mysql> CREATE DATABASE test_pymysql  DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
@@ -94,7 +102,9 @@ Run aiomysql test suite
 -----------------------
 
 After all the preconditions are met you can run tests typing the next
-command::
+command:
+
+.. code-block:: sh
 
    $ make test
 
@@ -113,7 +123,9 @@ Tests coverage
 
 We are trying hard to have good test coverage; please don't make it worse.
 
-Use::
+Use:
+
+.. code-block:: sh
 
    $ make cov
 
@@ -130,7 +142,9 @@ Documentation
 
 We encourage documentation improvements.
 
-Please before making a Pull Request about documentation changes run::
+Please before making a Pull Request about documentation changes run:
+
+.. code-block:: sh
 
    $ make doc
 
