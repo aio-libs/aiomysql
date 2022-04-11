@@ -362,7 +362,7 @@ jobs:
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
@@ -515,7 +515,7 @@ jobs:
         rm -rf aiomysql
 
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
@@ -650,7 +650,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
@@ -680,7 +680,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
@@ -746,7 +746,7 @@ jobs:
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-package-distributions
         path: dist/
