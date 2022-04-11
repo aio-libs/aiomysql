@@ -739,6 +739,12 @@ jobs:
       discussions: write
 
     steps:
+    - name: Fetch the src snapshot
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+        ref: ${{ github.event.inputs.release-commitish }}
+
     - name: Download all the dists
       uses: actions/download-artifact@v2
       with:
