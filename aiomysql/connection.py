@@ -733,12 +733,12 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
-        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
-            # capablities, max packet, charset
-            data = struct.pack('<IIB', self.client_flag, 16777216, 33)
-            data += b'\x00' * (32 - len(data))
+        charset_id = charset_by_name(self.charset).id
+        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
+                                charset_id, b'')
 
-            self.write_packet(data)
+        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
+            self.write_packet(data_init)
 
             # Stop sending events to data_received
             self._writer.transport.pause_reading()
@@ -762,14 +762,10 @@ class Connection:
 
             self._secure = True
 
-        charset_id = charset_by_name(self.charset).id
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
         else:
             _user = self.user
-
-        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
-                                charset_id, b'')
 
         data = data_init + _user + b'\0'
 
