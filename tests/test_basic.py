@@ -107,6 +107,20 @@ async def test_string(cursor, table_cleanup):
 
 
 @pytest.mark.run_loop
+async def test_string_with_emoji(cursor, table_cleanup):
+    await cursor.execute("DROP TABLE IF EXISTS test_string_with_emoji;")
+    await cursor.execute("CREATE TABLE test_string_with_emoji (a text) "
+                         "DEFAULT CHARACTER SET=\"utf8mb4\"")
+    test_value = "I am a test string with emoji 😄"
+    table_cleanup('test_string_with_emoji')
+    await cursor.execute("INSERT INTO test_string_with_emoji (a) VALUES (%s)",
+                         test_value)
+    await cursor.execute("SELECT a FROM test_string_with_emoji")
+    r = await cursor.fetchone()
+    assert (test_value,) == r
+
+
+@pytest.mark.run_loop
 async def test_integer(cursor, table_cleanup):
     await cursor.execute("CREATE TABLE test_integer (a INTEGER)")
     table_cleanup('test_integer')
