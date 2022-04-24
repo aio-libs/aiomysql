@@ -398,6 +398,8 @@ jobs:
     - build
     - pre-setup  # transitive, for accessing settings
     strategy:
+      # when updating matrix jobs make sure to adjust the expected reports in
+      # codecov.notify.after_n_builds in .codecov.yml
       matrix:
         # service containers are only supported on ubuntu currently
         os:
