@@ -1,8 +1,8 @@
 Changes
 -------
 
-next (unreleased)
-^^^^^^^^^^^^^^^^^
+0.1.1 (2022-05-08)
+^^^^^^^^^^^^^^^^^^
 
 * Fix SSL connection handshake charset not respecting client configuration #776
 
