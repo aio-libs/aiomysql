@@ -4,7 +4,6 @@ import re
 import time
 
 import pytest
-from pymysql import util
 from pymysql.err import ProgrammingError
 
 
@@ -42,7 +41,7 @@ async def test_datatypes(connection, cursor, datatype_table):
     await cursor.execute(
         "select b,i,l,f,s,u,bb,d,dt,td,t,st from test_datatypes")
     r = await cursor.fetchone()
-    assert util.int2byte(1) == r[0]
+    assert bytes([1]) == r[0]
     # assert v[1:8] == r[1:8])
     assert v[1:9] == r[1:9]
     # mysql throws away microseconds so we need to check datetimes
@@ -103,6 +102,20 @@ async def test_string(cursor, table_cleanup):
     await cursor.execute("INSERT INTO test_string (a) VALUES (%s)",
                          test_value)
     await cursor.execute("SELECT a FROM test_string")
+    r = await cursor.fetchone()
+    assert (test_value,) == r
+
+
+@pytest.mark.run_loop
+async def test_string_with_emoji(cursor, table_cleanup):
+    await cursor.execute("DROP TABLE IF EXISTS test_string_with_emoji;")
+    await cursor.execute("CREATE TABLE test_string_with_emoji (a text) "
+                         "DEFAULT CHARACTER SET=\"utf8mb4\"")
+    test_value = "I am a test string with emoji 😄"
+    table_cleanup('test_string_with_emoji')
+    await cursor.execute("INSERT INTO test_string_with_emoji (a) VALUES (%s)",
+                         test_value)
+    await cursor.execute("SELECT a FROM test_string_with_emoji")
     r = await cursor.fetchone()
     assert (test_value,) == r
 

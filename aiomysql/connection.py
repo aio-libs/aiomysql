@@ -15,8 +15,8 @@ from pymysql.charset import charset_by_name, charset_by_id
 from pymysql.constants import SERVER_STATUS
 from pymysql.constants import CLIENT
 from pymysql.constants import COMMAND
+from pymysql.constants import CR
 from pymysql.constants import FIELD_TYPE
-from pymysql.util import byte2int, int2byte
 from pymysql.converters import (escape_item, encoders, decoders,
                                 escape_string, escape_bytes_prefixed, through)
 from pymysql.err import (Warning, Error,
@@ -28,21 +28,21 @@ from pymysql.err import (Warning, Error,
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
 
-from pymysql.connections import pack_int24
-
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
 from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
-from pymysql.connections import lenenc_int
 
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
-from .utils import _ConnectionContextManager, _ContextManager
+from .utils import _pack_int24, _lenenc_int, _ConnectionContextManager, _ContextManager
 from .log import logger
 
-DEFAULT_USER = getpass.getuser()
+try:
+    DEFAULT_USER = getpass.getuser()
+except KeyError:
+    DEFAULT_USER = "unknown"
 
 
 def connect(host="localhost", user=None, password="",
@@ -51,7 +51,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
-            no_delay=None, autocommit=False, echo=False,
+            autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
             program_name='', server_public_key=None):
     """See connections.Connection.__init__() for information about
@@ -64,7 +64,7 @@ def connect(host="localhost", user=None, password="",
                     init_command=init_command,
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
-                    no_delay=no_delay, autocommit=autocommit, echo=echo,
+                    autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
                     auth_plugin=auth_plugin, program_name=program_name)
     return _ConnectionContextManager(coro)
@@ -74,6 +74,57 @@ async def _connect(*args, **kwargs):
     conn = Connection(*args, **kwargs)
     await conn._connect()
     return conn
+
+
+async def _open_connection(host=None, port=None, **kwds):
+    """This is based on asyncio.open_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_connection(
+        lambda: protocol, host, port, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
+async def _open_unix_connection(path=None, **kwds):
+    """This is based on asyncio.open_unix_connection, allowing us to use a custom
+    StreamReader.
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    loop = asyncio.events.get_running_loop()
+
+    reader = _StreamReader(loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_unix_connection(
+        lambda: protocol, path, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+
+class _StreamReader(asyncio.StreamReader):
+    """This StreamReader exposes whether EOF was received, allowing us to
+    discard the associated connection instead of returning it from the pool
+    when checking free connections in Pool._fill_free_pool().
+
+    `limit` arg has been removed as we don't currently use it.
+    """
+    def __init__(self, loop=None):
+        self._eof_received = False
+        super().__init__(loop=loop)
+
+    def feed_eof(self) -> None:
+        self._eof_received = True
+        super().feed_eof()
+
+    @property
+    def eof_received(self):
+        return self._eof_received
 
 
 class Connection:
@@ -89,7 +140,7 @@ class Connection:
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
                  connect_timeout=None, read_default_group=None,
-                 no_delay=None, autocommit=False, echo=False,
+                 autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
                  program_name='', server_public_key=None):
         """
@@ -120,7 +171,6 @@ class Connection:
             when connecting.
         :param read_default_group: Group to read from in the configuration
             file.
-        :param no_delay: Disable Nagle's algorithm on the socket
         :param autocommit: Autocommit mode. None means use server default.
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
@@ -131,7 +181,7 @@ class Connection:
             when using IAM authentication with Amazon RDS.
             (default: Server Default)
         :param program_name: Program name string to provide when
-            handshaking with MySQL. (default: sys.argv[0])
+            handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
         :param loop: asyncio loop
@@ -156,24 +206,17 @@ class Connection:
             port = int(_config("port", fallback=port))
             charset = _config("default-character-set", fallback=charset)
 
-        # pymysql port
-        if no_delay is not None:
-            warnings.warn("no_delay option is deprecated", DeprecationWarning)
-            no_delay = bool(no_delay)
-        else:
-            no_delay = True
-
         self._host = host
         self._port = port
         self._user = user or DEFAULT_USER
         self._password = password or ""
         self._db = db
-        self._no_delay = no_delay
         self._echo = echo
         self._last_usage = self._loop.time()
         self._client_auth_plugin = auth_plugin
         self._server_auth_plugin = ""
         self._auth_plugin_used = ""
+        self._secure = False
         self.server_public_key = server_public_key
         self.salt = None
 
@@ -185,8 +228,6 @@ class Connection:
         }
         if program_name:
             self._connect_attrs["program_name"] = program_name
-        elif sys.argv:
-            self._connect_attrs["program_name"] = sys.argv[0]
 
         self._unix_socket = unix_socket
         if charset:
@@ -304,7 +345,7 @@ class Connection:
         if self._writer is None:
             # connection has been closed
             return
-        send_data = struct.pack('<i', 1) + int2byte(COMMAND.COM_QUIT)
+        send_data = struct.pack('<i', 1) + bytes([COMMAND.COM_QUIT])
         self._writer.write(send_data)
         await self._writer.drain()
         self.close()
@@ -470,32 +511,28 @@ class Connection:
 
     async def _connect(self):
         # TODO: Set close callback
-        # raise OperationalError(2006,
+        # raise OperationalError(CR.CR_SERVER_GONE_ERROR,
         # "MySQL server has gone away (%r)" % (e,))
         try:
-            if self._unix_socket and self._host in ('localhost', '127.0.0.1'):
+            if self._unix_socket:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_unix_connection(
-                            self._unix_socket,
-                            loop=self._loop),
+                        _open_unix_connection(
+                            self._unix_socket),
                         timeout=self.connect_timeout)
                 self.host_info = "Localhost via UNIX socket: " + \
                                  self._unix_socket
+                self._secure = True
             else:
                 self._reader, self._writer = await \
                     asyncio.wait_for(
-                        asyncio.open_connection(
+                        _open_connection(
                             self._host,
-                            self._port,
-                            loop=self._loop),
+                            self._port),
                         timeout=self.connect_timeout)
                 self._set_keep_alive()
-                self.host_info = "socket %s:%d" % (self._host, self._port)
-
-            # do not set no delay in case of unix_socket
-            if self._no_delay and not self._unix_socket:
                 self._set_nodelay(True)
+                self.host_info = "socket %s:%d" % (self._host, self._port)
 
             self._next_seq_id = 0
 
@@ -544,7 +581,7 @@ class Connection:
         """
         # Internal note: when you build packet manually and calls
         # _write_bytes() directly, you should set self._next_seq_id properly.
-        data = pack_int24(len(payload)) + int2byte(self._next_seq_id) + payload
+        data = _pack_int24(len(payload)) + bytes([self._next_seq_id]) + payload
         self._write_bytes(data)
         self._next_seq_id = (self._next_seq_id + 1) % 256
 
@@ -568,6 +605,13 @@ class Connection:
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
+                self.close()
+                if packet_number == 0:
+                    # MySQL 8.0 sends error packet with seqno==0 when shutdown
+                    raise OperationalError(
+                        CR.CR_SERVER_LOST,
+                        "Lost connection to MySQL server during query")
+
                 raise InternalError(
                     "Packet sequence number wrong - got %d expected %d" %
                     (packet_number, self._next_seq_id))
@@ -587,7 +631,11 @@ class Connection:
                 break
 
         packet = packet_type(buff, self._encoding)
-        packet.check_error()
+        if packet.is_error_packet():
+            if self._result is not None and \
+               self._result.unbuffered_active is True:
+                self._result.unbuffered_active = False
+            packet.raise_for_error()
         return packet
 
     async def _read_bytes(self, num_bytes):
@@ -595,10 +643,12 @@ class Connection:
             data = await self._reader.readexactly(num_bytes)
         except asyncio.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         except (IOError, OSError) as e:
             msg = "Lost connection to MySQL server during query (%s)" % (e,)
-            raise OperationalError(2013, msg) from e
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         return data
 
     def _write_bytes(self, data):
@@ -651,7 +701,7 @@ class Connection:
         if self._result is not None:
             if self._result.unbuffered_active:
                 warnings.warn("Previous unbuffered result was left incomplete")
-                self._result._finish_unbuffered_query()
+                await self._result._finish_unbuffered_query()
             while self._result.has_next:
                 await self.next_result()
             self._result = None
@@ -685,12 +735,12 @@ class Connection:
         if self.user is None:
             raise ValueError("Did not specify a username")
 
-        if self._ssl_context:
-            # capablities, max packet, charset
-            data = struct.pack('<IIB', self.client_flag, 16777216, 33)
-            data += b'\x00' * (32 - len(data))
+        charset_id = charset_by_name(self.charset).id
+        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
+                                charset_id, b'')
 
-            self.write_packet(data)
+        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
+            self.write_packet(data_init)
 
             # Stop sending events to data_received
             self._writer.transport.pause_reading()
@@ -707,19 +757,17 @@ class Connection:
             # TCP connection not at start. Passing in a socket to
             # open_connection will cause it to negotiate TLS on an existing
             # connection not initiate a new one.
-            self._reader, self._writer = await asyncio.open_connection(
-                sock=raw_sock, ssl=self._ssl_context, loop=self._loop,
+            self._reader, self._writer = await _open_connection(
+                sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
 
-        charset_id = charset_by_name(self.charset).id
+            self._secure = True
+
         if isinstance(self.user, str):
             _user = self.user.encode(self.encoding)
         else:
             _user = self.user
-
-        data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
-                                charset_id, b'')
 
         data = data_init + _user + b'\0'
 
@@ -751,7 +799,7 @@ class Connection:
             authresp = self._password.encode('latin1') + b'\0'
 
         if self.server_capabilities & CLIENT.PLUGIN_AUTH_LENENC_CLIENT_DATA:
-            data += lenenc_int(len(authresp)) + authresp
+            data += _lenenc_int(len(authresp)) + authresp
         elif self.server_capabilities & CLIENT.SECURE_CONNECTION:
             data += struct.pack('B', len(authresp)) + authresp
         else:  # pragma: no cover
@@ -902,7 +950,7 @@ class Connection:
 
         logger.debug("caching sha2: Trying full auth...")
 
-        if self._ssl_context:
+        if self._secure:
             logger.debug("caching sha2: Sending plain "
                          "password via secure connection")
             self.write_packet(self._password.encode('latin1') + b'\0')
@@ -933,7 +981,7 @@ class Connection:
         pkt.check_error()
 
     async def sha256_password_auth(self, pkt):
-        if self._ssl_context:
+        if self._secure:
             logger.debug("sha256: Sending plain password")
             data = self._password.encode('latin1') + b'\0'
             self.write_packet(data)
@@ -991,7 +1039,7 @@ class Connection:
         packet = await self._read_packet()
         data = packet.get_all_data()
         # logger.debug(dump_packet(data))
-        self.protocol_version = byte2int(data[i:i + 1])
+        self.protocol_version = data[i]
         i += 1
 
         server_end = data.find(b'\0', i)
@@ -1197,7 +1245,22 @@ class MySQLResult:
         # in fact, no way to stop MySQL from sending all the data after
         # executing a query, so we just spin, and wait for an EOF packet.
         while self.unbuffered_active:
-            packet = await self.connection._read_packet()
+            try:
+                packet = await self.connection._read_packet()
+            except OperationalError as e:
+                # TODO: replace these numbers with constants when available
+                # TODO: in a new PyMySQL release
+                if e.args[0] in (
+                    3024,  # ER.QUERY_TIMEOUT
+                    1969,  # ER.STATEMENT_TIMEOUT
+                ):
+                    # if the query timed out we can simply ignore this error
+                    self.unbuffered_active = False
+                    self.connection = None
+                    return
+
+                raise
+
             if self._check_packet_is_eof(packet):
                 self.unbuffered_active = False
                 # release reference to kill cyclic reference.
