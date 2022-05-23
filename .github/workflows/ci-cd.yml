@@ -273,7 +273,7 @@ jobs:
       if: >-
         fromJSON(needs.pre-setup.outputs.is-untagged-devel)
         || fromJSON(needs.pre-setup.outputs.release-requested)
-      uses: fregante/setup-git-user@6cef8bf084d00360a293e0cc3c56e1b45d6502b8
+      uses: fregante/setup-git-user@2e28d51939d2a84005a917d2f844090637f435f8
     - name: >-
         Tag the release in the local Git repo
         as ${{ needs.pre-setup.outputs.git-tag }}
@@ -711,7 +711,7 @@ jobs:
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
     - name: Setup git user as [bot]
-      uses: fregante/setup-git-user@6cef8bf084d00360a293e0cc3c56e1b45d6502b8
+      uses: fregante/setup-git-user@2e28d51939d2a84005a917d2f844090637f435f8
 
     - name: >-
         Tag the release in the local Git repo
