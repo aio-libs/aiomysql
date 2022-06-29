@@ -3,13 +3,10 @@
 FLAGS=
 
 checkrst:
-	python setup.py check --restructuredtext
-
-pyroma:
-	pyroma -d .
+	python -m twine check --strict dist/*
 
 
-flake:checkrst pyroma
+flake:checkrst
 	flake8 aiomysql tests examples
 
 test: flake
@@ -47,7 +44,16 @@ start_mysql:
 stop_mysql:
 	docker-compose -f docker-compose.yml stop mysql
 
+# TODO: this depends on aiomysql being installed, e.g. in a venv.
+# TODO: maybe this can be solved better.
 doc:
+	@echo "----------------------------------------------------------------"
+	@echo "Doc builds require installing the aiomysql package in the"
+	@echo "environment. Make sure you've installed your current dev version"
+	@echo "into your environment, e.g. using venv, then run this command in"
+	@echo "the virtual environment."
+	@echo "----------------------------------------------------------------"
+	git fetch --tags --all
 	make -C docs html
 	@echo "open file://`pwd`/docs/_build/html/index.html"
 

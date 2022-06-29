@@ -30,28 +30,36 @@ Example::
 
     metadata = sa.MetaData()
 
-    tbl = sa.Table('tbl', metadata,
-                   sa.Column('id', sa.Integer, primary_key=True),
-                   sa.Column('val', sa.String(255)))
+    tbl = sa.Table(
+        "tbl",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("val", sa.String(255)),
+    )
 
 
-    @asyncio.coroutine
-    def go():
-        engine = yield from create_engine(user='root',
-                                          db='test_pymysql',
-                                          host='127.0.0.1',
-                                          password='')
+    async def go():
+        engine = await create_engine(
+            user="root",
+            db="test_pymysql",
+            host="127.0.0.1",
+            password="",
+        )
 
-        with (yield from engine) as conn:
-            yield from conn.execute(tbl.insert().values(val='abc'))
+        async with engine.acquire() as conn:
+            async with conn.begin() as transaction:
+                await conn.execute(tbl.insert().values(val="abc"))
+                await transaction.commit()
 
-            res = yield from conn.execute(tbl.select())
-            for row in res:
-                print(row.id, row.val)
+                res = await conn.execute(tbl.select())
+                async for row in res:
+                    print(row.id, row.val)
 
-            await conn.commit()
+        engine.close()
+        await engine.wait_closed()
 
-    asyncio.get_event_loop().run_until_complete(go())
+
+    asyncio.run(go())
 
 
 So you can execute SQL query built by
@@ -202,26 +210,26 @@ Connection
          to be used in the execution.  Typically, the format is either a
          dictionary passed to \*multiparams::
 
-             yield from conn.execute(
+             await conn.execute(
                  table.insert(),
                  {"id":1, "value":"v1"}
              )
 
          ...or individual key/values interpreted by \**params::
 
-             yield from conn.execute(
+             await conn.execute(
                  table.insert(), id=1, value="v1"
              )
 
          In the case that a plain SQL string is passed, a tuple or
          individual values in \*multiparams may be passed::
 
-             yield from conn.execute(
+             await conn.execute(
                  "INSERT INTO table (id, value) VALUES (%d, %s)",
                  (1, "v1")
              )
 
-             yield from conn.execute(
+             await conn.execute(
                  "INSERT INTO table (id, value) VALUES (%s, %s)",
                  1, "v1"
              )
@@ -257,10 +265,10 @@ Connection
         an emulated transaction within the scope of the enclosing
         transaction, that is::
 
-            trans = yield from conn.begin()   # outermost transaction
-            trans2 = yield from conn.begin()  # "inner"
-            yield from trans2.commit()          # does nothing
-            yield from trans.commit()           # actually commits
+            trans = await conn.begin()   # outermost transaction
+            trans2 = await conn.begin()  # "inner"
+            await trans2.commit()          # does nothing
+            await trans.commit()           # actually commits
 
         Calls to :meth:`.Transaction.commit` only have an effect
         when invoked via the outermost :class:`.Transaction` object, though the
@@ -364,7 +372,7 @@ ResultProxy
     case-sensitive column name, or by :class:`sqlalchemy.schema.Column``
     object. e.g.::
 
-        for row in (yield from conn.execute(...)):
+        async for row in conn.execute(...):
             col1 = row[0]    # access via integer position
             col2 = row['col2']   # access via name
             col3 = row[mytable.c.mycol] # access via Column object.
@@ -531,14 +539,14 @@ Transaction objects
     calling the :meth:`SAConnection.begin` method of
     :class:`SAConnection`::
 
-       with (yield from engine) as conn:
-           trans = yield from conn.begin()
+       async with engine.acquire() as conn:
+           trans = await conn.begin()
            try:
-               yield from conn.execute("insert into x (a, b) values (1, 2)")
+               await conn.execute("insert into x (a, b) values (1, 2)")
            except Exception:
-               yield from trans.rollback()
+               await trans.rollback()
            else:
-               yield from trans.commit()
+               await trans.commit()
 
     The object provides :meth:`.rollback` and :meth:`.commit`
     methods in order to control transaction boundaries.

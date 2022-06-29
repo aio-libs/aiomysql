@@ -1,4 +1,4 @@
-# copied from aiopg
+# based on aiopg pool
 # https://github.com/aio-libs/aiopg/blob/master/aiopg/pool.py
 
 import asyncio
@@ -39,14 +39,14 @@ class Pool(asyncio.AbstractServer):
     def __init__(self, minsize, maxsize, echo, pool_recycle, loop, **kwargs):
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
-        if maxsize < minsize:
+        if maxsize < minsize and maxsize != 0:
             raise ValueError("maxsize should be not less than minsize")
         self._minsize = minsize
         self._loop = loop
         self._conn_kwargs = kwargs
         self._acquiring = 0
-        self._free = collections.deque(maxlen=maxsize)
-        self._cond = asyncio.Condition(loop=loop)
+        self._free = collections.deque(maxlen=maxsize or None)
+        self._cond = asyncio.Condition()
         self._used = set()
         self._terminated = set()
         self._closing = False
@@ -86,6 +86,13 @@ class Pool(asyncio.AbstractServer):
                 conn = self._free.popleft()
                 await conn.ensure_closed()
             self._cond.notify()
+
+    @property
+    def closed(self):
+        """
+        The readonly property that returns ``True`` if connections is closed.
+        """
+        return self._closed
 
     def close(self):
         """Close pool.
@@ -165,13 +172,21 @@ class Pool(asyncio.AbstractServer):
                     await self._cond.wait()
 
     async def _fill_free_pool(self, override_min):
-        # iterate over free connections and remove timeouted ones
+        # iterate over free connections and remove timed out ones
         free_size = len(self._free)
         n = 0
         while n < free_size:
             conn = self._free[-1]
             if conn._reader.at_eof() or conn._reader.exception():
                 logger.debug('%s - Connection (%d) is removed from pool because of at_eof or exception', self._db, id(conn))
+                self._free.pop()
+                conn.close()
+
+            # On MySQL 8.0 a timed out connection sends an error packet before
+            # closing the connection, preventing us from relying on at_eof().
+            # This relies on our custom StreamReader, as eof_received is not
+            # present in asyncio.StreamReader.
+            elif conn._reader.eof_received:
                 self._free.pop()
                 conn.close()
 
@@ -191,7 +206,7 @@ class Pool(asyncio.AbstractServer):
         if self._free:
             return
 
-        if override_min and self.size < self.maxsize:
+        if override_min and (not self.maxsize or self.size < self.maxsize):
             await self.__create_new_connection()
 
     async def __create_new_connection(self):

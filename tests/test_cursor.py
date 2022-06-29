@@ -2,7 +2,8 @@ import asyncio
 
 import pytest
 
-from aiomysql import ProgrammingError, Cursor, InterfaceError
+from aiomysql import ProgrammingError, Cursor, InterfaceError, OperationalError
+from aiomysql.cursors import RE_INSERT_VALUES
 
 
 async def _prepare(conn):
@@ -94,6 +95,7 @@ async def test_scroll_absolute(connection_creator):
 @pytest.mark.run_loop
 async def test_scroll_errors(connection_creator):
     conn = await connection_creator()
+    await _prepare(conn)
     cur = await conn.cursor()
 
     with pytest.raises(ProgrammingError):
@@ -317,3 +319,115 @@ async def test_execute_cancel(connection_creator):
 
     with pytest.raises(InterfaceError):
         await conn.cursor()
+
+
+@pytest.mark.run_loop
+async def test_execute_percentage(connection_creator):
+    # %% in column set
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS percent_test")
+        await cur.execute("""\
+            CREATE TABLE percent_test (
+                `A%` INTEGER,
+                `B%` INTEGER)""")
+
+        q = "INSERT INTO percent_test (`A%%`, `B%%`) VALUES (%s, %s)"
+
+        await cur.execute(q, (3, 4))
+
+
+@pytest.mark.run_loop
+async def test_executemany_percentage(connection_creator):
+    # %% in column set
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS percent_test")
+        await cur.execute("""\
+            CREATE TABLE percent_test (
+                `A%` INTEGER,
+                `B%` INTEGER)""")
+
+        q = "INSERT INTO percent_test (`A%%`, `B%%`) VALUES (%s, %s)"
+
+        assert RE_INSERT_VALUES.match(q) is not None
+        await cur.executemany(q, [(3, 4), (5, 6)])
+        assert cur._last_executed.endswith(b"(3, 4),(5, 6)"), \
+            "executemany with %% not in one query"
+
+
+@pytest.mark.run_loop
+async def test_max_execution_time(mysql_server, connection_creator):
+    conn = await connection_creator()
+    await _prepare(conn)
+    async with conn.cursor() as cur:
+        # MySQL MAX_EXECUTION_TIME takes ms
+        # MariaDB max_statement_time takes seconds as int/float, introduced in 10.1
+
+        # this will sleep 0.01 seconds per row
+        if mysql_server["db_type"] == "mysql":
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                  name, sleep(0.01) FROM tbl
+                  """
+        else:
+            sql = """
+                  SET STATEMENT max_statement_time=2 FOR
+                  SELECT name, sleep(0.01) FROM tbl
+                  """
+
+        await cur.execute(sql)
+        # unlike SSCursor, Cursor returns a tuple of tuples here
+        assert (await cur.fetchall()) == (
+            ("a", 0),
+            ("b", 0),
+            ("c", 0),
+        )
+
+        if mysql_server["db_type"] == "mysql":
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(2000) */
+                  name, sleep(0.01) FROM tbl
+                  """
+        else:
+            sql = """
+                  SET STATEMENT max_statement_time=2 FOR
+                  SELECT name, sleep(0.01) FROM tbl
+                  """
+        await cur.execute(sql)
+        assert (await cur.fetchone()) == ("a", 0)
+
+        # this discards the previous unfinished query
+        await cur.execute("SELECT 1")
+        assert (await cur.fetchone()) == (1,)
+
+        if mysql_server["db_type"] == "mysql":
+            sql = """
+                  SELECT /*+ MAX_EXECUTION_TIME(1) */
+                  name, sleep(1) FROM tbl
+                  """
+        else:
+            sql = """
+                  SET STATEMENT max_statement_time=0.001 FOR
+                  SELECT name, sleep(1) FROM tbl
+                  """
+        with pytest.raises(OperationalError) as cm:
+            # in a buffered cursor this should reliably raise an
+            # OperationalError
+            await cur.execute(sql)
+
+        if mysql_server["db_type"] == "mysql":
+            # this constant was only introduced in MySQL 5.7, not sure
+            # what was returned before, may have been ER_QUERY_INTERRUPTED
+
+            # this constant is pending a new PyMySQL release
+            # assert cm.value.args[0] == pymysql.constants.ER.QUERY_TIMEOUT
+            assert cm.value.args[0] == 3024
+        else:
+            # this constant is pending a new PyMySQL release
+            # assert cm.value.args[0] == pymysql.constants.ER.STATEMENT_TIMEOUT
+            assert cm.value.args[0] == 1969
+
+        # connection should still be fine at this point
+        await cur.execute("SELECT 1")
+        assert (await cur.fetchone()) == (1,)

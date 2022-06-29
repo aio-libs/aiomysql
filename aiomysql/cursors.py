@@ -15,7 +15,7 @@ from .connection import FIELD_TYPE
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
 #: Regular expression for :meth:`Cursor.executemany`.
-#: executemany only suports simple bulk insert.
+#: executemany only supports simple bulk insert.
 #: You can use it to load large dataset.
 RE_INSERT_VALUES = re.compile(
     r"\s*((?:INSERT|REPLACE)\s.+\sVALUES?\s+)" +
@@ -318,7 +318,7 @@ class Cursor:
 
         m = RE_INSERT_VALUES.match(query)
         if m:
-            q_prefix = m.group(1)
+            q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
             q_postfix = m.group(3) or ''
             assert q_values[0] == '(' and q_values[-1] == ')'
