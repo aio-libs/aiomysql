@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from collections.abc import Coroutine
 
 import struct
@@ -198,7 +199,12 @@ class TaskTransactionContextManager:
         self._pool = pool
         self._counter = 0
         self._callback_list = list()
-        task = asyncio.Task.current_task()
+        if sys.version_info < (3, 7):
+            task = asyncio.Task.current_task()
+
+        else:
+            task = asyncio.current_task()
+
         if task in self.__task_storage:
             raise Exception('task already in task_storage')
 
@@ -209,7 +215,12 @@ class TaskTransactionContextManager:
 
     @classmethod
     def create(cls, coro, pool) -> 'TaskTransactionContextManager':
-        task = asyncio.Task.current_task()
+        if sys.version_info < (3, 7):
+            task = asyncio.Task.current_task()
+
+        else:
+            task = asyncio.current_task()
+
         if task in cls.__task_storage:
             return cls.__task_storage[task]
 
@@ -218,7 +229,12 @@ class TaskTransactionContextManager:
     @classmethod
     def get_transaction_context_manager(cls, task=None) -> 'TaskTransactionContextManager':
         if not task:
-            task = asyncio.Task.current_task()
+            if sys.version_info < (3, 7):
+                task = asyncio.Task.current_task()
+
+            else:
+                task = asyncio.current_task()
+
         return cls.__task_storage.get(task)
 
     def add_callback_on_commit(self, callback_func, **kwargs):
@@ -266,7 +282,12 @@ class TaskTransactionContextManager:
                     logger.warning('sql operation was not committed. Try to commit by TaskTransactionContextManager')
                     await self.connection_commit()
 
-            self.__task_storage.pop(asyncio.Task.current_task(), None)
+            if sys.version_info < (3, 7):
+                self.__task_storage.pop(asyncio.Task.current_task(), None)
+
+            else:
+                self.__task_storage.pop(asyncio.current_task(), None)
+
             try:
                 await self._pool.release(self._conn)
 

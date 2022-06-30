@@ -3,6 +3,7 @@
 
 import asyncio
 import collections
+import sys
 import warnings
 
 from pymysql import OperationalError
@@ -139,7 +140,12 @@ class Pool(asyncio.AbstractServer):
 
     def acquire(self):
         """Acquire free connection from the pool."""
-        o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.Task.current_task())
+        if sys.version_info < (3, 7):
+            o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.Task.current_task())
+
+        else:
+            o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.current_task())
+
         if o_transaction_context_manager:
             return o_transaction_context_manager
 
@@ -148,7 +154,12 @@ class Pool(asyncio.AbstractServer):
 
     def acquire_with_transaction(self):
         """Acquire free connection from the pool for transaction"""
-        o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.Task.current_task())
+        if sys.version_info < (3, 7):
+            o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.Task.current_task())
+
+        else:
+            o_transaction_context_manager = TaskTransactionContextManager.get_transaction_context_manager(asyncio.current_task())
+
         if o_transaction_context_manager:
             return o_transaction_context_manager
 
