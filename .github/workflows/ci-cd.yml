@@ -584,13 +584,7 @@ jobs:
         # we need to ensure that the socket path is writable for the user running the DB process in the container
         sudo chmod 0777 /tmp/run-${{ join(matrix.db, '-') }}
 
-        # mysql 5.7 container overrides the socket path in /etc/mysql/mysql.conf.d/mysqld.cnf
-        if [ "${{ join(matrix.db, '-') }}" = "mysql-5.7" ]
-        then
-          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/mysql.conf.d/zz-aiomysql-socket.cnf
-        else
-          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
-        fi
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
 
         docker container start mysqld
 
