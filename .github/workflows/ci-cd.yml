@@ -505,6 +505,7 @@ jobs:
         python -m
         pip install
         --user
+        --upgrade
         pip
 
     - name: Grab the source from Git
