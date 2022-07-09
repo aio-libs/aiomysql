@@ -4,7 +4,7 @@ import aiomysql
 import pytest
 
 from aiomysql import sa, create_pool, DictCursor, Cursor
-from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy import MetaData, Table, Column, Integer, String, func, select
 
 
 meta = MetaData()
@@ -165,7 +165,7 @@ async def test_sa_connection(table, mysql_params, loop):
 async def test_sa_transaction(table, mysql_params, loop):
     async with sa.create_engine(loop=loop, **mysql_params) as engine:
         async with engine.acquire() as connection:
-            cnt = await connection.scalar(tbl.count())
+            cnt = await connection.scalar(select([func.count()]).select_from(tbl))
             assert 3 == cnt
 
             async with (await connection.begin()) as tr:
@@ -173,7 +173,7 @@ async def test_sa_transaction(table, mysql_params, loop):
                 await connection.execute(tbl.delete())
 
             assert not tr.is_active
-            cnt = await connection.scalar(tbl.count())
+            cnt = await connection.scalar(select([func.count()]).select_from(tbl))
             assert 0 == cnt
 
 
@@ -181,7 +181,7 @@ async def test_sa_transaction(table, mysql_params, loop):
 async def test_sa_transaction_rollback(loop, mysql_params, table):
     async with sa.create_engine(loop=loop, **mysql_params) as engine:
         async with engine.acquire() as conn:
-            cnt = await conn.scalar(tbl.count())
+            cnt = await conn.scalar(select([func.count()]).select_from(tbl))
             assert 3 == cnt
 
             with pytest.raises(RuntimeError) as ctx:
@@ -191,7 +191,7 @@ async def test_sa_transaction_rollback(loop, mysql_params, table):
                     raise RuntimeError("Exit")
             assert str(ctx.value) == "Exit"
             assert not tr.is_active
-            cnt = await conn.scalar(tbl.count())
+            cnt = await conn.scalar(select([func.count()]).select_from(tbl))
             assert 3 == cnt
 
 
