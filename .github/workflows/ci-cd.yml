@@ -601,11 +601,11 @@ jobs:
     - name: Run tests
       run: |
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
-        timeout --preserve-status --signal=INT --verbose 5m \
+        timeout --preserve-status --signal=INT --verbose 570s \
           pytest --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql --cov tests ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
       env:
         PYTHONUNBUFFERED: 1
-      timeout-minutes: 6
+      timeout-minutes: 10
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
