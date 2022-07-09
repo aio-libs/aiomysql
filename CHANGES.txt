@@ -28,6 +28,8 @@ Changes
 * Fix SSCursor raising InternalError when last result was not fully retrieved #635
 
 * Remove deprecated no_delay argument #702
+* Remove deprecated Pool.get #703
+* Remove deprecated with await pool syntax #703
 
 * Support PyMySQL up to version 1.0.2 #643
 
