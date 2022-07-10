@@ -26,6 +26,8 @@ def make_engine(connection, mysql_params, loop):
             }
             if "ssl" in mysql_params:
                 conn_args["ssl"] = mysql_params["ssl"]
+            if "implicit_tls" in mysql_params:
+                conn_args["implicit_tls"] = mysql_params["implicit_tls"]
 
         engine = await sa.create_engine(
             db=mysql_params['db'],

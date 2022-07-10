@@ -7,6 +7,10 @@ import pytest
 async def test_tls_connect(mysql_server, loop, mysql_params):
     if "unix_socket" in mysql_params:
         pytest.skip("TLS is not supported on unix sockets")
+    if mysql_params.get("implicit_tls", False):
+        pytest.skip(
+            "Explicit TLS is not supported on implicit TLS connections",
+        )
 
     async with create_pool(**mysql_server['conn_params'],
                            loop=loop) as pool:
@@ -38,6 +42,10 @@ async def test_tls_connect(mysql_server, loop, mysql_params):
 async def test_auth_plugin_renegotiation(mysql_server, loop, mysql_params):
     if "unix_socket" in mysql_params:
         pytest.skip("TLS is not supported on unix sockets")
+    if mysql_params.get("implicit_tls", False):
+        pytest.skip(
+            "Explicit TLS is not supported on implicit TLS connections",
+        )
 
     async with create_pool(**mysql_server['conn_params'],
                            auth_plugin='mysql_clear_password',
