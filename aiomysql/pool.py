@@ -230,12 +230,6 @@ class Pool(asyncio.AbstractServer):
             fut = self._loop.create_task(self._wakeup())
         return fut
 
-    def get(self):
-        warnings.warn("pool.get deprecated use pool.acquire instead",
-                      DeprecationWarning,
-                      stacklevel=2)
-        return _PoolConnectionContextManager(self, None)
-
     def __enter__(self):
         raise RuntimeError(
             '"yield from" should be used as context manager expression')
