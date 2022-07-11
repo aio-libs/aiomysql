@@ -20,11 +20,11 @@ The basic usage is::
                                           db='mysql', loop=loop, autocommit=False)
 
         async with pool.acquire() as conn:
-            cur = await conn.cursor()
-            await cur.execute("SELECT 10")
-            # print(cur.description)
-            (r,) = await cur.fetchone()
-            assert r == 10
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 10")
+                # print(cur.description)
+                (r,) = await cur.fetchone()
+                assert r == 10
         pool.close()
         await pool.wait_closed()
 
@@ -65,10 +65,11 @@ The basic usage is::
     The most important way to use it is getting connection in *with statement*::
 
         async with pool.acquire() as conn:
-            cur = await conn.cursor()
+            async with conn.cursor() as cur:
+                pass
 
 
-    See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquring
+    See also :meth:`Pool.acquire` and :meth:`Pool.release` for acquiring
     :class:`Connection` without *with statement*.
 
     .. attribute:: echo
