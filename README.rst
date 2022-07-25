@@ -1,6 +1,6 @@
 aiomysql
 ========
-.. image:: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml/badge.svg?branch=master
+.. image:: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml/badge.svg?branch=master&event=schedule
     :target: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml?query=event%3Aschedule
 .. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/aio-libs/aiomysql
