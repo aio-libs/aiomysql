@@ -654,7 +654,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.5.0
+      uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
         print_hash: true
@@ -684,7 +684,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
-      uses: pypa/gh-action-pypi-publish@v1.5.0
+      uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
