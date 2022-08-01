@@ -1,5 +1,5 @@
 coverage==6.4.2
-flake8==4.0.1
+flake8==5.0.1
 ipdb==0.13.9
 pytest==7.1.2
 pytest-cov==3.0.0
