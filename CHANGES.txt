@@ -8,6 +8,10 @@ next (unreleased)
 
 * Remove deprecated Pool.get #706
 
+* | Partially ported `PyMySQL#304 <https://github.com/PyMySQL/PyMySQL/pull/304>`_ #792
+  | aiomysql now reraises the original exception during connect() if it's not `IOError`, `OSError` or `asyncio.TimeoutError`.
+  | This was previously always raised as `OperationalError`.
+
 0.1.1 (2022-05-08)
 ^^^^^^^^^^^^^^^^^^
 

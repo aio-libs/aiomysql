@@ -555,9 +555,20 @@ class Connection:
                 self._writer.transport.close()
             self._reader = None
             self._writer = None
-            raise OperationalError(2003,
-                                   "Can't connect to MySQL server on %r" %
-                                   self._host) from e
+
+            # As of 3.11, asyncio.TimeoutError is a deprecated alias of
+            # OSError. For consistency, we're also considering this an
+            # OperationalError on earlier python versions.
+            if isinstance(e, (IOError, OSError, asyncio.TimeoutError)):
+                raise OperationalError(
+                    CR.CR_CONN_HOST_ERROR,
+                    "Can't connect to MySQL server on %r" % self._host,
+                ) from e
+
+            # If e is neither IOError nor OSError, it's a bug.
+            # Raising AssertionError would hide the original error, so we just
+            # reraise it.
+            raise
 
     def _set_keep_alive(self):
         transport = self._writer.transport
