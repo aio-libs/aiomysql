@@ -130,7 +130,7 @@ jobs:
     - name: Set up pip cache
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: actions/cache@v3.0.6
+      uses: actions/cache@v3.0.8
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -239,7 +239,7 @@ jobs:
       run: >-
         echo "::set-output name=dir::$(python -m pip cache dir)"
     - name: Set up pip cache
-      uses: actions/cache@v3.0.6
+      uses: actions/cache@v3.0.8
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -343,7 +343,7 @@ jobs:
       run: >-
         echo "::set-output name=dir::$(python -m pip cache dir)"
     - name: Set up pip cache
-      uses: actions/cache@v3.0.6
+      uses: actions/cache@v3.0.8
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -487,7 +487,7 @@ jobs:
 
     - name: Set up pip cache
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
-      uses: actions/cache@v3.0.6
+      uses: actions/cache@v3.0.8
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
