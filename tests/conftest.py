@@ -349,6 +349,7 @@ def mysql_server(mysql_address):
                                'WITH "caching_sha2_password" '
                                'PASSWORD EXPIRE NEVER')
                 cursor.execute('FLUSH PRIVILEGES')
+        connection.close()
     except Exception:
         pytest.fail("Cannot initialize MySQL environment")
 
