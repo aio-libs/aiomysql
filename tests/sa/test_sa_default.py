@@ -31,6 +31,8 @@ def make_engine(connection, mysql_params, loop):
                 "host": mysql_params['host'],
                 "port": mysql_params['port'],
             }
+            if "ssl" in mysql_params:
+                conn_args["ssl"] = mysql_params["ssl"]
 
         engine = await sa.create_engine(
             db=mysql_params['db'],
