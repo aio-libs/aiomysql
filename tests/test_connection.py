@@ -274,7 +274,7 @@ async def test_connection_without_tls(connection_creator, mysql_params):
 
     conn = await connection_creator(ssl=False)
 
-    async with conn.cursor(cursor_class=aiomysql.cursors.DictCursor) as cur:
+    async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
         await cur.execute("SELECT @@have_ssl")
         res = await cur.fetchone()
         assert res["@@have_ssl"] == "YES", "SSL Not Enabled on MySQL"

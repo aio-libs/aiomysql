@@ -614,10 +614,6 @@ jobs:
 
         mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e "SET GLOBAL local_infile=on"
 
-        # This should get removed before merging
-        mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e "select user()"
-        mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e "select host, user, hex(authentication_string) from mysql.user"
-
     - name: Run tests
       # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
       run: >-
