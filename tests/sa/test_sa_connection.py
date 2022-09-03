@@ -466,3 +466,17 @@ async def test_async_iter(sa_connect):
     async for row in conn.execute(tbl.select()):
         ret.append(row)
     assert [(1, "first"), (2, "second")] == ret
+
+
+@pytest.mark.run_loop
+async def test_statement_in(sa_connect):
+    conn = await sa_connect()
+    await conn.execute(tbl.insert().values(name="second"))
+    await conn.execute(tbl.insert().values(name="third"))
+
+    stmt = tbl.select().where(tbl.c.id.in_([1, 2]))
+
+    ret = []
+    async for row in conn.execute(stmt):
+        ret.append(row)
+    assert [(1, "first"), (2, "second")] == ret
