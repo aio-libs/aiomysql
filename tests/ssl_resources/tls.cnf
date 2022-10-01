@@ -2,3 +2,6 @@
 ssl-ca=/etc/mysql/ssl/ca.pem
 ssl-cert=/etc/mysql/ssl/server-cert.pem
 ssl-key=/etc/mysql/ssl/server-key.pem
+
+# troubleshooting - should not be merged
+log_error_verbosity=3

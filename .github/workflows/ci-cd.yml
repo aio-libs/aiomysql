@@ -406,18 +406,18 @@ jobs:
         - ubuntu-latest
         py:
         - '3.7'
-        - '3.8'
-        - '3.9'
-        - '3.10'
+        # - '3.8'
+        # - '3.9'
+        # - '3.10'
         - '3.11-dev'
         db:
         - [mysql, '5.7']
         - [mysql, '8.0']
-        - [mariadb, '10.3']
-        - [mariadb, '10.4']
-        - [mariadb, '10.5']
-        - [mariadb, '10.6']
-        - [mariadb, '10.7']
+        # - [mariadb, '10.3']
+        # - [mariadb, '10.4']
+        # - [mariadb, '10.5']
+        # - [mariadb, '10.6']
+        # - [mariadb, '10.7']
         - [mariadb, '10.8']
 
       fail-fast: false
@@ -449,6 +449,13 @@ jobs:
         options: '--name=mysqld'
         env:
           MYSQL_ROOT_PASSWORD: rootpw
+      haproxy:
+        image: haproxytech/haproxy-alpine:2.6
+        ports:
+          - 13306:13306
+        volumes:
+        - "/tmp/run-${{ join(matrix.db, '-') }}/:/var/lib/haproxy/socket-mount/"
+        options: '--name=haproxy'
 
     steps:
     - name: Setup Python ${{ matrix.py }}
@@ -569,6 +576,18 @@ jobs:
     # unfortunately we need this hacky workaround as GitHub Actions service containers can't reference data from our repo.
     - name: Prepare mysql
       run: |
+        # we need to ensure that the socket path is readable from haproxy and
+        # writable for the user running the DB process
+        sudo chmod 0777 /tmp/run-${{ join(matrix.db, '-') }}
+
+        # inject HAproxy configuration
+        docker container stop haproxy
+
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/haproxy.cfg" haproxy:/usr/local/etc/haproxy/haproxy.cfg
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/ssl/server-combined.pem" haproxy:/usr/local/etc/haproxy/haproxy.pem
+
+        docker container start haproxy
+
         # ensure server is started up
         while :
         do
@@ -582,9 +601,6 @@ jobs:
         docker container cp "${{ github.workspace }}/tests/ssl_resources/tls.cnf" mysqld:/etc/mysql/conf.d/aiomysql-tls.cnf
 
         # use custom socket path
-        # we need to ensure that the socket path is writable for the user running the DB process in the container
-        sudo chmod 0777 /tmp/run-${{ join(matrix.db, '-') }}
-
         docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
 
         docker container start mysqld
@@ -599,10 +615,23 @@ jobs:
         mysql -h127.0.0.1 -uroot "-p$MYSQL_ROOT_PASSWORD" -e "SET GLOBAL local_infile=on"
 
     - name: Run tests
-      run: |
-        # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
-        timeout --preserve-status --signal=INT --verbose 570s \
-          pytest --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql --cov tests ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
+      # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
+      run: >-
+        timeout
+        --preserve-status
+        --signal=INT
+        --verbose 570s
+        pytest
+        --capture=no
+        --verbosity 2
+        --cov-report term
+        --cov-report xml
+        --cov aiomysql
+        --cov tests
+        ./tests
+        --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock"
+        --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
+        --mysql-address-tls "tls-${{ join(matrix.db, '') }}=127.0.0.1:13306"
       env:
         PYTHONUNBUFFERED: 1
       timeout-minutes: 10

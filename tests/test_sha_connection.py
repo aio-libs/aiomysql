@@ -40,7 +40,7 @@ async def test_sha256_nopw(mysql_server, loop):
     async with create_pool(**connection_data,
                            loop=loop) as pool:
         async with pool.acquire() as conn:
-            # User doesnt have any permissions to look at DBs
+            # User doesn't have any permissions to look at DBs
             # But as 8.0 will default to caching_sha2_password
             assert conn._auth_plugin_used == 'sha256_password'
 
@@ -55,6 +55,13 @@ async def test_sha256_pw(mysql_server, loop):
     # is secure by default.
     if "unix_socket" in mysql_server['conn_params']:
         pytest.skip("sha256_password is not supported on unix sockets")
+
+    # In our tests, our database server considers implicit TLS connections as
+    # non-TLS connections, as TLS is terminated before reaching it.
+    if mysql_server['conn_params'].get('implicit_tls', False):
+        pytest.skip(
+            "sha256_password is not supported on implicit TLS connections"
+        )
 
     connection_data = copy.copy(mysql_server['conn_params'])
     connection_data['user'] = 'user_sha256'
@@ -87,6 +94,13 @@ async def test_cached_sha256_nopw(mysql_server, loop):
 @pytest.mark.run_loop
 async def test_cached_sha256_pw(mysql_server, loop):
     ensure_mysql_version(mysql_server)
+
+    # In our tests, our database server considers implicit TLS connections as
+    # non-TLS connections, as TLS is terminated before reaching it.
+    if mysql_server['conn_params'].get('implicit_tls', False):
+        pytest.skip(
+            "sha256_password is not supported on implicit TLS connections"
+        )
 
     connection_data = copy.copy(mysql_server['conn_params'])
     connection_data['user'] = 'user_caching_sha2'

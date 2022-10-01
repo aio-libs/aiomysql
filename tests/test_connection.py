@@ -263,3 +263,22 @@ async def test_commit_during_multi_result(connection_creator):
     await cur.execute("SELECT 3;")
     resp = await cur.fetchone()
     assert resp[0] == 3
+
+
+@pytest.mark.run_loop
+async def test_connection_without_tls(connection_creator, mysql_params):
+    if mysql_params.get("implicit_tls", False):
+        pytest.skip(
+            "Non-TLS is not supported on implicit TLS connections",
+        )
+
+    conn = await connection_creator(ssl=False)
+
+    async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
+        await cur.execute("SELECT @@have_ssl")
+        res = await cur.fetchone()
+        assert res["@@have_ssl"] == "YES", "SSL Not Enabled on MySQL"
+
+        await cur.execute("SHOW STATUS WHERE Variable_name='Ssl_version'")
+        res = await cur.fetchone()
+        assert res["Value"] == '', "Connected to the database with TLS"

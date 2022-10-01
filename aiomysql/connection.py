@@ -9,6 +9,7 @@ import sys
 import warnings
 import configparser
 import getpass
+import ssl as ssllib
 from functools import partial
 
 from pymysql.charset import charset_by_name, charset_by_id
@@ -53,7 +54,7 @@ def connect(host="localhost", user=None, password="",
             connect_timeout=None, read_default_group=None,
             autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
-            program_name='', server_public_key=None):
+            program_name='', server_public_key=None, implicit_tls=False):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -66,7 +67,8 @@ def connect(host="localhost", user=None, password="",
                     read_default_group=read_default_group,
                     autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
-                    auth_plugin=auth_plugin, program_name=program_name)
+                    auth_plugin=auth_plugin, program_name=program_name,
+                    implicit_tls=implicit_tls)
     return _ConnectionContextManager(coro)
 
 
@@ -142,7 +144,7 @@ class Connection:
                  connect_timeout=None, read_default_group=None,
                  autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
-                 program_name='', server_public_key=None):
+                 program_name='', server_public_key=None, implicit_tls=False):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -184,6 +186,9 @@ class Connection:
             handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
+        :param implicit_tls: Establish TLS immediately, skipping non-TLS
+            preamble before upgrading to TLS.
+            (default: False)
         :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
@@ -218,6 +223,7 @@ class Connection:
         self._auth_plugin_used = ""
         self._secure = False
         self.server_public_key = server_public_key
+        self._implicit_tls = implicit_tls
         self.salt = None
 
         from . import __version__
@@ -241,7 +247,10 @@ class Connection:
             self.use_unicode = use_unicode
 
         self._ssl_context = ssl
-        if ssl:
+        # TLS is required when implicit_tls is True
+        if implicit_tls and not self._ssl_context:
+            self._ssl_context = ssllib.create_default_context()
+        if ssl and not implicit_tls:
             client_flag |= CLIENT.SSL
 
         self._encoding = charset_by_name(self._charset).encoding
@@ -536,7 +545,8 @@ class Connection:
 
             self._next_seq_id = 0
 
-            await self._get_server_information()
+            if not self._implicit_tls:
+                await self._get_server_information()
             await self._request_authentication()
 
             self.connected_time = self._loop.time()
@@ -738,7 +748,8 @@ class Connection:
 
     async def _request_authentication(self):
         # https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
-        if int(self.server_version.split('.', 1)[0]) >= 5:
+        # FIXME: change this before merge
+        if self._implicit_tls or int(self.server_version.split('.', 1)[0]) >= 5:
             self.client_flag |= CLIENT.MULTI_RESULTS
 
         if self.user is None:
@@ -748,8 +759,10 @@ class Connection:
         data_init = struct.pack('<iIB23s', self.client_flag, MAX_PACKET_LEN,
                                 charset_id, b'')
 
-        if self._ssl_context and self.server_capabilities & CLIENT.SSL:
-            self.write_packet(data_init)
+        if self._ssl_context and \
+                (self._implicit_tls or self.server_capabilities & CLIENT.SSL):
+            if not self._implicit_tls:
+                self.write_packet(data_init)
 
             # Stop sending events to data_received
             self._writer.transport.pause_reading()
@@ -770,6 +783,9 @@ class Connection:
                 sock=raw_sock, ssl=self._ssl_context,
                 server_hostname=self._host
             )
+
+            if self._implicit_tls:
+                await self._get_server_information()
 
             self._secure = True
 

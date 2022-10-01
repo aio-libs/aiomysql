@@ -47,7 +47,7 @@ Example::
             connect_timeout=None, read_default_group=None,
             autocommit=False, echo=False
             ssl=None, auth_plugin='', program_name='',
-            server_public_key=None, loop=None)
+            server_public_key=None, loop=None, implicit_tls=False)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -93,6 +93,11 @@ Example::
             ``sys.argv[0]`` is no longer passed by default
     :param server_public_key: SHA256 authenticaiton plugin public key value.
     :param loop: asyncio event loop instance or ``None`` for default one.
+    :param implicit_tls: Establish TLS immediately, skipping non-TLS
+        preamble before upgrading to TLS.
+        (default: False)
+
+        .. versionadded:: 0.2
     :returns: :class:`Connection` instance.
 
 

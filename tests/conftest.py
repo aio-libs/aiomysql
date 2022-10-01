@@ -2,6 +2,7 @@ import asyncio
 import gc
 import os
 import re
+import socket
 import ssl
 import sys
 
@@ -63,13 +64,26 @@ def pytest_generate_tests(metafunc):
 
             if ":" in addr:
                 addr = addr.split(":", 1)
-                mysql_addresses.append((addr[0], int(addr[1])))
+                mysql_addresses.append((addr[0], int(addr[1]), False))
             else:
-                mysql_addresses.append((addr, 3306))
+                mysql_addresses.append((addr, 3306, False))
+
+        opt_mysql_address_tls =\
+            list(metafunc.config.getoption("mysql_address_tls"))
+        for i in range(len(opt_mysql_address_tls)):
+            if "=" in opt_mysql_address_tls[i]:
+                label, addr = opt_mysql_address_tls[i].split("=", 1)
+                ids.append(label)
+            else:
+                addr = opt_mysql_address_tls[i]
+                ids.append("tls{}".format(i))
+
+            addr = addr.split(":", 1)
+            mysql_addresses.append((addr[0], int(addr[1]), True))
 
         # default to connecting to localhost
         if len(mysql_addresses) == 0:
-            mysql_addresses = [("127.0.0.1", 3306)]
+            mysql_addresses = [("127.0.0.1", 3306, False)]
             ids = ["tcp-local"]
 
         assert len(mysql_addresses) == len(set(mysql_addresses)), \
@@ -152,6 +166,12 @@ def pytest_addoption(parser):
         action="append",
         default=[],
         help="list of addresses to connect to: [name=]host[:port]",
+    )
+    parser.addoption(
+        "--mysql-address-tls",
+        action="append",
+        default=[],
+        help="list of addresses to connect to using implicit TLS: [name=]host:port",
     )
     parser.addoption(
         "--mysql-unix-socket",
@@ -249,6 +269,7 @@ def table_cleanup(loop, connection):
 @pytest.fixture(scope='session')
 def mysql_server(mysql_address):
     unix_socket = type(mysql_address) is str
+    implicit_tls = not unix_socket and mysql_address[2]
 
     if not unix_socket:
         ssl_directory = os.path.join(os.path.dirname(__file__),
@@ -270,14 +291,34 @@ def mysql_server(mysql_address):
     else:
         server_params["host"] = mysql_address[0]
         server_params["port"] = mysql_address[1]
+
+    if not unix_socket and not implicit_tls:
         server_params["ssl"] = ctx
 
     try:
-        connection = pymysql.connect(
-            db='mysql',
-            charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor,
-            **server_params)
+        if implicit_tls:
+            sock = ctx.wrap_socket(
+                socket.create_connection(
+                    (server_params["host"], server_params["port"]),
+                ),
+                server_hostname=server_params["host"],
+            )
+            connection = pymysql.Connection(
+                db='mysql',
+                charset='utf8mb4',
+                cursorclass=pymysql.cursors.DictCursor,
+                **server_params,
+                defer_connect=True,
+            )
+            connection.connect(sock)
+
+        else:
+            connection = pymysql.connect(
+                db='mysql',
+                charset='utf8mb4',
+                cursorclass=pymysql.cursors.DictCursor,
+                **server_params,
+            )
 
         with connection.cursor() as cursor:
             cursor.execute("SELECT VERSION() AS version")
@@ -297,7 +338,7 @@ def mysql_server(mysql_address):
                 pytest.fail("Unable to determine database type from {!r}"
                             .format(server_version_tuple))
 
-            if not unix_socket:
+            if not unix_socket and not implicit_tls:
                 cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
 
                 result = cursor.fetchall()
@@ -352,6 +393,10 @@ def mysql_server(mysql_address):
         connection.close()
     except Exception:
         pytest.fail("Cannot initialize MySQL environment")
+
+    if implicit_tls:
+        server_params["ssl"] = ctx
+        server_params["implicit_tls"] = implicit_tls
 
     return {
         "conn_params": server_params,
