@@ -12,6 +12,8 @@ next (unreleased)
   | aiomysql now reraises the original exception during connect() if it's not `IOError`, `OSError` or `asyncio.TimeoutError`.
   | This was previously always raised as `OperationalError`.
 
+* Fix debug log level with sha256_password authentication #863
+
 0.1.1 (2022-05-08)
 ^^^^^^^^^^^^^^^^^^
 
