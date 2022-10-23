@@ -1010,8 +1010,7 @@ class Connection:
         if pkt.is_extra_auth_data():
             self.server_public_key = pkt._data[1:]
             logger.debug(
-                "Received public key:\n",
-                self.server_public_key.decode('ascii')
+                "Received public key:\n" + self.server_public_key.decode('ascii')
             )
 
         if self._password:
