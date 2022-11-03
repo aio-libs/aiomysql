@@ -39,7 +39,7 @@ async def test_sha256_nopw(mysql_server, loop):
 
     async with create_pool(**connection_data,
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             # User doesnt have any permissions to look at DBs
             # But as 8.0 will default to caching_sha2_password
             assert conn._auth_plugin_used == 'sha256_password'
@@ -62,7 +62,7 @@ async def test_sha256_pw(mysql_server, loop):
 
     async with create_pool(**connection_data,
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             # User doesnt have any permissions to look at DBs
             # But as 8.0 will default to caching_sha2_password
             assert conn._auth_plugin_used == 'sha256_password'
@@ -78,7 +78,7 @@ async def test_cached_sha256_nopw(mysql_server, loop):
 
     async with create_pool(**connection_data,
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             # User doesnt have any permissions to look at DBs
             # But as 8.0 will default to caching_sha2_password
             assert conn._auth_plugin_used == 'caching_sha2_password'
@@ -94,7 +94,7 @@ async def test_cached_sha256_pw(mysql_server, loop):
 
     async with create_pool(**connection_data,
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             # User doesnt have any permissions to look at DBs
             # But as 8.0 will default to caching_sha2_password
             assert conn._auth_plugin_used == 'caching_sha2_password'

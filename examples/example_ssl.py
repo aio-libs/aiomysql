@@ -13,7 +13,7 @@ async def main():
             password='rootpw', ssl=ctx,
             auth_plugin='mysql_clear_password') as pool:
 
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # Run simple command
                 await cur.execute("SHOW DATABASES;")

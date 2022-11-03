@@ -427,7 +427,7 @@ async def test_issue_175(connection):
 async def test_issue_323(mysql_server, loop, recwarn):
     async with aiomysql.create_pool(**mysql_server['conn_params'],
                                     loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 drop_db = "DROP DATABASE IF EXISTS bugtest;"
                 await cur.execute(drop_db)
@@ -465,3 +465,13 @@ async def test_issue_323(mysql_server, loop, recwarn):
             finally:
                 async with conn.cursor() as cur:
                     await cur.execute("DELETE FROM `bugtest`.`testtable`;")
+
+
+# https://github.com/aio-libs/aiomysql/issues/792
+@pytest.mark.run_loop
+async def test_issue_792(connection_creator):
+    with pytest.raises(aiomysql.OperationalError) as exc_info:
+        await connection_creator(db="does_not_exist")
+
+    assert exc_info.value.args[0] == 1049
+    assert exc_info.value.args[1] == "Unknown database 'does_not_exist'"

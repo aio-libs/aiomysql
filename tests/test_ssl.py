@@ -10,7 +10,7 @@ async def test_tls_connect(mysql_server, loop, mysql_params):
 
     async with create_pool(**mysql_server['conn_params'],
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # Run simple command
                 await cur.execute("SHOW DATABASES;")
@@ -42,7 +42,7 @@ async def test_auth_plugin_renegotiation(mysql_server, loop, mysql_params):
     async with create_pool(**mysql_server['conn_params'],
                            auth_plugin='mysql_clear_password',
                            loop=loop) as pool:
-        async with pool.get() as conn:
+        async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # Run simple command
                 await cur.execute("SHOW DATABASES;")
