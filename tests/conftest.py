@@ -3,21 +3,11 @@ import gc
 import os
 import re
 import ssl
-import sys
 
 import aiomysql
 import pymysql
 import pytest
-
-
-# version gate can be removed once uvloop supports python 3.11
-# https://github.com/MagicStack/uvloop/issues/450
-# https://github.com/MagicStack/uvloop/pull/459
-PY_311 = sys.version_info >= (3, 11)
-if PY_311:
-    uvloop = None
-else:
-    import uvloop
+import uvloop
 
 
 @pytest.fixture
