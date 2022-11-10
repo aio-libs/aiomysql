@@ -452,6 +452,7 @@ jobs:
 
     steps:
     - name: Setup Python ${{ matrix.py }}
+      id: python-install
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.py }}
@@ -612,7 +613,13 @@ jobs:
       uses: codecov/codecov-action@v3.1.1
       with:
         file: ./coverage.xml
-        flags: "${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}"
+        flags: >-
+          CI-GHA,
+          OS-${{ runner.os }},
+          VM-${{ matrix.os }},
+          Py-${{ steps.python-install.outputs.python-version }},
+          DB-${{ join(matrix.db, '-') }},
+          ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
 
   check:  # This job does nothing and is only used for the branch protection
