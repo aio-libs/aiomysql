@@ -1,21 +1,29 @@
-import re
-import json
-import warnings
+# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 import contextlib
+import json
+import re
+import warnings
 
 from pymysql.err import (
-    Warning, Error, InterfaceError, DataError,
-    DatabaseError, OperationalError, IntegrityError, InternalError,
-    NotSupportedError, ProgrammingError)
+    Warning,
+    Error,
+    InterfaceError,
+    DataError,
+    DatabaseError,
+    OperationalError,
+    IntegrityError,
+    InternalError,
+    NotSupportedError,
+    ProgrammingError
+)
 
-from .log import logger
 from .connection import FIELD_TYPE
-
-# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
+from .log import logger
 
 #: Regular expression for :meth:`Cursor.executemany`.
 #: executemany only supports simple bulk insert.
 #: You can use it to load large dataset.
+# flake8: noqa
 RE_INSERT_VALUES = re.compile(
     r"\s*((?:INSERT|REPLACE)\s.+\sVALUES?\s+)" +
     r"(\(\s*(?:%s|%\(.+\)s)\s*(?:,\s*(?:%s|%\(.+\)s)\s*)*\))" +
@@ -155,7 +163,7 @@ class Cursor:
         if conn is None:
             return
         try:
-            while (await self.nextset()):
+            while await self.nextset():
                 pass
         finally:
             self._connection = None
@@ -198,7 +206,7 @@ class Cursor:
         elif isinstance(args, dict):
             return dict((key, conn.escape(val)) for (key, val) in args.items())
         else:
-            # If it's not a dictionary let's try escaping it anyways.
+            # If it's not a dictionary let's try escaping it anyway.
             # Worst case it will throw a Value error
             return conn.escape(args)
 
@@ -230,7 +238,7 @@ class Cursor:
         """
         conn = self._get_db()
 
-        while (await self.nextset()):
+        while await self.nextset():
             pass
 
         if args is not None:

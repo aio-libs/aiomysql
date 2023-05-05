@@ -484,8 +484,7 @@ def _distill_params(multiparams: Any, params: Any) -> List[Union[Dict[str, Any],
             # execute(stmt, "value")
             return [[zero]]
     else:
-        if (hasattr(multiparams[0], '__iter__') and
-                not hasattr(multiparams[0], 'strip')):
+        if hasattr(multiparams[0], '__iter__') and not hasattr(multiparams[0], 'strip'):
             return multiparams
         else:
             return [multiparams]

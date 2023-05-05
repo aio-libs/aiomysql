@@ -512,8 +512,7 @@ class Connection:
         return self.escape(obj)
 
     def escape_string(self, s: str) -> str:
-        if (self.server_status &
-                SERVER_STATUS.SERVER_STATUS_NO_BACKSLASH_ESCAPES):
+        if self.server_status & SERVER_STATUS.SERVER_STATUS_NO_BACKSLASH_ESCAPES:
             return s.replace("'", "''")
         return escape_string(s)
 
@@ -539,8 +538,7 @@ class Connection:
         if cursors and len(cursors) == 1:
             cur = cursors[0](self, self._echo)
         elif cursors:
-            cursor_name = ''.join(map(lambda x: x.__name__, cursors)) \
-                              .replace('Cursor', '') + 'Cursor'
+            cursor_name = ''.join(map(lambda x: x.__name__, cursors)).replace('Cursor', '') + 'Cursor'
             cursor_class = type(cursor_name, cursors, {})
             cur = cursor_class(self, self._echo)
         else:
@@ -940,8 +938,7 @@ class Connection:
             # connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
             auth_packet.read_uint8()  # 0xfe packet identifier
             plugin_name = auth_packet.read_string()
-            if (self.server_capabilities & CLIENT.PLUGIN_AUTH and
-                    plugin_name is not None):
+            if self.server_capabilities & CLIENT.PLUGIN_AUTH and plugin_name is not None:
                 await self._process_auth(plugin_name, auth_packet)
             else:
                 # send legacy handshake
@@ -1325,7 +1322,7 @@ class MySQLResult:
         await self._get_descriptions()
         await self._read_rowdata_packet()
 
-    async def _read_rowdata_packet_unbuffered(self) -> Optional[tuple[Optional[Any], ...]]:
+    async def _read_rowdata_packet_unbuffered(self) -> Optional[Tuple[Optional[Any], ...]]:
         # Check if in an active query
         if not self.unbuffered_active:
             return
@@ -1383,7 +1380,7 @@ class MySQLResult:
         self.affected_rows = len(rows)
         self.rows = tuple(rows)
 
-    def _read_row_from_packet(self, packet) -> tuple[Optional[Any], ...]:
+    def _read_row_from_packet(self, packet) -> Tuple[Optional[Any], ...]:
         row = []
         for encoding, converter in self.converters:
             try:

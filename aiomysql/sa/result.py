@@ -180,17 +180,16 @@ class ResultMetaData:
         # or colummn('name') constructs to ColumnElements, or after a
         # pickle/unpickle roundtrip
         elif isinstance(key, expression.ColumnElement):
-            if (key._label and key._label in map):
+            if key._label and key._label in map:
                 result = map[key._label]
-            elif (hasattr(key, 'name') and key.name in map):
+            elif hasattr(key, 'name') and key.name in map:
                 # match is only on name.
                 result = map[key.name]
             # search extra hard to make sure this
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
             # was unpickled.
-            if (result is not None and
-                    result[1] is not None):
+            if result is not None and result[1] is not None:
                 for obj in result[1]:
                     if key._compare_name_for_result(obj):
                         break

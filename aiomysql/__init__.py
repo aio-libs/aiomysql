@@ -23,8 +23,6 @@ THE SOFTWARE.
 
 """
 
-from typing import List, Type
-
 from pymysql.converters import escape_dict, escape_sequence, escape_string
 from pymysql.err import (
     Warning,
@@ -47,30 +45,34 @@ from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 
 __version__ = version
 
-__all__: List[Type] = [
+__all__ = [
+
     # Errors
-    Error,
-    DataError,
-    DatabaseError,
-    IntegrityError,
-    InterfaceError,
-    InternalError,
-    MySQLError,
-    NotSupportedError,
-    OperationalError,
-    ProgrammingError,
-    Warning,
+    'Error',
+    'DataError',
+    'DatabaseError',
+    'IntegrityError',
+    'InterfaceError',
+    'InternalError',
+    'MySQLError',
+    'NotSupportedError',
+    'OperationalError',
+    'ProgrammingError',
+    'Warning',
 
-    escape_dict,
-    escape_sequence,
-    escape_string,
+    'escape_dict',
+    'escape_sequence',
+    'escape_string',
 
-    Connection,
-    Pool,
-    connect,
-    create_pool,
-    Cursor,
-    SSCursor,
-    DictCursor,
-    SSDictCursor,
+    'Connection',
+    'Pool',
+    'connect',
+    'create_pool',
+    'Cursor',
+    'SSCursor',
+    'DictCursor',
+    'SSDictCursor'
 ]
+
+(Connection, Pool, connect, create_pool, Cursor, SSCursor, DictCursor,
+ SSDictCursor)  # pyflakes
