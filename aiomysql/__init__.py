@@ -23,47 +23,54 @@ THE SOFTWARE.
 
 """
 
-from pymysql.converters import escape_dict, escape_sequence, escape_string
-from pymysql.err import (Warning, Error, InterfaceError, DataError,
-                         DatabaseError, OperationalError, IntegrityError,
-                         InternalError,
-                         NotSupportedError, ProgrammingError, MySQLError)
+from typing import List, Type
 
+from pymysql.converters import escape_dict, escape_sequence, escape_string
+from pymysql.err import (
+    Warning,
+    Error,
+    InterfaceError,
+    DataError,
+    DatabaseError,
+    OperationalError,
+    IntegrityError,
+    InternalError,
+    NotSupportedError,
+    ProgrammingError,
+    MySQLError,
+)
+
+from aiomysql.pool import create_pool, Pool
+from ._version import version
 from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
-from .pool import create_pool, Pool
-from ._version import version
 
 __version__ = version
 
-__all__ = [
-
+__all__: List[Type] = [
     # Errors
-    'Error',
-    'DataError',
-    'DatabaseError',
-    'IntegrityError',
-    'InterfaceError',
-    'InternalError',
-    'MySQLError',
-    'NotSupportedError',
-    'OperationalError',
-    'ProgrammingError',
-    'Warning',
+    Error,
+    DataError,
+    DatabaseError,
+    IntegrityError,
+    InterfaceError,
+    InternalError,
+    MySQLError,
+    NotSupportedError,
+    OperationalError,
+    ProgrammingError,
+    Warning,
 
-    'escape_dict',
-    'escape_sequence',
-    'escape_string',
+    escape_dict,
+    escape_sequence,
+    escape_string,
 
-    'Connection',
-    'Pool',
-    'connect',
-    'create_pool',
-    'Cursor',
-    'SSCursor',
-    'DictCursor',
-    'SSDictCursor'
+    Connection,
+    Pool,
+    connect,
+    create_pool,
+    Cursor,
+    SSCursor,
+    DictCursor,
+    SSDictCursor,
 ]
-
-(Connection, Pool, connect, create_pool, Cursor, SSCursor, DictCursor,
- SSDictCursor)  # pyflakes
