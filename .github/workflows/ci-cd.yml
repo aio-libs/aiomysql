@@ -375,7 +375,7 @@ jobs:
         --requirement requirements-dev.txt
 
     - name: flake8 Lint
-      uses: py-actions/flake8@v2.2.0
+      uses: py-actions/flake8@v2.2.1
       with:
         flake8-version: 4.0.1
         path: aiomysql
