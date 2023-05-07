@@ -6,8 +6,10 @@ updates:
     interval: daily
   open-pull-requests-limit: 10
   target-branch: master
+  rebase-strategy: disabled  # Automatic rebases are disabled to save CI time
 - package-ecosystem: github-actions
   directory: /
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+  rebase-strategy: disabled  # Automatic rebases are disabled to save CI time
