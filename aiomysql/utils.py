@@ -1,28 +1,57 @@
+import asyncio
 import struct
+import sys
 from types import TracebackType
 from typing import (
-    Coroutine,
-    TypeVar,
     Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Generator,
+    Generic,
     Optional,
-    Generic, Callable, Awaitable, Type, AsyncGenerator, Generator
+    Type,
+    TypeVar,
+    Union,
 )
 
-_Tobj = TypeVar("_Tobj")
-_Release = Callable[[_Tobj], Awaitable[None]]
+if sys.version_info >= (3, 7, 0):
+    __get_running_loop = asyncio.get_running_loop
+else:
+    def __get_running_loop() -> asyncio.AbstractEventLoop:
+        loop = asyncio.get_event_loop()
+        if not loop.is_running():
+            raise RuntimeError('no running event loop')
+        return loop
 
 
-class _ContextManager(Coroutine[Any, None, _Tobj], Generic[_Tobj]):
+def get_running_loop() -> asyncio.AbstractEventLoop:
+    return __get_running_loop()
+
+
+def create_completed_future(
+        loop: asyncio.AbstractEventLoop
+) -> 'asyncio.Future[Any]':
+    future = loop.create_future()
+    future.set_result(None)
+    return future
+
+
+_TObj = TypeVar("_TObj")
+_Release = Callable[[_TObj], Awaitable[None]]
+
+
+class _ContextManager(Coroutine[Any, None, _TObj], Generic[_TObj]):
     __slots__ = ('_coro', '_obj', '_release', '_release_on_exception')
 
     def __init__(
             self,
-            coro: Coroutine[Any, None, _Tobj],
-            release: _Release[_Tobj],
-            release_on_exception: Optional[_Release[_Tobj]] = None
+            coro: Coroutine[Any, None, _TObj],
+            release: _Release[_TObj],
+            release_on_exception: Optional[_Release[_TObj]] = None
     ):
         self._coro = coro
-        self._obj: Optional[_Tobj] = None
+        self._obj: Optional[_TObj] = None
         self._release = release
         self._release_on_exception = (
             release
@@ -33,38 +62,25 @@ class _ContextManager(Coroutine[Any, None, _Tobj], Generic[_Tobj]):
     def send(self, value: Any) -> 'Any':
         return self._coro.send(value)
 
-    def throw(
+    def throw(  # type: ignore
             self,
             typ: Type[BaseException],
-            val: Optional[BaseException] = None,
+            val: Optional[Union[BaseException, object]] = None,
             tb: Optional[TracebackType] = None
     ) -> Any:
         if val is None:
             return self._coro.throw(typ)
-        elif tb is None:
+        if tb is None:
             return self._coro.throw(typ, val)
-        else:
-            return self._coro.throw(typ, val, tb)
+        return self._coro.throw(typ, val, tb)
 
     def close(self) -> None:
-        return self._coro.close()
+        self._coro.close()
 
-    async def __anext__(self) -> _Tobj:
-        try:
-            value = self._coro.send(None)
-        except StopAsyncIteration:
-            self._obj = None
-            raise
-        else:
-            return value
-
-    def __aiter__(self) -> AsyncGenerator[None, _Tobj]:
-        return self._obj
-
-    def __await__(self) -> Generator[Any, None, _Tobj]:
+    def __await__(self) -> Generator[Any, None, _TObj]:
         return self._coro.__await__()
 
-    async def __aenter__(self) -> _Tobj:
+    async def __aenter__(self) -> _TObj:
         self._obj = await self._coro
         assert self._obj
         return self._obj
@@ -75,26 +91,28 @@ class _ContextManager(Coroutine[Any, None, _Tobj], Generic[_Tobj]):
             exc: Optional[BaseException],
             tb: Optional[TracebackType],
     ) -> None:
+        if self._obj is None:
+            return
+
         try:
-            if exc_type is not None and exc is not None and tb is not None:
+            if exc_type is not None:
                 await self._release_on_exception(self._obj)
             else:
                 await self._release(self._obj)
         finally:
-            await self._obj.close()
             self._obj = None
 
 
-class _IterableContextManager(_ContextManager[_Tobj]):
+class _IterableContextManager(_ContextManager[_TObj]):
     __slots__ = ()
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-    def __aiter__(self) -> '_IterableContextManager[_Tobj]':
+    def __aiter__(self) -> '_IterableContextManager[_TObj]':
         return self
 
-    async def __anext__(self) -> _Tobj:
+    async def __anext__(self) -> _TObj:
         if self._obj is None:
             self._obj = await self._coro
 
@@ -108,11 +126,11 @@ class _IterableContextManager(_ContextManager[_Tobj]):
             raise
 
 
-def _pack_int24(n: int) -> bytes:
+def _pack_int24(n):
     return struct.pack("<I", n)[:3]
 
 
-def _lenenc_int(i: int) -> bytes:
+def _lenenc_int(i):
     if i < 0:
         raise ValueError(
             "Encoding %d is less than 0 - no representation in LengthEncodedInteger" % i

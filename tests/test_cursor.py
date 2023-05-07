@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from aiomysql import ProgrammingError, Cursor, InterfaceError, OperationalError
-from aiomysql.cursors import RE_INSERT_VALUES
+from aiomysql.connection import RE_INSERT_VALUES
 
 
 async def _prepare(conn):
@@ -272,11 +272,12 @@ async def test_executemany(connection_creator):
 async def test_custom_cursor(connection_creator):
     class MyCursor(Cursor):
         pass
+
     conn = await connection_creator()
     cur = await conn.cursor(MyCursor)
     assert isinstance(cur, MyCursor)
     await cur.execute("SELECT 42;")
-    (r, ) = await cur.fetchone()
+    (r,) = await cur.fetchone()
     assert r == 42
 
 
@@ -284,6 +285,7 @@ async def test_custom_cursor(connection_creator):
 async def test_custom_cursor_not_cursor_subclass(connection_creator):
     class MyCursor2:
         pass
+
     conn = await connection_creator()
     with pytest.raises(TypeError):
         await conn.cursor(MyCursor2)

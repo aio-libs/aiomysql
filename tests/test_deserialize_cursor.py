@@ -1,9 +1,8 @@
 import copy
 
-import aiomysql.cursors
-
 import pytest
 
+import aiomysql.connection
 
 BOB = ("bob", 21, {"k1": "pretty", "k2": [18, 25]})
 JIM = ("jim", 56, {"k1": "rich", "k2": [20, 60]})
@@ -12,10 +11,9 @@ FRED = ("fred", 100, {"k1": "longevity", "k2": [100, 160]})
 
 @pytest.fixture()
 async def prepare(connection):
-
     havejson = True
 
-    c = await connection.cursor(aiomysql.cursors.DeserializationCursor)
+    c = await connection.cursor(aiomysql.connection.DeserializationCursor)
 
     # create a table ane some data to query
     await c.execute("drop table if exists deserialize_cursor")
@@ -52,7 +50,7 @@ async def test_deserialize_cursor(prepare, connection):
     # all assert test compare to the structure as would come
     # out from MySQLdb
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.DeserializationCursor)
+    c = await conn.cursor(aiomysql.connection.DeserializationCursor)
 
     # pull back the single row dict for bob and check
     await c.execute("SELECT * from deserialize_cursor "
@@ -88,7 +86,7 @@ async def test_deserialize_cursor_low_version(prepare, connection):
     # all assert test compare to the structure as would come
     # out from MySQLdb
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.DeserializationCursor)
+    c = await conn.cursor(aiomysql.connection.DeserializationCursor)
 
     # pull back the single row dict for bob and check
     await c.execute("SELECT * from deserialize_cursor where name='bob'")
@@ -120,8 +118,8 @@ async def test_deserializedictcursor(prepare, connection):
     bob = {'name': 'bob', 'age': 21,
            'claim': {"k1": "pretty", "k2": [18, 25]}}
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.DeserializationCursor,
-                          aiomysql.cursors.DictCursor)
+    c = await conn.cursor(aiomysql.connection.DeserializationCursor,
+                          aiomysql.connection.DictCursor)
     await c.execute("SELECT * from deserialize_cursor "
                     "where name='bob'")
     r = await c.fetchall()
@@ -135,8 +133,8 @@ async def test_ssdeserializecursor(prepare, connection):
     if not havejson:
         return
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.SSCursor,
-                          aiomysql.cursors.DeserializationCursor)
+    c = await conn.cursor(aiomysql.connection.SSCursor,
+                          aiomysql.connection.DeserializationCursor)
     await c.execute("SELECT * from deserialize_cursor "
                     "where name='bob'")
     r = await c.fetchall()
@@ -152,9 +150,9 @@ async def test_ssdeserializedictcursor(prepare, connection):
     bob = {'name': 'bob', 'age': 21,
            'claim': {"k1": "pretty", "k2": [18, 25]}}
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.SSCursor,
-                          aiomysql.cursors.DeserializationCursor,
-                          aiomysql.cursors.DictCursor)
+    c = await conn.cursor(aiomysql.connection.SSCursor,
+                          aiomysql.connection.DeserializationCursor,
+                          aiomysql.connection.DictCursor)
     await c.execute("SELECT * from deserialize_cursor "
                     "where name='bob'")
     r = await c.fetchall()

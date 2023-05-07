@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-import aiomysql.cursors
+import aiomysql.connection
 
 
 BOB = {'name': 'bob', 'age': 21,
@@ -12,7 +12,7 @@ JIM = {'name': 'jim', 'age': 56,
 FRED = {'name': 'fred', 'age': 100,
         'DOB': datetime.datetime(1911, 9, 12, 1, 1, 1)}
 
-CURSOR_TYPE = aiomysql.cursors.DictCursor
+CURSOR_TYPE = aiomysql.connection.DictCursor
 
 
 async def prepare(conn):
@@ -100,7 +100,7 @@ async def test_ssdictcursor(connection):
     conn = connection
     await prepare(connection)
 
-    c = await conn.cursor(aiomysql.cursors.SSDictCursor)
+    c = await conn.cursor(aiomysql.connection.SSDictCursor)
     await c.execute("SELECT * from dictcursor where name='bob'")
     r = await c.fetchall()
     assert [BOB] == r,\

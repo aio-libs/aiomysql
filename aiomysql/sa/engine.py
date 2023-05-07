@@ -10,18 +10,13 @@ from typing import (
     Union
 )
 
-from sqlalchemy import (
-    Engine,
-    Dialect
-)
-
 import aiomysql
 from .connection import SAConnection
 from .exc import (
     InvalidRequestError,
     ArgumentError
 )
-from ..cursors import (
+from ..connection import (
     Cursor,
     DeserializationCursor,
     DictCursor,
@@ -65,18 +60,17 @@ _dialect.statement_compiler = MySQLCompiler_pymysql
 _dialect.default_paramstyle = 'pyformat'
 
 
-# todo: Update Any to stricter kwarg
-# https://github.com/python/mypy/issues/4441
 def create_engine(
         minsize: int = 1,
         maxsize: int = 10,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        dialect: Dialect = _dialect,
+        dialect=_dialect,
         pool_recycle: int = -1,
         compiled_cache: Optional[Dict[str, Any]] = None,
         **kwargs: Union[str, int, bool, Any]
 ):
-    """A coroutine for Engine creation.
+    """
+    A coroutine for Engine creation.
 
     Returns Engine instance with embedded connection pool.
 
@@ -108,17 +102,15 @@ async def _close_connection(c: SAConnection) -> None:
     await c.close()
 
 
-# todo: Update Any to stricter kwarg
-# https://github.com/python/mypy/issues/4441
 async def _create_engine(
         minsize: int = 1,
         maxsize: int = 10,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        dialect: Dialect = _dialect,
+        dialect=_dialect,
         pool_recycle: int = -1,
         compiled_cache: Optional[Dict[str, Any]] = None,
         **kwargs: Any
-) -> Engine:
+):
     if loop is None:
         loop = asyncio.get_event_loop()
     pool = await aiomysql.create_pool(minsize=minsize, maxsize=maxsize,
@@ -132,7 +124,8 @@ async def _create_engine(
 
 
 class Engine:
-    """Connects a aiomysql.Pool and
+    """
+    Connects a aiomysql.Pool and
     sqlalchemy.engine.interfaces.Dialect together to provide a
     source of database connectivity and behavior.
 
@@ -140,11 +133,9 @@ class Engine:
     create_engine coroutine.
     """
 
-    # todo: Update Any to stricter kwarg
-    # https://github.com/python/mypy/issues/4441
     def __init__(
             self,
-            dialect: Dialect,
+            dialect,
             pool: Any,
             compiled_cache: Any = None,
             **kwargs: Any
@@ -155,17 +146,17 @@ class Engine:
         self._conn_kw = kwargs
 
     @property
-    def dialect(self) -> Dialect:
-        """An dialect for engine."""
+    def dialect(self):
+        """A dialect for engine."""
         return self._dialect
 
     @property
-    def name(self) -> Dialect.name:
+    def name(self):
         """A name of the dialect."""
         return self._dialect.name
 
     @property
-    def driver(self) -> Dialect.driver:
+    def driver(self):
         """A driver of the dialect."""
         return self._dialect.driver
 
@@ -186,7 +177,8 @@ class Engine:
         return self._pool.freesize
 
     def close(self) -> None:
-        """Close engine.
+        """
+        Close engine.
 
         Mark all engine connections to be closed on getting back to pool.
         Closed engine doesn't allow acquiring new connections.
@@ -194,7 +186,8 @@ class Engine:
         self._pool.close()
 
     def terminate(self) -> None:
-        """Terminate engine.
+        """
+        Terminate engine.
 
         Terminate engine pool with instantly closing all acquired
         connections also.
@@ -214,13 +207,12 @@ class Engine:
         raw = await self._pool.acquire()
         return SAConnection(raw, self, compiled_cache=self._compiled_cache)
 
-    def release(self, conn: SAConnection) -> None:
+    def release(self, conn: SAConnection):
         """Revert connection to pool."""
         if conn.in_transaction:
             raise InvalidRequestError("Cannot release a connection with "
                                       "not finished transaction")
-        raw = conn.connection
-        return self._pool.release(raw)
+        return self._pool.release(conn.connection)
 
     def __enter__(self):
         raise RuntimeError(
@@ -266,7 +258,8 @@ class Engine:
 
 
 class _ConnectionContextManager:
-    """Context manager.
+    """
+    Context manager.
 
     This enables the following idiom for acquiring and releasing a
     connection around a block:
@@ -280,8 +273,6 @@ class _ConnectionContextManager:
             <block>
     """
 
-    __slots__ = ('_engine', '_conn')
-
     def __init__(
             self,
             engine: Engine,
@@ -290,13 +281,13 @@ class _ConnectionContextManager:
         self._engine = engine
         self._conn = conn
 
-    def __enter__(self) -> SAConnection:
+    async def __aenter__(self) -> SAConnection:
         assert self._conn is not None
         return self._conn
 
-    def __exit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: Any) -> None:
         try:
-            self._engine.release(self._conn)
+            await self._engine.release(self._conn)
         finally:
             self._engine = None
             self._conn = None

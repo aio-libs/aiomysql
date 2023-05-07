@@ -53,7 +53,8 @@ class Transaction(object):
         return self._connection
 
     async def close(self) -> None:
-        """Close this transaction.
+        """
+        Close this transaction.
 
         If this transaction is the base transaction in a begin/commit
         nesting, the transaction will rollback().  Otherwise, the
@@ -115,14 +116,17 @@ class RootTransaction(Transaction):
         super().__init__(connection, None)
 
     async def _do_rollback(self) -> None:
+        # noinspection PyProtectedMember
         await self._connection._rollback_impl()
 
     async def _do_commit(self) -> None:
+        # noinspection PyProtectedMember
         await self._connection._commit_impl()
 
 
 class NestedTransaction(Transaction):
-    """Represent a 'nested', or SAVEPOINT transaction.
+    """
+    Represent a 'nested', or SAVEPOINT transaction.
 
     A new NestedTransaction object may be procured
     using the SAConnection.begin_nested() method.
@@ -142,18 +146,21 @@ class NestedTransaction(Transaction):
     async def _do_rollback(self) -> None:
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
+            # noinspection PyProtectedMember
             await self._connection._rollback_to_savepoint_impl(
                 self._savepoint, self._parent)
 
     async def _do_commit(self) -> None:
         assert self._savepoint is not None, "Broken transaction logic"
         if self._is_active:
+            # noinspection PyProtectedMember
             await self._connection._release_savepoint_impl(
                 self._savepoint, self._parent)
 
 
 class TwoPhaseTransaction(Transaction):
-    """Represent a two-phase transaction.
+    """
+    Represent a two-phase transaction.
 
     A new TwoPhaseTransaction object may be procured
     using the SAConnection.begin_twophase() method.
@@ -177,13 +184,16 @@ class TwoPhaseTransaction(Transaction):
         return self._xid
 
     async def prepare(self) -> None:
-        """Prepare this TwoPhaseTransaction.
+        """
+        Prepare this TwoPhaseTransaction.
 
         After a PREPARE, the transaction can be committed.
         """
 
         if not self._parent.is_active:
             raise exc.InvalidRequestError("This transaction is inactive")
+
+        # noinspection PyProtectedMember
         await self._connection._prepare_twophase_impl(self._xid)
         self._is_prepared = True
 

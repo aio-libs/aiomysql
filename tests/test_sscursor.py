@@ -4,7 +4,7 @@ import pytest
 from pymysql import NotSupportedError
 
 from aiomysql import ProgrammingError, InterfaceError, OperationalError
-from aiomysql.cursors import SSCursor
+from aiomysql.connection import SSCursor
 
 
 DATA = [

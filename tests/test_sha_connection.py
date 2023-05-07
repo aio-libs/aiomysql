@@ -4,7 +4,7 @@ from aiomysql import create_pool
 import pytest
 
 
-# You could parameterise these tests with this, but then pytest
+# You could parameterize these tests with this, but then pytest
 # does some funky stuff and spins up and tears down containers
 # per function call.  Remember it would be
 # mysql_versions * event_loops * 4 auth tests ~= 3*2*4 ~= 24 tests

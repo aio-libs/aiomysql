@@ -40,8 +40,7 @@ from pymysql.err import (
 
 from aiomysql.pool import create_pool, Pool
 from ._version import version
-from .connection import Connection, connect
-from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
+from .connection import Connection, connect, SSDictCursor, Cursor, SSCursor, DictCursor
 
 __version__ = version
 

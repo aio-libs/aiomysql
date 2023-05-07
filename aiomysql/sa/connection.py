@@ -16,7 +16,7 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import UpdateBase
 
-from . import exc, Engine
+from . import exc
 from .result import create_result_proxy, ResultProxy
 from .transaction import (
     RootTransaction,
@@ -46,7 +46,7 @@ class SAConnection:
     def __init__(
             self,
             connection: Connection,
-            engine: Engine,
+            engine,
             compiled_cache: Optional[Any] = None,
     ) -> None:
         self._connection = connection
@@ -57,8 +57,6 @@ class SAConnection:
         self._dialect = engine.dialect
         self._compiled_cache = compiled_cache
 
-    # todo: Update Any to stricter kwarg
-    # https://github.com/python/mypy/issues/4441
     def execute(
             self,
             query: Union[str, DDLElement, ClauseElement],
@@ -179,8 +177,6 @@ class SAConnection:
         self._weak_results.add(ret)
         return ret
 
-    # todo: Update Any to stricter kwarg
-    # https://github.com/python/mypy/issues/4441
     async def _execute(
             self,
             query: Union[str, DDLElement, ClauseElement],
@@ -236,8 +232,6 @@ class SAConnection:
         self._weak_results.add(ret)
         return ret
 
-    # todo: Update Any to stricter kwarg
-    # https://github.com/python/mypy/issues/4441
     async def scalar(
             self,
             query: Union[str, DDLElement, ClauseElement],

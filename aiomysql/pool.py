@@ -4,12 +4,10 @@
 import asyncio
 import collections
 import warnings
-from types import TracebackType
 from typing import (
     Optional,
     Any,
-    Deque,
-    Type
+    Deque
 )
 
 from aiomysql.connection import (
@@ -17,12 +15,10 @@ from aiomysql.connection import (
     Connection
 )
 from aiomysql.utils import (
-    _ContextManager
+    _ContextManager, _Release, _TObj
 )
 
 
-# todo: Update Any to stricter kwarg
-# https://github.com/python/mypy/issues/4441
 def create_pool(
         minsize: int = 1,
         maxsize: int = 10,
@@ -40,8 +36,6 @@ async def _destroy_pool(pool: "Pool") -> None:
     await pool.wait_closed()
 
 
-# todo: Update Any to stricter kwarg
-# https://github.com/python/mypy/issues/4441
 async def _create_pool(
         minsize: int = 1,
         maxsize: int = 10,
@@ -61,6 +55,79 @@ async def _create_pool(
             await pool._fill_free_pool(False)
 
     return pool
+
+
+class _PoolContextManager(_ContextManager):
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        await self._obj.wait_closed()
+        self._obj = None
+
+
+class _PoolAcquireContextManager(_ContextManager):
+    __slots__ = ('_coro', '_conn', '_pool')
+
+    def __init__(self, coro, pool, release: _Release[_TObj]):
+        super().__init__(coro, release)
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+
+    async def __aenter__(self):
+        self._conn = await self._coro
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc, tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+
+class _PoolConnectionContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    connection around a block:
+
+        with (yield from pool) as conn:
+            cur = yield from conn.cursor()
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    __slots__ = ('_pool', '_conn')
+
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def __enter__(self):
+        assert self._conn
+        return self._conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+    async def __aenter__(self):
+        assert not self._conn
+        self._conn = await self._pool.acquire()
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
 
 
 class Pool(asyncio.AbstractServer):
@@ -188,6 +255,7 @@ class Pool(asyncio.AbstractServer):
                 else:
                     await self._cond.wait()
 
+    # noinspection PyProtectedMember
     async def _fill_free_pool(self, override_min: bool) -> None:
         # iterate over free connections and remove timed out ones
         free_size = len(self._free)
@@ -243,7 +311,8 @@ class Pool(asyncio.AbstractServer):
             self._cond.notify()
 
     def release(self, conn: Any) -> asyncio.Future:
-        """Release free connection back to the connection pool.
+        """
+        Release free connection back to the connection pool.
 
         This is **NOT** a coroutine.
         """
@@ -270,7 +339,7 @@ class Pool(asyncio.AbstractServer):
 
     def __enter__(self) -> None:
         raise RuntimeError(
-            '"yield from" should be used as context manager expression')
+            '"await" should be used as context manager expression')
 
     # todo: Update Any to stricter kwarg
     # https://github.com/python/mypy/issues/4441
@@ -279,7 +348,7 @@ class Pool(asyncio.AbstractServer):
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover
 
-    def __iter__(self) -> _ContextManager:
+    def __iter__(self):
         # This is not a coroutine.  It is meant to enable the idiom:
         #
         #     with (yield from pool) as conn:
@@ -293,20 +362,18 @@ class Pool(asyncio.AbstractServer):
         #     finally:
         #         conn.release()
         conn = yield from self.acquire()
-        return _ContextManager[Connection](conn, self.release)
+        return _PoolConnectionContextManager(self, conn)
 
-    def __await__(self) -> _ContextManager:
+    def __await__(self):
         msg = "with await pool as conn deprecated, use" \
               "async with pool.acquire() as conn instead"
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         conn = yield from self.acquire()
-        return _ContextManager[Connection](conn, self.release)
+        return _PoolConnectionContextManager(self, conn)
 
-    async def __aenter__(self) -> 'Pool':
+    async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type: Optional[Type[BaseException]],
-                        exc_val: Optional[BaseException],
-                        exc_tb: Optional[TracebackType]) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.close()
         await self.wait_closed()

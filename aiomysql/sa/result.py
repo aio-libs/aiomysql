@@ -11,12 +11,12 @@ from . import exc
 
 async def create_result_proxy(connection, cursor, dialect, result_map):
     result_proxy = ResultProxy(connection, cursor, dialect, result_map)
+    # noinspection PyProtectedMember
     await result_proxy._prepare()
     return result_proxy
 
 
 class RowProxy(Mapping):
-
     __slots__ = ('_result_proxy', '_row', '_processors', '_keymap')
 
     def __init__(self, result_proxy, row, processors, keymap):
@@ -36,6 +36,7 @@ class RowProxy(Mapping):
         try:
             processor, obj, index = self._keymap[key]
         except KeyError:
+            # noinspection PyProtectedMember
             processor, obj, index = self._result_proxy._key_fallback(key)
         # Do we need slicing at all? RowProxy now is Mapping not Sequence
         # except TypeError:
@@ -66,6 +67,7 @@ class RowProxy(Mapping):
             raise AttributeError(e.args[0])
 
     def __contains__(self, key):
+        # noinspection PyProtectedMember
         return self._result_proxy._has_key(self._row, key)
 
     __hash__ = None
@@ -92,6 +94,7 @@ class ResultMetaData:
     """Handle cursor.description, applying additional info from an execution
     context."""
 
+    # noinspection PyProtectedMember
     def __init__(self, result_proxy, metadata):
         self._processors = processors = []
 
@@ -170,6 +173,7 @@ class ResultMetaData:
         # high precedence keymap.
         keymap.update(primary_keymap)
 
+    # noinspection PyProtectedMember
     def _key_fallback(self, key, raiseerr=True):
         map = self._keymap
         result = None
@@ -177,7 +181,7 @@ class ResultMetaData:
             result = map.get(key)
         # fallback for targeting a ColumnElement to a textual expression
         # this is a rare use case which only occurs when matching text()
-        # or colummn('name') constructs to ColumnElements, or after a
+        # or column('name') constructs to ColumnElements, or after a
         # pickle/unpickle roundtrip
         elif isinstance(key, expression.ColumnElement):
             if key._label and key._label in map:
@@ -188,7 +192,7 @@ class ResultMetaData:
             # search extra hard to make sure this
             # isn't a column/label name overlap.
             # this check isn't currently available if the row
-            # was unpickled.
+            # was unpicked.
             if result is not None and result[1] is not None:
                 for obj in result[1]:
                     if key._compare_name_for_result(obj):
@@ -214,7 +218,8 @@ class ResultMetaData:
 
 
 class ResultProxy:
-    """Wraps a DB-API cursor object to provide easier access to row columns.
+    """
+    Wraps a DB-API cursor object to provide easier access to row columns.
 
     Individual columns may be accessed by their integer position,
     case-insensitive column name, or by sqlalchemy schema.Column
@@ -250,6 +255,7 @@ class ResultProxy:
 
             def callback(wr):
                 loop.create_task(cursor.close())
+
             self._weak = weakref.ref(self, callback)
         else:
             self._metadata = None
@@ -274,7 +280,8 @@ class ResultProxy:
 
     @property
     def rowcount(self):
-        """Return the 'rowcount' for this result.
+        """
+        Return the 'rowcount' for this result.
 
         The 'rowcount' reports the number of rows *matched*
         by the WHERE criterion of an UPDATE or DELETE statement.
@@ -315,7 +322,8 @@ class ResultProxy:
 
     @property
     def returns_rows(self):
-        """True if this ResultProxy returns rows.
+        """
+        True if this ResultProxy returns rows.
 
         I.e. if it is legal to call the methods .fetchone(),
         .fetchmany() and .fetchall()`.
@@ -327,7 +335,8 @@ class ResultProxy:
         return self._closed
 
     async def close(self):
-        """Close this ResultProxy.
+        """
+        Close this ResultProxy.
 
         Closes the underlying DBAPI cursor corresponding to the execution.
 
@@ -387,7 +396,8 @@ class ResultProxy:
             return ret
 
     async def fetchone(self):
-        """Fetch one row, just like DB-API cursor.fetchone().
+        """
+        Fetch one row, just like DB-API cursor.fetchone().
 
         If a row is present, the cursor remains open after this is called.
         Else the cursor is automatically closed and None is returned.
@@ -404,7 +414,8 @@ class ResultProxy:
                 return None
 
     async def fetchmany(self, size=None):
-        """Fetch many rows, just like DB-API
+        """
+        Fetch many rows, just like DB-API
         cursor.fetchmany(size=cursor.arraysize).
 
         If rows are present, the cursor remains open after this is called.
@@ -424,19 +435,21 @@ class ResultProxy:
             return ret
 
     async def first(self):
-        """Fetch the first row and then close the result set unconditionally.
+        """
+        Fetch the first row and then close the result set unconditionally.
 
         Returns None if no row is present.
         """
         if self._metadata is None:
             self._non_result()
         try:
-            return (await self.fetchone())
+            return await self.fetchone()
         finally:
             await self.close()
 
     async def scalar(self):
-        """Fetch the first column of the first row, and close the result set.
+        """
+        Fetch the first column of the first row, and close the result set.
 
         Returns None if no row is present.
         """

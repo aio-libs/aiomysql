@@ -6,14 +6,16 @@ class Error(Exception):
 
 
 class ArgumentError(Error):
-    """Raised when an invalid or conflicting function argument is supplied.
+    """
+    Raised when an invalid or conflicting function argument is supplied.
 
     This error generally corresponds to construction time state errors.
     """
 
 
 class InvalidRequestError(ArgumentError):
-    """aiomysql.sa was asked to do something it can't do.
+    """
+    aiomysql.sa was asked to do something it can't do.
 
     This error generally corresponds to runtime state errors.
     """
@@ -24,5 +26,7 @@ class NoSuchColumnError(KeyError, InvalidRequestError):
 
 
 class ResourceClosedError(InvalidRequestError):
-    """An operation was requested from a connection, cursor, or other
-    object that's in a closed state."""
+    """
+    An operation was requested from a connection, cursor, or other
+    object that's in a closed state.
+    """
