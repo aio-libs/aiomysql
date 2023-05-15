@@ -1,4 +1,5 @@
 coverage==6.5.0
+# flake8 version is also specified in .github/workflows/ci-cd.yml
 flake8==5.0.4
 ipdb==0.13.13
 pytest==7.3.1
