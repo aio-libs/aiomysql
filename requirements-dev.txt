@@ -3,7 +3,7 @@ coverage==7.2.5
 flake8==5.0.4
 ipdb==0.13.13
 pytest==7.3.1
-pytest-cov==4.0.0
+pytest-cov==4.1.0
 pytest-sugar==0.9.7
 PyMySQL==1.0.3
 sphinx>=1.8.1, <5.1.2
