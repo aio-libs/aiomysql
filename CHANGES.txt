@@ -14,6 +14,8 @@ next (unreleased)
 
 * Fix debug log level with sha256_password authentication #863
 
+* Update build-system requirements to drop the use of setuptools-scm-git-archive #872
+
 0.1.1 (2022-05-08)
 ^^^^^^^^^^^^^^^^^^
 
