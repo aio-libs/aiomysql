@@ -683,6 +683,9 @@ jobs:
           needs.pre-setup.outputs.dist-version
         }}
 
+    permissions:
+      id-token: write  # this permission is mandatory for trusted publishing
+
     steps:
     - name: Download all the dists
       uses: actions/download-artifact@v3
@@ -693,7 +696,6 @@ jobs:
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
       uses: pypa/gh-action-pypi-publish@v1.8.6
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
         print_hash: true
 
