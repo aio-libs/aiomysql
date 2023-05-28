@@ -16,6 +16,8 @@ next (unreleased)
 
 * Modernized code with `pyupgrade <https://github.com/asottile/pyupgrade>`_ to Python 3.7+ syntax #930
 
+* Removed tests for EoL MariaDB versions 10.3, 10.7 and 10.8, added tests for MariaDB 10.9, 10.10, 10.11 #932
+
 0.1.1 (2022-05-08)
 ^^^^^^^^^^^^^^^^^^
 
