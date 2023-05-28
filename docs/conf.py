@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # aiomysql documentation build configuration file, created by
 # sphinx-quickstart on Sun Jan 18 22:02:31 2015.

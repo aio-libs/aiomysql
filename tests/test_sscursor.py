@@ -42,10 +42,10 @@ async def test_ssursor(connection):
     cursor = await conn.cursor(SSCursor)
     # Create table
     await cursor.execute('DROP TABLE IF EXISTS tz_data;')
-    await cursor.execute(('CREATE TABLE tz_data ('
-                          'region VARCHAR(64),'
-                          'zone VARCHAR(64),'
-                          'name VARCHAR(64))'))
+    await cursor.execute('CREATE TABLE tz_data ('
+                         'region VARCHAR(64),'
+                         'zone VARCHAR(64),'
+                         'name VARCHAR(64))')
 
     # Test INSERT
     for i in DATA:
