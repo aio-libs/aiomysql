@@ -333,7 +333,7 @@ async def test_issue_79(connection):
     """ Duplicate field overwrites the previous one in the result
     of DictCursor """
     conn = connection
-    c = await conn.cursor(aiomysql.cursors.DictCursor)
+    c = await conn.cursor(aiomysql.connection.DictCursor)
 
     await c.execute("drop table if exists a")
     await c.execute("drop table if exists b")

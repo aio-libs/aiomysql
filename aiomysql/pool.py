@@ -4,74 +4,182 @@
 import asyncio
 import collections
 import warnings
+from typing import (
+    Optional,
+    Any,
+    Deque
+)
 
-from .connection import connect
-from .utils import (_PoolContextManager, _PoolConnectionContextManager,
-                    _PoolAcquireContextManager)
+from aiomysql.connection import (
+    connect,
+    Connection
+)
+from aiomysql.utils import (
+    _ContextManager, _Release, _TObj
+)
 
 
-def create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
-                loop=None, **kwargs):
+def create_pool(
+        minsize: int = 1,
+        maxsize: int = 10,
+        echo: bool = False,
+        pool_recycle: int = -1,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        **kwargs: Any) -> _ContextManager["Pool"]:
     coro = _create_pool(minsize=minsize, maxsize=maxsize, echo=echo,
                         pool_recycle=pool_recycle, loop=loop, **kwargs)
-    return _PoolContextManager(coro)
+    return _ContextManager[Pool](coro, _destroy_pool)
 
 
-async def _create_pool(minsize=1, maxsize=10, echo=False, pool_recycle=-1,
-                       loop=None, **kwargs):
+async def _destroy_pool(pool: "Pool") -> None:
+    pool.close()
+    await pool.wait_closed()
+
+
+async def _create_pool(
+        minsize: int = 1,
+        maxsize: int = 10,
+        echo: bool = False,
+        pool_recycle: int = -1,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        **kwargs: Any
+) -> 'Pool':
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo,
-                pool_recycle=pool_recycle, loop=loop, **kwargs)
+    pool: Pool = Pool(minsize=minsize, maxsize=maxsize, echo=echo,
+                      pool_recycle=pool_recycle, loop=loop, **kwargs)
+
     if minsize > 0:
         async with pool._cond:
             await pool._fill_free_pool(False)
+
     return pool
+
+
+class _PoolContextManager(_ContextManager):
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        await self._obj.wait_closed()
+        self._obj = None
+
+
+class _PoolAcquireContextManager(_ContextManager):
+    __slots__ = ('_coro', '_conn', '_pool')
+
+    def __init__(self, coro, pool, release: _Release[_TObj]):
+        super().__init__(coro, release)
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+
+    async def __aenter__(self):
+        self._conn = await self._coro
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc, tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+
+class _PoolConnectionContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    connection around a block:
+
+        with (yield from pool) as conn:
+            cur = yield from conn.cursor()
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    __slots__ = ('_pool', '_conn')
+
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def __enter__(self):
+        assert self._conn
+        return self._conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+    async def __aenter__(self):
+        assert not self._conn
+        self._conn = await self._pool.acquire()
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
 
 
 class Pool(asyncio.AbstractServer):
     """Connection pool"""
 
-    def __init__(self, minsize, maxsize, echo, pool_recycle, loop, **kwargs):
+    def __init__(
+            self,
+            minsize: int,
+            maxsize: int,
+            echo: bool,
+            pool_recycle: int,
+            loop: asyncio.AbstractEventLoop,
+            **kwargs: Any
+    ) -> None:
         if minsize < 0:
             raise ValueError("minsize should be zero or greater")
         if maxsize < minsize and maxsize != 0:
             raise ValueError("maxsize should be not less than minsize")
-        self._minsize = minsize
-        self._loop = loop
-        self._conn_kwargs = kwargs
-        self._acquiring = 0
-        self._free = collections.deque(maxlen=maxsize or None)
-        self._cond = asyncio.Condition()
-        self._used = set()
-        self._terminated = set()
-        self._closing = False
-        self._closed = False
-        self._echo = echo
-        self._recycle = pool_recycle
+        self._minsize: int = minsize
+        self._loop: asyncio.AbstractEventLoop = loop
+        self._conn_kwargs: dict[str, Any] = kwargs
+        self._acquiring: int = 0
+        self._free: Deque[Any] = collections.deque(maxlen=maxsize or None)
+        self._cond: asyncio.Condition = asyncio.Condition()
+        self._used: set[Any] = set()
+        self._terminated: set[Any] = set()
+        self._closing: bool = False
+        self._closed: bool = False
+        self._echo: bool = echo
+        self._recycle: int = pool_recycle
 
     @property
-    def echo(self):
+    def echo(self) -> bool:
         return self._echo
 
     @property
-    def minsize(self):
+    def minsize(self) -> int:
         return self._minsize
 
     @property
-    def maxsize(self):
+    def maxsize(self) -> int:
         return self._free.maxlen
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.freesize + len(self._used) + self._acquiring
 
     @property
-    def freesize(self):
+    def freesize(self) -> int:
         return len(self._free)
 
-    async def clear(self):
+    async def clear(self) -> None:
         """Close all free connections in pool."""
         async with self._cond:
             while self._free:
@@ -80,28 +188,27 @@ class Pool(asyncio.AbstractServer):
             self._cond.notify()
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         """
         The readonly property that returns ``True`` if connections is closed.
         """
         return self._closed
 
-    def close(self):
+    def close(self) -> None:
         """Close pool.
 
         Mark all pool connections to be closed on getting back to pool.
-        Closed pool doesn't allow to acquire new connections.
+        Closed pool doesn't allow acquiring new connections.
         """
         if self._closed:
             return
         self._closing = True
 
-    def terminate(self):
+    def terminate(self) -> None:
         """Terminate pool.
 
         Close pool with instantly closing all acquired connections also.
         """
-
         self.close()
 
         for conn in list(self._used):
@@ -110,9 +217,8 @@ class Pool(asyncio.AbstractServer):
 
         self._used.clear()
 
-    async def wait_closed(self):
+    async def wait_closed(self) -> None:
         """Wait for closing all pool's connections."""
-
         if self._closed:
             return
         if not self._closing:
@@ -129,12 +235,12 @@ class Pool(asyncio.AbstractServer):
 
         self._closed = True
 
-    def acquire(self):
+    async def acquire(self) -> _ContextManager:
         """Acquire free connection from the pool."""
         coro = self._acquire()
-        return _PoolAcquireContextManager(coro, self)
+        return _ContextManager[Connection](coro, self.release)
 
-    async def _acquire(self):
+    async def _acquire(self) -> Connection:
         if self._closing:
             raise RuntimeError("Cannot acquire connection after closing pool")
         async with self._cond:
@@ -149,7 +255,8 @@ class Pool(asyncio.AbstractServer):
                 else:
                     await self._cond.wait()
 
-    async def _fill_free_pool(self, override_min):
+    # noinspection PyProtectedMember
+    async def _fill_free_pool(self, override_min: bool) -> None:
         # iterate over free connections and remove timed out ones
         free_size = len(self._free)
         n = 0
@@ -167,8 +274,7 @@ class Pool(asyncio.AbstractServer):
                 self._free.pop()
                 conn.close()
 
-            elif (self._recycle > -1 and
-                  self._loop.time() - conn.last_usage > self._recycle):
+            elif -1 < self._recycle < self._loop.time() - conn.last_usage:
                 self._free.pop()
                 conn.close()
 
@@ -200,12 +306,13 @@ class Pool(asyncio.AbstractServer):
             finally:
                 self._acquiring -= 1
 
-    async def _wakeup(self):
+    async def _wakeup(self) -> None:
         async with self._cond:
             self._cond.notify()
 
-    def release(self, conn):
-        """Release free connection back to the connection pool.
+    def release(self, conn: Any) -> asyncio.Future:
+        """
+        Release free connection back to the connection pool.
 
         This is **NOT** a coroutine.
         """
@@ -230,11 +337,13 @@ class Pool(asyncio.AbstractServer):
             fut = self._loop.create_task(self._wakeup())
         return fut
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         raise RuntimeError(
-            '"yield from" should be used as context manager expression')
+            '"await" should be used as context manager expression')
 
-    def __exit__(self, *args):
+    # todo: Update Any to stricter kwarg
+    # https://github.com/python/mypy/issues/4441
+    def __exit__(self, *args: Any) -> None:
         # This must exist because __enter__ exists, even though that
         # always raises; that's how the with-statement works.
         pass  # pragma: nocover

@@ -48,7 +48,7 @@ async def test_config_file(fill_my_cnf, connection_creator, mysql_params):
     # make sure connection is working
     cur = await conn.cursor()
     await cur.execute('SELECT 42;')
-    (r, ) = await cur.fetchone()
+    (r,) = await cur.fetchone()
     assert r == 42
     conn.close()
 
@@ -71,7 +71,7 @@ async def test_config_file_with_different_group(fill_my_cnf,
     # make sure connection is working
     cur = await conn.cursor()
     await cur.execute('SELECT 42;')
-    (r, ) = await cur.fetchone()
+    (r,) = await cur.fetchone()
     assert r == 42
     conn.close()
 

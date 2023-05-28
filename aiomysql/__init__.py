@@ -24,15 +24,23 @@ THE SOFTWARE.
 """
 
 from pymysql.converters import escape_dict, escape_sequence, escape_string
-from pymysql.err import (Warning, Error, InterfaceError, DataError,
-                         DatabaseError, OperationalError, IntegrityError,
-                         InternalError,
-                         NotSupportedError, ProgrammingError, MySQLError)
+from pymysql.err import (
+    Warning,
+    Error,
+    InterfaceError,
+    DataError,
+    DatabaseError,
+    OperationalError,
+    IntegrityError,
+    InternalError,
+    NotSupportedError,
+    ProgrammingError,
+    MySQLError,
+)
 
-from .connection import Connection, connect
-from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
-from .pool import create_pool, Pool
+from aiomysql.pool import create_pool, Pool
 from ._version import version
+from .connection import Connection, connect, SSDictCursor, Cursor, SSCursor, DictCursor
 
 __version__ = version
 
