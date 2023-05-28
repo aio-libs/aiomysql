@@ -80,12 +80,14 @@ jobs:
           'refs/heads/{0}', github.event.repository.default_branch
         )
       run: >-
-        print('::set-output name=is-untagged-devel::true')
+        echo "is-untagged-devel=true" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Mark the build as "release request"
       id: request-check
       if: github.event_name == 'workflow_dispatch'
       run: >-
-        print('::set-output name=release-requested::true')
+        echo "release-requested=true" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Check out src from Git
       if: >-
         steps.request-check.outputs.release-requested != 'true'
@@ -101,31 +103,32 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
     - name: >-
         Calculate dependency files' combined hash value
         for use in the cache key
       if: >-
         steps.request-check.outputs.release-requested != 'true'
       id: calc-cache-key-files
-      run: |
-        print(
-          "::set-output name=files-hash-key::${{
-              hashFiles(
+      run: >-
+        echo "files-hash-key=${{
+            hashFiles(
                 'requirements-dev.txt',
                 'setup.cfg',
                 'pyproject.toml'
-              )
-          }}",
-        )
+            )
+        }}" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Get pip cache dir
       id: pip-cache-dir
       if: >-
         steps.request-check.outputs.release-requested != 'true'
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Set up pip cache
       if: >-
@@ -165,6 +168,7 @@ jobs:
       if: steps.request-check.outputs.release-requested != 'true'
       id: scm-version
       run: |
+        from os import environ
         import setuptools_scm
         ver = setuptools_scm.get_version(
           ${{
@@ -172,28 +176,31 @@ jobs:
               && 'local_scheme="no-local-version"' || ''
           }}
         )
-        print('::set-output name=dist-version::{ver}'.format(ver=ver))
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print('dist-version={ver}'.format(ver=ver), file=github_output)
     - name: Set the target Git tag
       id: git-tag
       run: >-
-        print('::set-output name=tag::v${{
+        echo "tag=v${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}')
+        }}" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Set the expected dist artifact names
       id: artifact-name
       run: |
-        print('::set-output name=sdist::aiomysql-${{
+        echo "sdist=aiomysql-${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}.tar.gz')
-        print('::set-output name=wheel::aiomysql-${{
+        }}.tar.gz" >> "$GITHUB_OUTPUT"
+        echo "wheel=aiomysql-${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}-py3-none-any.whl')
+        }}-py3-none-any.whl" >> "$GITHUB_OUTPUT"
+      shell: bash
 
   build:
     name: >-
@@ -230,14 +237,16 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
       shell: python
     - name: Get pip cache dir
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
     - name: Set up pip cache
       uses: actions/cache@v3.3.1
       with:
@@ -334,14 +343,16 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
       shell: python
     - name: Get pip cache dir
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
     - name: Set up pip cache
       uses: actions/cache@v3.3.1
       with:
@@ -460,12 +471,15 @@ jobs:
     - name: Figure out if the interpreter ABI is stable
       id: py-abi
       run: |
+        from os import environ
         from sys import version_info
         is_stable_abi = version_info.releaselevel == 'final'
-        print(
-            '::set-output name=is-stable-abi::{is_stable_abi}'.
-            format(is_stable_abi=str(is_stable_abi).lower())
-        )
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(
+                'is-stable-abi={is_stable_abi}'.
+                format(is_stable_abi=str(is_stable_abi).lower()),
+                file=github_output,
+            )
       shell: python
 
     - name: >-
@@ -474,17 +488,19 @@ jobs:
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
       id: calc-cache-key-py
       run: |
+        from os import environ
         from hashlib import sha512
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print('::set-output name=py-hash-key::{hash}'.format(hash=hash))
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print('py-hash-key={hash}'.format(hash=hash), file=github_output)
       shell: python
 
     - name: Get pip cache dir
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
 
     - name: Set up pip cache
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
