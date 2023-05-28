@@ -28,7 +28,7 @@ async def test_datatypes(connection, cursor, datatype_table):
     # insert values
     v = (
         True, -3, 123456789012, 5.7, "hello'\" world",
-        u"Espa\xc3\xb1ol",
+        "Espa\xc3\xb1ol",
         "binary\x00data".encode(encoding),
         datetime.date(1988, 2, 2),
         datetime.datetime.now().replace(microsecond=0),
@@ -148,10 +148,10 @@ async def test_binary_data(cursor, table_cleanup):
 async def test_untyped_convertion_to_null_and_empty_string(cursor):
     await cursor.execute("select null,''")
     r = await cursor.fetchone()
-    assert (None, u'') == r
+    assert (None, '') == r
     await cursor.execute("select '',null")
     r = await cursor.fetchone()
-    assert (u'', None) == r
+    assert ('', None) == r
 
 
 @pytest.mark.run_loop

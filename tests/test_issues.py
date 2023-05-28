@@ -122,10 +122,10 @@ async def test_issue_15(connection):
     await c.execute("create table issue15 (t varchar(32))")
     try:
         await c.execute("insert into issue15 (t) values (%s)",
-                        (u'\xe4\xf6\xfc',))
+                        ('\xe4\xf6\xfc',))
         await c.execute("select t from issue15")
         r = await c.fetchone()
-        assert u'\xe4\xf6\xfc' == r[0]
+        assert '\xe4\xf6\xfc' == r[0]
     finally:
         await c.execute("drop table issue15")
 
@@ -412,8 +412,8 @@ async def test_issue_175(connection):
     conn = connection
     cur = await conn.cursor()
     for length in (200, 300):
-        cols = ', '.join('c{0} integer'.format(i) for i in range(length))
-        sql = 'create table test_field_count ({0})'.format(cols)
+        cols = ', '.join(f'c{i} integer' for i in range(length))
+        sql = f'create table test_field_count ({cols})'
         try:
             await cur.execute(sql)
             await cur.execute('select * from test_field_count')

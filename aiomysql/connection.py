@@ -542,7 +542,7 @@ class Connection:
             self.connected_time = self._loop.time()
 
             if self.sql_mode is not None:
-                await self.query("SET sql_mode=%s" % (self.sql_mode,))
+                await self.query(f"SET sql_mode={self.sql_mode}")
 
             if self.init_command is not None:
                 await self.query(self.init_command)
@@ -659,8 +659,8 @@ class Connection:
             msg = "Lost connection to MySQL server during query"
             self.close()
             raise OperationalError(CR.CR_SERVER_LOST, msg) from e
-        except (IOError, OSError) as e:
-            msg = "Lost connection to MySQL server during query (%s)" % (e,)
+        except OSError as e:
+            msg = f"Lost connection to MySQL server during query ({e})"
             self.close()
             raise OperationalError(CR.CR_SERVER_LOST, msg) from e
         return data
@@ -899,7 +899,7 @@ class Connection:
                 data = self._password.encode('latin1') + b'\0'
             else:
                 raise OperationalError(
-                    2059, "Authentication plugin '{0}'"
+                    2059, "Authentication plugin '{}'"
                           " not configured".format(plugin_name)
                 )
 
@@ -936,7 +936,7 @@ class Connection:
         if not pkt.is_extra_auth_data():
             raise OperationalError(
                 "caching sha2: Unknown packet "
-                "for fast auth: {0}".format(pkt._data[:1])
+                "for fast auth: {}".format(pkt._data[:1])
             )
 
         # magic numbers:
@@ -955,7 +955,7 @@ class Connection:
 
         if n != 4:
             raise OperationalError("caching sha2: Unknown "
-                                   "result for fast auth: {0}".format(n))
+                                   "result for fast auth: {}".format(n))
 
         logger.debug("caching sha2: Trying full auth...")
 
@@ -975,7 +975,7 @@ class Connection:
             if not pkt.is_extra_auth_data():
                 raise OperationalError(
                     "caching sha2: Unknown packet "
-                    "for public key: {0}".format(pkt._data[:1])
+                    "for public key: {}".format(pkt._data[:1])
                 )
 
             self.server_public_key = pkt._data[1:]
@@ -1126,7 +1126,7 @@ class Connection:
 
     def __del__(self):
         if self._writer:
-            warnings.warn("Unclosed connection {!r}".format(self),
+            warnings.warn(f"Unclosed connection {self!r}",
                           ResourceWarning)
             self.close()
 
@@ -1351,7 +1351,7 @@ class MySQLResult:
         self.description = tuple(description)
 
 
-class LoadLocalFile(object):
+class LoadLocalFile:
     def __init__(self, filename, connection):
         self.filename = filename
         self.connection = connection
@@ -1364,8 +1364,8 @@ class LoadLocalFile(object):
         def opener(filename):
             try:
                 self._file_object = open(filename, 'rb')
-            except IOError as e:
-                msg = "Can't find file '{0}'".format(filename)
+            except OSError as e:
+                msg = f"Can't find file '{filename}'"
                 raise OperationalError(1017, msg) from e
 
         fut = self._loop.run_in_executor(self._executor, opener, self.filename)
@@ -1384,7 +1384,7 @@ class LoadLocalFile(object):
             except Exception as e:
                 self._file_object.close()
                 self._file_object = None
-                msg = "Error reading file {}".format(self.filename)
+                msg = f"Error reading file {self.filename}"
                 raise OperationalError(1024, msg) from e
             return chunk
 

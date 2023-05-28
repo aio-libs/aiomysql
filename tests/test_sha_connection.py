@@ -24,7 +24,7 @@ import pytest
 def ensure_mysql_version(mysql_server):
     if mysql_server["db_type"] != "mysql" \
             or mysql_server["server_version_tuple_short"] != (8, 0):
-        pytest.skip("Not applicable for {0} version: {1}"
+        pytest.skip("Not applicable for {} version: {}"
                     .format(mysql_server["db_type"],
                             mysql_server["server_version_tuple_short"]))
 
