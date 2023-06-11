@@ -18,8 +18,8 @@ except ImportError:  # pragma: no cover
 
 
 class MySQLCompiler_pymysql(MySQLCompiler_mysqldb):
-    def construct_params(self, params=None, _group_number=None, _check=True):
-        pd = super().construct_params(params, _group_number, _check)
+    def construct_params(self, *args, **kwargs):
+        pd = super().construct_params(*args, **kwargs)
 
         for column in self.prefetch:
             pd[column.key] = self._exec_default(column.default)
