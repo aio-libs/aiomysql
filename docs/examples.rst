@@ -35,4 +35,4 @@ Example of using connection pool:
 sqlalchemy usage
 ----------------
 
-.. literalinclude:: ../examples/example_sa.py
+.. literalinclude:: ../examples/example_simple_sa.py

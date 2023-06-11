@@ -112,7 +112,7 @@ Let's take basic example of :meth:`Cursor.execute` method::
    loop = asyncio.get_event_loop()
    loop.run_until_complete(test_example_execute(loop))
    
-Please note that you need to manually call :func:`commit()` bound to your :term:`Connection` object, because by default it's set to ``False`` or in :meth:`aiomysql.connect()` you can transfer addition keyword argument ``autocommit=True``.
+Please note that you need to manually call :func:`commit()` bound to your :class:`Connection` object, because by default it's set to ``False`` or in :meth:`aiomysql.connect()` you can transfer addition keyword argument ``autocommit=True``.
 
 Example with ``autocommit=True``::
 
