@@ -148,13 +148,13 @@ class SAConnection:
                 key = query
                 compiled = self._compiled_cache.get(key)
                 if not compiled:
-                    compiled = query.compile(dialect=self._dialect)
+                    compiled = query.compile(dialect=self._dialect, compile_kwargs={"render_postcompile": True})
                     if dp and dp.keys() == compiled.params.keys() \
                             or not (dp or compiled.params):
                         # we only want queries with bound params in cache
                         self._compiled_cache[key] = compiled
             else:
-                compiled = query.compile(dialect=self._dialect)
+                compiled = query.compile(dialect=self._dialect, compile_kwargs={"render_postcompile": True})
 
             if not isinstance(query, DDLElement):
                 post_processed_params = self._base_params(
