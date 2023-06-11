@@ -682,7 +682,7 @@ jobs:
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
       uses: pypa/gh-action-pypi-publish@v1.8.6
       with:
-        print_hash: true
+        print-hash: true
 
   publish-testpypi:
     name: Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
@@ -714,8 +714,8 @@ jobs:
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
       uses: pypa/gh-action-pypi-publish@v1.8.6
       with:
-        repository_url: https://test.pypi.org/legacy/
-        print_hash: true
+        repository-url: https://test.pypi.org/legacy/
+        print-hash: true
 
   post-release-repo-update:
     name: >-
