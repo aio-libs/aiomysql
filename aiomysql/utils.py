@@ -1,6 +1,10 @@
+import asyncio
+import sys
 from collections.abc import Coroutine
 
 import struct
+
+from .log import logger
 
 
 def _pack_int24(n):
@@ -28,7 +32,6 @@ def _lenenc_int(i):
 
 
 class _ContextManager(Coroutine):
-
     __slots__ = ('_coro', '_obj')
 
     def __init__(self, coro):
@@ -122,7 +125,6 @@ class _TransactionContextManager(_ContextManager):
 
 
 class _PoolAcquireContextManager(_ContextManager):
-
     __slots__ = ('_coro', '_conn', '_pool')
 
     def __init__(self, coro, pool):
@@ -185,3 +187,153 @@ class _PoolConnectionContextManager:
         finally:
             self._pool = None
             self._conn = None
+
+
+class TaskTransactionContextManager:
+    __task_storage = dict()
+    __slots__ = ('_coro', '_conn', '_pool', '_counter', '_callback_list', '__connection_transaction_begin', '__connection_committed', '__connection_rollbacked')
+
+    def __init__(self, coro, pool):
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+        self._counter = 0
+        self._callback_list = list()
+        if sys.version_info < (3, 7):
+            task = asyncio.Task.current_task()
+
+        else:
+            task = asyncio.current_task()
+
+        if task in self.__task_storage:
+            raise Exception('task already in task_storage')
+
+        self.__task_storage[task] = self
+        self.__connection_transaction_begin = False
+        self.__connection_committed = False
+        self.__connection_rollbacked = False
+
+    @classmethod
+    def create(cls, coro, pool) -> 'TaskTransactionContextManager':
+        if sys.version_info < (3, 7):
+            task = asyncio.Task.current_task()
+
+        else:
+            task = asyncio.current_task()
+
+        if task in cls.__task_storage:
+            return cls.__task_storage[task]
+
+        return TaskTransactionContextManager(coro, pool)
+
+    @classmethod
+    def get_transaction_context_manager(cls, task=None) -> 'TaskTransactionContextManager':
+        if not task:
+            if sys.version_info < (3, 7):
+                task = asyncio.Task.current_task()
+
+            else:
+                task = asyncio.current_task()
+
+        return cls.__task_storage.get(task)
+
+    def add_callback_on_commit(self, callback_func, **kwargs):
+        self._callback_list.append((callback_func, kwargs))
+
+    async def connection_begin(self):
+        if not self.__connection_transaction_begin:
+            await self._conn.begin()
+            self.__connection_transaction_begin = True
+
+    async def connection_commit(self):
+        if self._counter <= 1:
+            await self._conn.commit()
+            for callback_func, kwargs in self._callback_list:
+                try:
+                    if asyncio.iscoroutine(callback_func):
+                        await callback_func(**kwargs)
+
+                    else:
+                        callback_func(**kwargs)
+
+                except Exception as e:
+                    logger.exception(e)
+
+            self._callback_list.clear()
+            self.__connection_committed = True
+
+    async def connection_rollback(self):
+        await self._conn.rollback()
+        self._callback_list.clear()
+        self.__connection_rollbacked = True
+
+    async def __aenter__(self):
+        self._counter += 1
+        if not self._conn:
+            self._conn = await self._coro
+
+        return TransactionConnection(self._conn)
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self._counter -= 1
+        if self._counter <= 0:
+            if self.__connection_transaction_begin and not self.__connection_committed and not self.__connection_rollbacked:
+                if not exc_type:
+                    logger.warning('sql operation was not committed. Try to commit by TaskTransactionContextManager')
+                    await self.connection_commit()
+
+            if sys.version_info < (3, 7):
+                self.__task_storage.pop(asyncio.Task.current_task(), None)
+
+            else:
+                self.__task_storage.pop(asyncio.current_task(), None)
+
+            try:
+                await self._pool.release(self._conn)
+
+            finally:
+                self._pool = None
+                self._conn = None
+                self.__connection_transaction_begin = False
+                self.__connection_committed = False
+                self.__connection_rollbacked = False
+
+
+class TransactionConnection:
+
+    def __init__(self, conn):
+        self.__conn = conn
+
+    def __str__(self):
+        return 'TransactionConnection ' + str(self.__conn)
+
+    async def begin(self):
+        """Begin transaction."""
+        if TaskTransactionContextManager.get_transaction_context_manager():
+            await TaskTransactionContextManager.get_transaction_context_manager().connection_begin()
+
+        else:
+            await self.__conn.begin()
+
+    async def commit(self):
+        """Commit changes to stable storage."""
+        if TaskTransactionContextManager.get_transaction_context_manager():
+            await TaskTransactionContextManager.get_transaction_context_manager().connection_commit()
+
+        else:
+            await self.__conn.commit()
+
+    async def rollback(self):
+        """Roll back the current transaction."""
+        if TaskTransactionContextManager.get_transaction_context_manager():
+            await TaskTransactionContextManager.get_transaction_context_manager().connection_rollback()
+
+        else:
+            await self.__conn.rollback()
+
+    def __getattr__(self, item):
+        return getattr(self.__conn, item)
+
+    @property
+    def conn(self):
+        return self.__conn
