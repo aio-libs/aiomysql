@@ -67,3 +67,5 @@ target/
 tests/fixtures/my.cnf
 
 .pytest_cache
+
+venv
