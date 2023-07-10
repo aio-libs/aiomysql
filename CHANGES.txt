@@ -1,6 +1,11 @@
 Changes
 -------
 
+next (unreleased)
+^^^^^^^^^^^^^^^^^
+
+* Add pluggable authentication plugins.
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 

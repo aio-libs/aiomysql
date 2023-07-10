@@ -29,6 +29,7 @@ from pymysql.err import (Warning, Error, InterfaceError, DataError,
                          InternalError,
                          NotSupportedError, ProgrammingError, MySQLError)
 
+from .auth import AuthPlugin
 from .connection import Connection, connect
 from .cursors import Cursor, SSCursor, DictCursor, SSDictCursor
 from .pool import create_pool, Pool
@@ -55,6 +56,7 @@ __all__ = [
     'escape_sequence',
     'escape_string',
 
+    "AuthPlugin",
     'Connection',
     'Pool',
     'connect',
