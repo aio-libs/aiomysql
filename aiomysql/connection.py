@@ -428,17 +428,20 @@ class Connection:
             return s.replace("'", "''")
         return escape_string(s)
 
-    def cursor(self, *cursors):
+    def cursor(self, echo=False, *cursors):
         """Instantiates and returns a cursor
 
         By default, :class:`Cursor` is returned. It is possible to also give a
         custom cursor through the cursor_class parameter, but it needs to
         be a subclass  of :class:`Cursor`
 
-        :param cursor: custom cursor class.
+        :param cursors: custom cursor class.
+        :param echo: create cursor with echo option
         :returns: instance of cursor, by default :class:`Cursor`
         :raises TypeError: cursor_class is not a subclass of Cursor.
         """
+        if echo is None:
+            echo = self._echo
         self._ensure_alive()
         self._last_usage = self._loop.time()
         try:
@@ -448,14 +451,14 @@ class Connection:
         except TypeError:
             raise TypeError('Custom cursor must be subclass of Cursor')
         if cursors and len(cursors) == 1:
-            cur = cursors[0](self, self._echo)
+            cur = cursors[0](self, echo)
         elif cursors:
             cursor_name = ''.join(map(lambda x: x.__name__, cursors)) \
                 .replace('Cursor', '') + 'Cursor'
             cursor_class = type(cursor_name, cursors, {})
-            cur = cursor_class(self, self._echo)
+            cur = cursor_class(self, echo)
         else:
-            cur = self.cursorclass(self, self._echo)
+            cur = self.cursorclass(self, echo)
         fut = self._loop.create_future()
         fut.set_result(cur)
         return _ContextManager(fut)
@@ -717,6 +720,9 @@ class Connection:
 
         if isinstance(sql, str):
             sql = sql.encode(self._encoding)
+
+        if self._echo:
+            logger.debug("ECHO: " + str(sql), extra={"command": command})
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 
