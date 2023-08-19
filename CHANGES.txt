@@ -1,6 +1,11 @@
 Changes
 -------
 
+next (unreleased)
+^^^^^^^^^^^^^^^^^
+
+* Update build-system requirements to drop the use of setuptools-scm-git-archive #955
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 
