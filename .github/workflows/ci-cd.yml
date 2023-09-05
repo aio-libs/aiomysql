@@ -91,7 +91,7 @@ jobs:
     - name: Check out src from Git
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ github.event.inputs.release-commitish }}
@@ -269,7 +269,7 @@ jobs:
         build
 
     - name: Grab the source from Git
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: >-
           ${{
@@ -368,7 +368,7 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Grab the source from Git
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
@@ -526,7 +526,7 @@ jobs:
         pip
 
     - name: Grab the source from Git
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ github.event.inputs.release-commitish }}
 
@@ -728,7 +728,7 @@ jobs:
 
     steps:
     - name: Fetch the src snapshot
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
@@ -765,7 +765,7 @@ jobs:
 
     steps:
     - name: Fetch the src snapshot
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
