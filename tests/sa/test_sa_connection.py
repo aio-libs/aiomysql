@@ -1,12 +1,12 @@
 from unittest import mock
 
+import aiomysql
+from aiomysql import sa, Cursor
+
 import pytest
 from sqlalchemy import MetaData, Table, Column, Integer, String, func, select
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.sql.expression import bindparam
-
-import aiomysql
-from aiomysql import sa, Cursor
 
 meta = MetaData()
 tbl = Table('sa_tbl', meta,
@@ -33,6 +33,13 @@ def sa_connect(connection_creator):
         engine.dialect = sa.engine._dialect
         return sa.SAConnection(conn, engine)
     return connect
+
+
+@pytest.mark.run_loop
+async def test_read_timeout(sa_connect):
+    conn = await sa_connect(read_timeout=0.01)
+    with pytest.raises(aiomysql.OperationalError):
+        await conn.execute("DO SLEEP(1)")
 
 
 @pytest.mark.run_loop
