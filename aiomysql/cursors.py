@@ -59,7 +59,7 @@ class Cursor:
     def description(self):
         """This read-only attribute is a sequence of 7-item sequences.
 
-        Each of these sequences is a collections.namedtuple containing
+        Each of these sequences is a tuple containing
         information describing one result column:
 
         0.  name: the name of the column returned.
