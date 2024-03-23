@@ -35,7 +35,7 @@ class Cursor:
     #: Default value of max_allowed_packet is 1048576.
     max_stmt_length = 1024000
 
-    def __init__(self, connection, echo: bool = False) -> None:
+    def __init__(self, connection, echo=False):
         """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
         """
