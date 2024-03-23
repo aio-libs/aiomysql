@@ -13,9 +13,6 @@ from ._type import Description
 from .log import logger
 from .connection import FIELD_TYPE
 
-if t.TYPE_CHECKING:
-    from .connection import Connection
-
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
 #: Regular expression for :meth:`Cursor.executemany`.
@@ -38,7 +35,7 @@ class Cursor:
     #: Default value of max_allowed_packet is 1048576.
     max_stmt_length = 1024000
 
-    def __init__(self, connection: 'Connection', echo: bool = False) -> None:
+    def __init__(self, connection, echo: bool = False) -> None:
         """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
         """
@@ -55,7 +52,7 @@ class Cursor:
         self._echo = echo
 
     @property
-    def connection(self) -> 'Connection':
+    def connection(self):
         """This read-only attribute return a reference to the Connection
         object on which the cursor was created."""
         return self._connection
