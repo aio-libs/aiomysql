@@ -7,9 +7,14 @@ from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
+import typing as t
 
+from ._type import Description
 from .log import logger
 from .connection import FIELD_TYPE
+
+if t.TYPE_CHECKING:
+    from .connection import Connection
 
 # https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
 
@@ -33,7 +38,7 @@ class Cursor:
     #: Default value of max_allowed_packet is 1048576.
     max_stmt_length = 1024000
 
-    def __init__(self, connection, echo=False):
+    def __init__(self, connection: 'Connection', echo: bool = False) -> None:
         """Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
         """
@@ -50,28 +55,14 @@ class Cursor:
         self._echo = echo
 
     @property
-    def connection(self):
+    def connection(self) -> 'Connection':
         """This read-only attribute return a reference to the Connection
         object on which the cursor was created."""
         return self._connection
 
     @property
-    def description(self):
+    def description(self) -> t.Optional[t.Tuple[Description]]:
         """This read-only attribute is a sequence of 7-item sequences.
-
-        Each of these sequences is a tuple containing
-        information describing one result column:
-
-        0.  name: the name of the column returned.
-        1.  type_code: the type of the column.
-        2.  display_size: the actual length of the column in bytes.
-        3.  internal_size: the size in bytes of the column associated to
-            this column on the server.
-        4.  precision: total number of significant digits in columns of
-            type NUMERIC. None for other types.
-        5.  scale: count of decimal digits in the fractional part in
-            columns of type NUMERIC. None for other types.
-        6.  null_ok: always None as not easy to retrieve from the libpq.
 
         This attribute will be None for operations that do not
         return rows or if the cursor has not had an operation invoked
