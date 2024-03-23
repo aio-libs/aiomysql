@@ -34,6 +34,7 @@ from pymysql.connections import EOFPacketWrapper
 from pymysql.connections import OKPacketWrapper
 from pymysql.connections import LoadLocalPacketWrapper
 
+from ._type import Description
 # from aiomysql.utils import _convert_to_str
 from .cursors import Cursor
 from .utils import _pack_int24, _lenenc_int, _ConnectionContextManager, _ContextManager
@@ -1317,7 +1318,7 @@ class MySQLResult:
             field = await self.connection._read_packet(
                 FieldDescriptorPacket)
             self.fields.append(field)
-            description.append(field.description())
+            description.append(Description(*field.description()))
             field_type = field.type_code
             if use_unicode:
                 if field_type == FIELD_TYPE.JSON:

@@ -7,7 +7,9 @@ from pymysql.err import (
     Warning, Error, InterfaceError, DataError,
     DatabaseError, OperationalError, IntegrityError, InternalError,
     NotSupportedError, ProgrammingError)
+import typing as t
 
+from ._type import Description
 from .log import logger
 from .connection import FIELD_TYPE
 
@@ -56,22 +58,8 @@ class Cursor:
         return self._connection
 
     @property
-    def description(self):
+    def description(self) -> t.Optional[t.Sequence[Description]]:
         """This read-only attribute is a sequence of 7-item sequences.
-
-        Each of these sequences is a collections.namedtuple containing
-        information describing one result column:
-
-        0.  name: the name of the column returned.
-        1.  type_code: the type of the column.
-        2.  display_size: the actual length of the column in bytes.
-        3.  internal_size: the size in bytes of the column associated to
-            this column on the server.
-        4.  precision: total number of significant digits in columns of
-            type NUMERIC. None for other types.
-        5.  scale: count of decimal digits in the fractional part in
-            columns of type NUMERIC. None for other types.
-        6.  null_ok: always None as not easy to retrieve from the libpq.
 
         This attribute will be None for operations that do not
         return rows or if the cursor has not had an operation invoked
