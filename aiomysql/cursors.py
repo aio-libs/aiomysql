@@ -58,7 +58,7 @@ class Cursor:
         return self._connection
 
     @property
-    def description(self) -> t.Optional[t.Tuple[Description, ...]]:
+    def description(self) -> t.Optional[t.Sequence[Description]]:
         """This read-only attribute is a sequence of 7-item sequences.
 
         This attribute will be None for operations that do not
