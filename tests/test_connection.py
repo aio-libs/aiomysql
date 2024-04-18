@@ -26,7 +26,8 @@ def fill_my_cnf(mysql_params):
 
 @pytest.mark.run_loop
 async def test_connect_timeout(connection_creator):
-    # All exceptions are caught and raised as operational errors
+    # OSErrors and asyncio.TimeoutError are caught and raised as operational
+    # errors
     with pytest.raises(aiomysql.OperationalError):
         await connection_creator(connect_timeout=0.000000000001)
 

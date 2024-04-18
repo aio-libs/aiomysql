@@ -65,7 +65,7 @@ jobs:
       wheel-artifact-name: ${{ steps.artifact-name.outputs.wheel }}
     steps:
     - name: Switch to using Python 3.10 by default
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: >-
           3.10
@@ -80,12 +80,14 @@ jobs:
           'refs/heads/{0}', github.event.repository.default_branch
         )
       run: >-
-        print('::set-output name=is-untagged-devel::true')
+        echo "is-untagged-devel=true" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Mark the build as "release request"
       id: request-check
       if: github.event_name == 'workflow_dispatch'
       run: >-
-        print('::set-output name=release-requested::true')
+        echo "release-requested=true" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Check out src from Git
       if: >-
         steps.request-check.outputs.release-requested != 'true'
@@ -101,36 +103,37 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
     - name: >-
         Calculate dependency files' combined hash value
         for use in the cache key
       if: >-
         steps.request-check.outputs.release-requested != 'true'
       id: calc-cache-key-files
-      run: |
-        print(
-          "::set-output name=files-hash-key::${{
-              hashFiles(
+      run: >-
+        echo "files-hash-key=${{
+            hashFiles(
                 'requirements-dev.txt',
                 'setup.cfg',
                 'pyproject.toml'
-              )
-          }}",
-        )
+            )
+        }}" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Get pip cache dir
       id: pip-cache-dir
       if: >-
         steps.request-check.outputs.release-requested != 'true'
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Set up pip cache
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: actions/cache@v3.0.2
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -165,6 +168,7 @@ jobs:
       if: steps.request-check.outputs.release-requested != 'true'
       id: scm-version
       run: |
+        from os import environ
         import setuptools_scm
         ver = setuptools_scm.get_version(
           ${{
@@ -172,28 +176,31 @@ jobs:
               && 'local_scheme="no-local-version"' || ''
           }}
         )
-        print('::set-output name=dist-version::{ver}'.format(ver=ver))
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print('dist-version={ver}'.format(ver=ver), file=github_output)
     - name: Set the target Git tag
       id: git-tag
       run: >-
-        print('::set-output name=tag::v${{
+        echo "tag=v${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}')
+        }}" >> "$GITHUB_OUTPUT"
+      shell: bash
     - name: Set the expected dist artifact names
       id: artifact-name
       run: |
-        print('::set-output name=sdist::aiomysql-${{
+        echo "sdist=aiomysql-${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}.tar.gz')
-        print('::set-output name=wheel::aiomysql-${{
+        }}.tar.gz" >> "$GITHUB_OUTPUT"
+        echo "wheel=aiomysql-${{
             steps.request-check.outputs.release-requested == 'true'
             && github.event.inputs.release-version
             || steps.scm-version.outputs.dist-version
-        }}-py3-none-any.whl')
+        }}-py3-none-any.whl" >> "$GITHUB_OUTPUT"
+      shell: bash
 
   build:
     name: >-
@@ -220,7 +227,7 @@ jobs:
 
     steps:
     - name: Switch to using Python v3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: >-
           3.10
@@ -230,16 +237,18 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
       shell: python
     - name: Get pip cache dir
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
     - name: Set up pip cache
-      uses: actions/cache@v3.0.2
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -273,7 +282,7 @@ jobs:
       if: >-
         fromJSON(needs.pre-setup.outputs.is-untagged-devel)
         || fromJSON(needs.pre-setup.outputs.release-requested)
-      uses: fregante/setup-git-user@6cef8bf084d00360a293e0cc3c56e1b45d6502b8
+      uses: fregante/setup-git-user@77c1b5542f14ab6db4b8462d6857e31deb988b09
     - name: >-
         Tag the release in the local Git repo
         as ${{ needs.pre-setup.outputs.git-tag }}
@@ -324,7 +333,7 @@ jobs:
 
     steps:
     - name: Switch to using Python 3.10 by default
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: >-
           3.10
@@ -334,16 +343,18 @@ jobs:
       id: calc-cache-key-py
       run: |
         from hashlib import sha512
+        from os import environ
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print(f'::set-output name=py-hash-key::{hash}')
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(f'py-hash-key={hash}', file=github_output)
       shell: python
     - name: Get pip cache dir
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
     - name: Set up pip cache
-      uses: actions/cache@v3.0.2
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -375,9 +386,9 @@ jobs:
         --requirement requirements-dev.txt
 
     - name: flake8 Lint
-      uses: py-actions/flake8@v2.0.0
+      uses: py-actions/flake8@v2.2.1
       with:
-        flake8-version: 4.0.1
+        flake8-version: 5.0.4
         path: aiomysql
         args: tests examples
 
@@ -398,6 +409,8 @@ jobs:
     - build
     - pre-setup  # transitive, for accessing settings
     strategy:
+      # when updating matrix jobs make sure to adjust the expected reports in
+      # codecov.notify.after_n_builds in .codecov.yml
       matrix:
         # service containers are only supported on ubuntu currently
         os:
@@ -407,16 +420,16 @@ jobs:
         - '3.8'
         - '3.9'
         - '3.10'
-        - '3.11-dev'
+        - '3.11'
         db:
         - [mysql, '5.7']
         - [mysql, '8.0']
-        - [mariadb, '10.2']
-        - [mariadb, '10.3']
         - [mariadb, '10.4']
         - [mariadb, '10.5']
         - [mariadb, '10.6']
-        - [mariadb, '10.7']
+        - [mariadb, '10.9']
+        - [mariadb, '10.10']
+        - [mariadb, '10.11']
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -450,19 +463,23 @@ jobs:
 
     steps:
     - name: Setup Python ${{ matrix.py }}
-      uses: actions/setup-python@v3
+      id: python-install
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.py }}
 
     - name: Figure out if the interpreter ABI is stable
       id: py-abi
       run: |
+        from os import environ
         from sys import version_info
         is_stable_abi = version_info.releaselevel == 'final'
-        print(
-            '::set-output name=is-stable-abi::{is_stable_abi}'.
-            format(is_stable_abi=str(is_stable_abi).lower())
-        )
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print(
+                'is-stable-abi={is_stable_abi}'.
+                format(is_stable_abi=str(is_stable_abi).lower()),
+                file=github_output,
+            )
       shell: python
 
     - name: >-
@@ -471,21 +488,23 @@ jobs:
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
       id: calc-cache-key-py
       run: |
+        from os import environ
         from hashlib import sha512
         from sys import version
         hash = sha512(version.encode()).hexdigest()
-        print('::set-output name=py-hash-key::{hash}'.format(hash=hash))
+        with open(environ['GITHUB_OUTPUT'], mode='a') as github_output:
+            print('py-hash-key={hash}'.format(hash=hash), file=github_output)
       shell: python
 
     - name: Get pip cache dir
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
       id: pip-cache-dir
       run: >-
-        echo "::set-output name=dir::$(python -m pip cache dir)"
+        echo "dir=$(python -m pip cache dir)" >> "$GITHUB_OUTPUT"
 
     - name: Set up pip cache
       if: fromJSON(steps.py-abi.outputs.is-stable-abi)
-      uses: actions/cache@v3.0.2
+      uses: actions/cache@v3.3.1
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
         key: >-
@@ -503,6 +522,7 @@ jobs:
         python -m
         pip install
         --user
+        --upgrade
         pip
 
     - name: Grab the source from Git
@@ -582,13 +602,7 @@ jobs:
         # we need to ensure that the socket path is writable for the user running the DB process in the container
         sudo chmod 0777 /tmp/run-${{ join(matrix.db, '-') }}
 
-        # mysql 5.7 container overrides the socket path in /etc/mysql/mysql.conf.d/mysqld.cnf
-        if [ "${{ join(matrix.db, '-') }}" = "mysql-5.7" ]
-        then
-          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/mysql.conf.d/zz-aiomysql-socket.cnf
-        else
-          docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
-        fi
+        docker container cp "${{ github.workspace }}/tests/ssl_resources/socket.cnf" mysqld:/etc/mysql/conf.d/aiomysql-socket.cnf
 
         docker container start mysqld
 
@@ -604,18 +618,24 @@ jobs:
     - name: Run tests
       run: |
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
-        timeout --preserve-status --signal=INT --verbose 5m \
+        timeout --preserve-status --signal=INT --verbose 570s \
           pytest --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql --cov tests ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
       env:
         PYTHONUNBUFFERED: 1
-      timeout-minutes: 6
+      timeout-minutes: 10
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3.1.4
       with:
         file: ./coverage.xml
-        flags: "${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}"
+        flags: >-
+          CI-GHA,
+          OS-${{ runner.os }},
+          VM-${{ matrix.os }},
+          Py-${{ steps.python-install.outputs.python-version }},
+          DB-${{ join(matrix.db, '-') }},
+          ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
 
   check:  # This job does nothing and is only used for the branch protection
@@ -629,7 +649,7 @@ jobs:
 
     steps:
     - name: Decide whether the needed jobs succeeded or failed
-      uses: re-actors/alls-green@v1.1.0
+      uses: re-actors/alls-green@v1.2.2
       with:
         jobs: ${{ toJSON(needs) }}
 
@@ -649,6 +669,9 @@ jobs:
           needs.pre-setup.outputs.dist-version
         }}
 
+    permissions:
+      id-token: write  # this permission is mandatory for trusted publishing
+
     steps:
     - name: Download all the dists
       uses: actions/download-artifact@v3
@@ -657,10 +680,9 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.5.0
+      uses: pypa/gh-action-pypi-publish@v1.8.6
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        print_hash: true
+        print-hash: true
 
   publish-testpypi:
     name: Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
@@ -679,6 +701,9 @@ jobs:
           needs.pre-setup.outputs.dist-version
         }}
 
+    permissions:
+      id-token: write  # this permission is mandatory for trusted publishing
+
     steps:
     - name: Download all the dists
       uses: actions/download-artifact@v3
@@ -687,11 +712,10 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
-      uses: pypa/gh-action-pypi-publish@v1.5.0
+      uses: pypa/gh-action-pypi-publish@v1.8.6
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
-        print_hash: true
+        repository-url: https://test.pypi.org/legacy/
+        print-hash: true
 
   post-release-repo-update:
     name: >-
@@ -709,7 +733,7 @@ jobs:
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
     - name: Setup git user as [bot]
-      uses: fregante/setup-git-user@6cef8bf084d00360a293e0cc3c56e1b45d6502b8
+      uses: fregante/setup-git-user@77c1b5542f14ab6db4b8462d6857e31deb988b09
 
     - name: >-
         Tag the release in the local Git repo
@@ -755,7 +779,7 @@ jobs:
     - name: >-
         Publish a GitHub Release for
         ${{ needs.pre-setup.outputs.git-tag }}
-      uses: ncipollo/release-action@58ae73b360456532aafd58ee170c045abbeaee37
+      uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
       with:
         artifacts: |
           dist/${{ needs.pre-setup.outputs.sdist-artifact-name }}

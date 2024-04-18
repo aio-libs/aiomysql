@@ -42,10 +42,10 @@ async def test_ssursor(connection):
     cursor = await conn.cursor(SSCursor)
     # Create table
     await cursor.execute('DROP TABLE IF EXISTS tz_data;')
-    await cursor.execute(('CREATE TABLE tz_data ('
-                          'region VARCHAR(64),'
-                          'zone VARCHAR(64),'
-                          'name VARCHAR(64))'))
+    await cursor.execute('CREATE TABLE tz_data ('
+                         'region VARCHAR(64),'
+                         'zone VARCHAR(64),'
+                         'name VARCHAR(64))')
 
     # Test INSERT
     for i in DATA:
@@ -196,7 +196,11 @@ async def test_sscursor_discarded_result(connection):
     await _prepare(conn)
     async with conn.cursor(SSCursor) as cursor:
         await cursor.execute("select 1")
-        await cursor.execute("select 2")
+        with pytest.warns(
+            UserWarning,
+            match="Previous unbuffered result was left incomplete",
+        ):
+            await cursor.execute("select 2")
         ret = await cursor.fetchone()
     assert (2,) == ret
 
@@ -262,7 +266,10 @@ async def test_max_execution_time(mysql_server, connection):
 
         # this discards the previous unfinished query and raises an
         # incomplete unbuffered query warning
-        with pytest.warns(UserWarning):
+        with pytest.warns(
+            UserWarning,
+            match="Previous unbuffered result was left incomplete",
+        ):
             await cur.execute("SELECT 1")
         assert (await cur.fetchone()) == (1,)
 

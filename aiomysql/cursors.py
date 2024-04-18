@@ -196,7 +196,7 @@ class Cursor:
         if isinstance(args, (tuple, list)):
             return tuple(conn.escape(arg) for arg in args)
         elif isinstance(args, dict):
-            return dict((key, conn.escape(val)) for (key, val) in args.items())
+            return {key: conn.escape(val) for (key, val) in args.items()}
         else:
             # If it's not a dictionary let's try escaping it anyways.
             # Worst case it will throw a Value error
@@ -357,7 +357,7 @@ class Cursor:
             await self.nextset()
 
         _args = ','.join('@_%s_%d' % (procname, i) for i in range(len(args)))
-        q = "CALL %s(%s)" % (procname, _args)
+        q = f"CALL {procname}({_args})"
         await self._query(q)
         self._executed = q
         return args

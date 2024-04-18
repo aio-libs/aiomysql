@@ -3,21 +3,11 @@ import gc
 import os
 import re
 import ssl
-import sys
 
 import aiomysql
 import pymysql
 import pytest
-
-
-# version gate can be removed once uvloop supports python 3.11
-# https://github.com/MagicStack/uvloop/issues/450
-# https://github.com/MagicStack/uvloop/pull/459
-PY_311 = sys.version_info >= (3, 11)
-if PY_311:
-    uvloop = None
-else:
-    import uvloop
+import uvloop
 
 
 @pytest.fixture
@@ -50,7 +40,7 @@ def pytest_generate_tests(metafunc):
                 ids.append(label)
             else:
                 mysql_addresses.append(opt_mysql_unix_socket[i])
-                ids.append("unix{}".format(i))
+                ids.append(f"unix{i}")
 
         opt_mysql_address = list(metafunc.config.getoption("mysql_address"))
         for i in range(len(opt_mysql_address)):
@@ -59,7 +49,7 @@ def pytest_generate_tests(metafunc):
                 ids.append(label)
             else:
                 addr = opt_mysql_address[i]
-                ids.append("tcp{}".format(i))
+                ids.append(f"tcp{i}")
 
             if ":" in addr:
                 addr = addr.split(":", 1)
@@ -242,7 +232,7 @@ def table_cleanup(loop, connection):
     yield _register_table
     for t in table_list:
         # TODO: probably this is not safe code
-        sql = "DROP TABLE IF EXISTS {};".format(t)
+        sql = f"DROP TABLE IF EXISTS {t};"
         loop.run_until_complete(cursor.execute(sql))
 
 
@@ -349,6 +339,7 @@ def mysql_server(mysql_address):
                                'WITH "caching_sha2_password" '
                                'PASSWORD EXPIRE NEVER')
                 cursor.execute('FLUSH PRIVILEGES')
+        connection.close()
     except Exception:
         pytest.fail("Cannot initialize MySQL environment")
 
