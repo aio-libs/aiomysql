@@ -667,7 +667,7 @@ class Connection:
             return self._writer.write(data)
         except RuntimeError as e:
             self.close()
-            msg = "Lost connection to MySQL server during query (%s)" % (e,)
+            msg = "Lost connection to MySQL server during query ({})".format(e)
             raise OperationalError(2013, msg) from e
 
     async def _read_query_result(self, unbuffered=False):
