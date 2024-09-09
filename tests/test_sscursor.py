@@ -66,6 +66,15 @@ async def test_ssursor(connection):
 
 
 @pytest.mark.run_loop
+async def test_ssursor_conn_closed(connection):
+    conn = connection
+    cursor = await conn.cursor(SSCursor)
+
+    conn.close()
+    await cursor.close()
+
+
+@pytest.mark.run_loop
 async def test_sscursor_fetchall(connection):
     conn = connection
     cursor = await conn.cursor(SSCursor)
