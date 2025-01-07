@@ -47,8 +47,8 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
 
     async def test_example():
         async with aiomysql.create_pool(host='127.0.0.1', port=3306,
-                                          user='root', password='',
-                                          db='mysql') as pool:
+                                        user='root', password='',
+                                        db='mysql') as pool:
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute("SELECT 42;")
