@@ -45,22 +45,19 @@ Properties are unchanged, so ``conn.prop`` is correct as well as
     import aiomysql
 
 
-    async def test_example(loop):
-        pool = await aiomysql.create_pool(host='127.0.0.1', port=3306,
+    async def test_example():
+        async with aiomysql.create_pool(host='127.0.0.1', port=3306,
                                           user='root', password='',
-                                          db='mysql', loop=loop)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT 42;")
-                print(cur.description)
-                (r,) = await cur.fetchone()
-                assert r == 42
-        pool.close()
-        await pool.wait_closed()
+                                          db='mysql') as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute("SELECT 42;")
+                    print(cur.description)
+                    (r,) = await cur.fetchone()
+                    assert r == 42
 
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_example(loop))
+    asyncio.run(test_example())
 
 
 Example of SQLAlchemy optional integration
@@ -83,9 +80,9 @@ for aiopg_ user.:
                    sa.Column('val', sa.String(255)))
 
 
-    async def go(loop):
+    async def go():
         engine = await create_engine(user='root', db='test_pymysql',
-                                     host='127.0.0.1', password='', loop=loop)
+                                     host='127.0.0.1', password='')
         async with engine.acquire() as conn:
             await conn.execute(tbl.insert().values(val='abc'))
             await conn.execute(tbl.insert().values(val='xyz'))
@@ -97,8 +94,7 @@ for aiopg_ user.:
         await engine.wait_closed()
 
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(go(loop))
+    asyncio.run(go())
 
 
 Requirements
