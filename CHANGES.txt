@@ -1,6 +1,23 @@
 Changes
 -------
 
+0.2.0 (2023-06-11)
+^^^^^^^^^^^^^^^^^^
+
+* Bump minimal SQLAlchemy version to 1.3 #815
+
+* Remove deprecated Pool.get #706
+
+* | Partially ported `PyMySQL#304 <https://github.com/PyMySQL/PyMySQL/pull/304>`_ #792
+  | aiomysql now reraises the original exception during connect() if it's not `IOError`, `OSError` or `asyncio.TimeoutError`.
+  | This was previously always raised as `OperationalError`.
+
+* Fix debug log level with sha256_password authentication #863
+
+* Modernized code with `pyupgrade <https://github.com/asottile/pyupgrade>`_ to Python 3.7+ syntax #930
+
+* Removed tests for EoL MariaDB versions 10.3, 10.7 and 10.8, added tests for MariaDB 10.9, 10.10, 10.11 #932
+
 0.1.1 (2022-05-08)
 ^^^^^^^^^^^^^^^^^^
 

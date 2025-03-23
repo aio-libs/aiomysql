@@ -20,7 +20,9 @@ table = Table('sa_tbl_default_test', meta,
 
 
 @pytest.fixture()
-def make_engine(mysql_params, connection):
+def make_engine(connection, mysql_params, loop):
+    engines = []
+
     async def _make_engine(**kwargs):
         if "unix_socket" in mysql_params:
             conn_args = {"unix_socket": mysql_params["unix_socket"]}
@@ -29,15 +31,27 @@ def make_engine(mysql_params, connection):
                 "host": mysql_params['host'],
                 "port": mysql_params['port'],
             }
+            if "ssl" in mysql_params:
+                conn_args["ssl"] = mysql_params["ssl"]
 
-        return (await sa.create_engine(db=mysql_params['db'],
-                                       user=mysql_params['user'],
-                                       password=mysql_params['password'],
-                                       minsize=10,
-                                       **conn_args,
-                                       **kwargs))
+        engine = await sa.create_engine(
+            db=mysql_params['db'],
+            user=mysql_params['user'],
+            password=mysql_params['password'],
+            minsize=10,
+            **conn_args,
+            **kwargs,
+        )
 
-    return _make_engine
+        engines.append(engine)
+
+        return engine
+
+    yield _make_engine
+
+    for engine in engines:
+        engine.terminate()
+        loop.run_until_complete(engine.wait_closed())
 
 
 async def start(engine):

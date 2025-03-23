@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy import MetaData, Table, Column, Integer, String, func, select
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.sql.expression import bindparam
 
@@ -130,7 +130,7 @@ async def test_execute_sa_insert_positional_params(sa_connect):
 @pytest.mark.run_loop
 async def test_scalar(sa_connect):
     conn = await sa_connect()
-    res = await conn.scalar(tbl.count())
+    res = await conn.scalar(select([func.count()]).select_from(tbl))
     assert 1 == res
 
 
@@ -464,5 +464,19 @@ async def test_async_iter(sa_connect):
 
     ret = []
     async for row in conn.execute(tbl.select()):
+        ret.append(row)
+    assert [(1, "first"), (2, "second")] == ret
+
+
+@pytest.mark.run_loop
+async def test_statement_in(sa_connect):
+    conn = await sa_connect()
+    await conn.execute(tbl.insert().values(name="second"))
+    await conn.execute(tbl.insert().values(name="third"))
+
+    stmt = tbl.select().where(tbl.c.id.in_([1, 2]))
+
+    ret = []
+    async for row in conn.execute(stmt):
         ret.append(row)
     assert [(1, "first"), (2, "second")] == ret

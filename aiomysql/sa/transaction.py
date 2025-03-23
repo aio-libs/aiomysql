@@ -3,7 +3,7 @@
 from . import exc
 
 
-class Transaction(object):
+class Transaction:
     """Represent a database transaction in progress.
 
     The Transaction object is procured by
@@ -114,7 +114,7 @@ class NestedTransaction(Transaction):
     _savepoint = None
 
     def __init__(self, connection, parent):
-        super(NestedTransaction, self).__init__(connection, parent)
+        super().__init__(connection, parent)
 
     async def _do_rollback(self):
         assert self._savepoint is not None, "Broken transaction logic"
