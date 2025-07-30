@@ -9,10 +9,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "aiomysql"
-dynamic = ["version"]
-
 [tool.setuptools_scm]
 write_to = "aiomysql/_scm_version.py"
 fallback_version = "0.2.1"
