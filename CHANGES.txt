@@ -1,6 +1,15 @@
 Changes
 -------
 
+0.2.1 (2025-07-30)
+^^^^^^^^^^^^^^^^^^
+
+* Add native Python support for SHA256 MySQL authentication methods without requiring cryptography package
+* Implement native RSA encryption using Python standard library for sha256_password and caching_sha2_password
+* Add comprehensive test suite for native authentication methods
+* Enable deployment in No-GIL Python environments and restricted environments where cryptography is unavailable
+* Maintain 100% backward compatibility with automatic fallback to cryptography when available
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 

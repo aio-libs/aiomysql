@@ -27,6 +27,7 @@ from pymysql.err import (Warning, Error,
 
 from pymysql.connections import TEXT_TYPES, MAX_PACKET_LEN, DEFAULT_CHARSET
 from pymysql.connections import _auth
+from . import _auth_native
 
 from pymysql.connections import MysqlPacket
 from pymysql.connections import FieldDescriptorPacket
@@ -43,6 +44,16 @@ try:
     DEFAULT_USER = getpass.getuser()
 except KeyError:
     DEFAULT_USER = "unknown"
+
+
+def _safe_rsa_encrypt(password, salt, server_public_key):
+    """Safely encrypt password with RSA, falling back to native implementation."""
+    try:
+        # Try using pymysql's implementation first (requires cryptography)
+        return _auth.sha2_rsa_encrypt(password, salt, server_public_key)
+    except (ImportError, RuntimeError):
+        # Fall back to native implementation
+        return _auth_native.sha2_rsa_encrypt_native(password, salt, server_public_key)
 
 
 def connect(host="localhost", user=None, password="",
@@ -788,11 +799,11 @@ class Connection:
             auth_plugin = self._server_auth_plugin
 
         if auth_plugin in ('', 'mysql_native_password'):
-            authresp = _auth.scramble_native_password(
+            authresp = _auth_native.scramble_native_password(
                 self._password.encode('latin1'), self.salt)
         elif auth_plugin == 'caching_sha2_password':
             if self._password:
-                authresp = _auth.scramble_caching_sha2(
+                authresp = _auth_native.scramble_caching_sha2(
                     self._password.encode('latin1'), self.salt
                 )
             # Else: empty password
@@ -883,7 +894,7 @@ class Connection:
                 # https://dev.mysql.com/doc/internals/en/
                 # secure-password-authentication.html#packet-Authentication::
                 # Native41
-                data = _auth.scramble_native_password(
+                data = _auth_native.scramble_native_password(
                     self._password.encode('latin1'),
                     auth_packet.read_all())
             elif plugin_name == b"mysql_old_password":
@@ -923,7 +934,7 @@ class Connection:
             # Try from fast auth
             logger.debug("caching sha2: Trying fast path")
             self.salt = pkt.read_all()
-            scrambled = _auth.scramble_caching_sha2(
+            scrambled = _auth_native.scramble_caching_sha2(
                 self._password.encode('latin1'), self.salt
             )
 
@@ -981,7 +992,7 @@ class Connection:
             self.server_public_key = pkt._data[1:]
             logger.debug(self.server_public_key.decode('ascii'))
 
-        data = _auth.sha2_rsa_encrypt(
+        data = _safe_rsa_encrypt(
             self._password.encode('latin1'), self.salt,
             self.server_public_key
         )
@@ -1018,7 +1029,7 @@ class Connection:
             if not self.server_public_key:
                 raise OperationalError("Couldn't receive server's public key")
 
-            data = _auth.sha2_rsa_encrypt(
+            data = _safe_rsa_encrypt(
                 self._password.encode('latin1'), self.salt,
                 self.server_public_key
             )

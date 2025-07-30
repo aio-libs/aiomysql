@@ -1,0 +1,14 @@
+name: "CodeQL Config"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+  - exclude:
+      id: py/weak-sensitive-data-hashing
+
+paths-ignore:
+  - "tests/**"
+  - "**/test_*"

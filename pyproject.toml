@@ -1,13 +1,11 @@
 [build-system]
 requires = [
-    # Essentials
-    "setuptools >= 42",
-
-    # Plugins
-    "setuptools_scm[toml] >= 6.4, < 7",
-    "setuptools_scm_git_archive >= 1.1",
+    "setuptools >= 64, < 70",
+    "setuptools_scm[toml] >= 8",
+    "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
 
 [tool.setuptools_scm]
 write_to = "aiomysql/_scm_version.py"
