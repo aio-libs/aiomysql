@@ -10,4 +10,4 @@ sphinx>=1.8.1, <5.1.2
 sphinxcontrib-asyncio==0.3.0
 SQLAlchemy==1.3.24
 uvloop==0.17.0
-twine==4.0.2
+twine==5.1.1
