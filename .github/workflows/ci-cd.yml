@@ -267,6 +267,7 @@ jobs:
         --user
         --upgrade
         build
+        setuptools-scm
 
     - name: Grab the source from Git
       uses: actions/checkout@v3
@@ -277,6 +278,19 @@ jobs:
               && 1 || 0
           }}
         ref: ${{ github.event.inputs.release-commitish }}
+
+    - name: Drop Git tags from HEAD for non-release requests
+      if: >-
+        !fromJSON(needs.pre-setup.outputs.release-requested)
+      run: >-
+        git tag --points-at HEAD
+        |
+        xargs -r git tag --delete
+      shell: bash
+
+    - name: Verify setuptools-scm version detection
+      run: >-
+        python -c "import setuptools_scm; print('Version:', setuptools_scm.get_version())"
 
     - name: Setup git user as [bot]
       if: >-
@@ -394,7 +408,7 @@ jobs:
 
     - name: Check package description
       run: |
-        python -m twine check --strict dist/* || echo "Warning: twine check failed but continuing build"
+        python -m twine check --strict dist/*
 
   tests:
     name: >-
