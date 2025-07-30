@@ -435,9 +435,7 @@ jobs:
       run: |
         echo "=== Twine version ==="
         python -m twine --version
-        echo "=== Testing with non-strict mode first ==="
-        python -m twine check dist/* || true
-        echo "=== Running strict check ==="
+        echo "=== Fixed: Using setuptools < 70 to generate Metadata-Version 2.1 compatible with twine ==="
         python -m twine check --strict dist/*
 
   tests:
