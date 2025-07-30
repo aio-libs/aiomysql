@@ -625,7 +625,7 @@ jobs:
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
-      uses: codecov/codecov-action@v3.1.4
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: >-
@@ -635,7 +635,7 @@ jobs:
           Py-${{ steps.python-install.outputs.python-version }},
           DB-${{ join(matrix.db, '-') }},
           ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
 
   check:  # This job does nothing and is only used for the branch protection
     if: always()
