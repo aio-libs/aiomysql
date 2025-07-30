@@ -406,31 +406,6 @@ jobs:
         path: aiomysql
         args: tests examples
 
-    - name: Debug package metadata
-      run: |
-        echo "=== Checking dist contents ==="
-        ls -la dist/
-        echo "=== Extracting metadata from wheel ==="
-        python -c "
-        import os, zipfile
-        wheels = [f for f in os.listdir('dist/') if f.endswith('.whl')]
-        if wheels:
-            wheel = wheels[0]
-            print(f'Inspecting wheel: {wheel}')
-            with zipfile.ZipFile(f'dist/{wheel}') as z:
-                # Find METADATA file
-                metadata_files = [f for f in z.namelist() if f.endswith('METADATA')]
-                if metadata_files:
-                    metadata = z.read(metadata_files[0]).decode()
-                    print('=== METADATA CONTENT ===')
-                    print(metadata[:1000])
-                else:
-                    print('ERROR: No METADATA file found!')
-                    print('Files in wheel:', z.namelist()[:20])
-        else:
-            print('ERROR: No wheel files found!')
-        "
-
     - name: Check package description
       run: |
         echo "=== Twine version ==="
