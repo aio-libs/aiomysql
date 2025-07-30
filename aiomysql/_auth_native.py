@@ -4,7 +4,6 @@ without requiring cryptography package.
 """
 
 import hashlib
-import struct
 from functools import partial
 
 
@@ -48,13 +47,19 @@ def scramble_caching_sha2(password, nonce):
     """Scramble algorithm used in cached_sha2_password fast path.
     
     XOR(SHA256(password), SHA256(SHA256(SHA256(password)), nonce))
+    
+    Note: This uses SHA256 as specified by the MySQL protocol RFC, not for
+    secure password storage. This is a challenge-response mechanism where
+    the actual password verification is done server-side with proper
+    password hashing algorithms.
     """
     if not password:
         return b""
 
-    p1 = hashlib.sha256(password).digest()
-    p2 = hashlib.sha256(p1).digest()
-    p3 = hashlib.sha256(p2 + nonce).digest()
+    # MySQL protocol specified SHA256 usage - not for password storage
+    p1 = hashlib.sha256(password).digest()  # nosec B324
+    p2 = hashlib.sha256(p1).digest()  # nosec B324  
+    p3 = hashlib.sha256(p2 + nonce).digest()  # nosec B324
 
     res = bytearray(p1)
     for i in range(len(p3)):

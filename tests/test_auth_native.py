@@ -262,7 +262,7 @@ class TestRsaEncryption:
         """Test RSA encrypt with empty password."""
         # This test just ensures the function handles edge cases
         try:
-            result = sha2_rsa_encrypt_native(b"", b"salt123", b"invalid_key")
+            sha2_rsa_encrypt_native(b"", b"salt123", b"invalid_key")
         except (ValueError, Exception):
             # Expected behavior for invalid key
             pass
