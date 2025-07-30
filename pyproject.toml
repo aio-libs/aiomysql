@@ -9,3 +9,5 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "aiomysql/_scm_version.py"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
