@@ -433,6 +433,11 @@ jobs:
 
     - name: Check package description
       run: |
+        echo "=== Twine version ==="
+        python -m twine --version
+        echo "=== Testing with non-strict mode first ==="
+        python -m twine check dist/* || true
+        echo "=== Running strict check ==="
         python -m twine check --strict dist/*
 
   tests:
