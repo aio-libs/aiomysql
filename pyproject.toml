@@ -1,6 +1,7 @@
 [build-system]
 requires = [
     "setuptools >= 64",
+    "setuptools_scm[toml] >= 8",
     "wheel",
 ]
 build-backend = "setuptools.build_meta"
@@ -32,7 +33,7 @@ classifiers = [
 dependencies = [
     "PyMySQL>=1.0",
 ]
-version = "0.2.1"
+dynamic = ["version"]
 
 [project.urls]
 "Homepage" = "https://github.com/aio-libs/aiomysql"
@@ -51,6 +52,4 @@ rsa = ["PyMySQL[rsa]>=1.0"]
 packages = ["aiomysql"]
 include-package-data = true
 
-# [tool.setuptools_scm]
-# write_to = "aiomysql/_scm_version.py"
-# fallback_version = "0.2.1"
+[tool.setuptools_scm]
