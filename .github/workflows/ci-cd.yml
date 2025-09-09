@@ -626,7 +626,7 @@ jobs:
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
-      uses: codecov/codecov-action@v3.1.4
+      uses: codecov/codecov-action@v5.5.1
       with:
         file: ./coverage.xml
         flags: >-
