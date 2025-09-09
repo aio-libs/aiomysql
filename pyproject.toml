@@ -1,13 +1,61 @@
+[project]
+name = "aiomysql"
+authors = [
+    {name = "Nikolay Novik", email = "nickolainovik@gmail.com"}
+]
+description = "MySQL driver for asyncio."
+readme = "README.rst"
+requires-python = ">=3.7"
+keywords = ["mysql", "mariadb", "asyncio", "aiomysql"]
+license = "MIT"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: POSIX",
+    "Environment :: Web Environment",
+    "Development Status :: 3 - Alpha",
+    "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+    "Framework :: AsyncIO",
+]
+dependencies = [
+    "PyMySQL>=1.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+"sa" = ["sqlalchemy>=1.3,<1.4"]
+"rsa" = ["PyMySQL[rsa]>=1.0"]
+
+[project.urls]
+homepage = "https://github.com/aio-libs/aiomysql"
+source = "https://github.com/aio-libs/aiomysql"
+download = "https://pypi.python.org/pypi/aiomysql"
+changelog = "https://github.com/aio-libs/aiomysql/blob/main/CHANGES.txt"
+documentation = "https://aiomysql.readthedocs.io/"
+issues = "https://github.com/aio-libs/aiomysql/issues"
+"GitHub: CI" = "https://github.com/aio-libs/aiomysql/actions"
+"GitHub: discussions" = "https://github.com/aio-libs/aiomysql/discussions"
+
 [build-system]
 requires = [
     # Essentials
-    "setuptools >= 42",
+    "setuptools >= 80",
 
     # Plugins
-    "setuptools_scm[toml] >= 6.4, < 7",
-    "setuptools_scm_git_archive >= 1.1",
+    "setuptools_scm[toml] >= 7, < 8",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+platforms = ["POSIX"]
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
 
 [tool.setuptools_scm]
 write_to = "aiomysql/_scm_version.py"
