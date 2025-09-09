@@ -1,8 +1,8 @@
 aiomysql
 ========
-.. image:: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml/badge.svg?branch=master
+.. image:: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml/badge.svg?branch=main
     :target: https://github.com/aio-libs/aiomysql/actions/workflows/ci-cd.yml
-.. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/aio-libs/aiomysql/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/aio-libs/aiomysql
     :alt: Code coverage
 .. image:: https://badge.fury.io/py/aiomysql.svg

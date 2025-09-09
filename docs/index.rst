@@ -98,7 +98,7 @@ or have some suggestion for library improvement.
 
 The library uses `GitHub Actions
 <https://github.com/aio-libs/aiomysql/actions>`_ for Continuous Integration
-and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/master>`_ for
+and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/main>`_ for
 coverage reports.
 
 
