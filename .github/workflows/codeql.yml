@@ -20,7 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ python ]
+        language:
+          - actions
+          - python
 
     steps:
       - name: Checkout
