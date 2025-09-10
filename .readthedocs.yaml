@@ -20,6 +20,6 @@ formats:
 
 python:
   install:
-  - requirements: requirements-dev.txt
+  - requirements: requirements-docs.txt
   - method: pip
     path: .
