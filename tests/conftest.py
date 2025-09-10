@@ -232,7 +232,7 @@ def table_cleanup(loop, connection):
     yield _register_table
     for t in table_list:
         # TODO: probably this is not safe code
-        sql = f"DROP TABLE IF EXISTS {t};"
+        sql = f"DROP TABLE IF EXISTS {t}"
         loop.run_until_complete(cursor.execute(sql))
 
 
