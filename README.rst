@@ -104,7 +104,7 @@ for aiopg_ user.:
 Requirements
 ------------
 
-* Python_ 3.7+
+* Python_ 3.9+
 * PyMySQL_
 
 

@@ -5,7 +5,6 @@ import asyncio
 import os
 import socket
 import struct
-import sys
 import warnings
 import configparser
 import getpass
@@ -188,7 +187,7 @@ class Connection:
         """
         self._loop = loop or asyncio.get_event_loop()
 
-        if use_unicode is None and sys.version_info[0] > 2:
+        if use_unicode is None:
             use_unicode = True
 
         if read_default_file:

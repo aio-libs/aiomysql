@@ -1,6 +1,13 @@
 Changes
 -------
 
+next (unreleased)
+^^^^^^^^^^^^^^^^^^
+
+* Drop support for Python 3.7 and 3.8, replaced by 3.12 and 3.13
+
+* Bump minimum Sphinx version to generate documentation to 6.2.0 for Python 3.13 support
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 

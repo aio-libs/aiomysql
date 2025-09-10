@@ -5,16 +5,17 @@ authors = [
 ]
 description = "MySQL driver for asyncio."
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 keywords = ["mysql", "mariadb", "asyncio", "aiomysql"]
 license = "MIT"
 classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: POSIX",
     "Environment :: Web Environment",
     "Development Status :: 3 - Alpha",
