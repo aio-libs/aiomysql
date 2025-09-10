@@ -1,6 +1,11 @@
 Changes
 -------
 
+next (unreleased)
+^^^^^^^^^^^^^^^^^^
+
+* Drop support for Python 3.7 and 3.8, replaced by 3.12 and 3.13
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 

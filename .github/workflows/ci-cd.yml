@@ -65,11 +65,11 @@ jobs:
       sdist-artifact-name: ${{ steps.artifact-name.outputs.sdist }}
       wheel-artifact-name: ${{ steps.artifact-name.outputs.wheel }}
     steps:
-    - name: Switch to using Python 3.10 by default
+    - name: Switch to using Python 3.13 by default
       uses: actions/setup-python@v6
       with:
         python-version: >-
-          3.10
+          3.13
     - name: >-
         Mark the build as untagged '${{
             github.event.repository.default_branch
@@ -199,11 +199,11 @@ jobs:
       PY_COLORS: 1
 
     steps:
-    - name: Switch to using Python v3.10
+    - name: Switch to using Python v3.13
       uses: actions/setup-python@v6
       with:
         python-version: >-
-          3.10
+          3.13
     - name: Set up pip cache
       uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
       with:
@@ -287,11 +287,11 @@ jobs:
       PY_COLORS: 1
 
     steps:
-    - name: Switch to using Python 3.10 by default
+    - name: Switch to using Python 3.13 by default
       uses: actions/setup-python@v6
       with:
         python-version: >-
-          3.10
+          3.13
     - name: Set up pip cache
       uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
       with:
@@ -348,10 +348,11 @@ jobs:
         os:
         - ubuntu-latest
         py:
-        - '3.8'
         - '3.9'
         - '3.10'
         - '3.11'
+        - '3.12'
+        - '3.13'
         db:
         - [mysql, '5.7']
         - [mysql, '8.0']
