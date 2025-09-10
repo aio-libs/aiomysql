@@ -8,6 +8,8 @@ next (unreleased)
 
 * Bump minimum Sphinx version to generate documentation to 6.2.0 for Python 3.13 support
 
+* Sphinx now uses the furo theme for local and RTD builds
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 
