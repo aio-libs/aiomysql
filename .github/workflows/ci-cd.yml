@@ -509,7 +509,18 @@ jobs:
       run: |
         # timeout ensures a more or less clean stop by sending a KeyboardInterrupt which will still provide useful logs
         timeout --preserve-status --signal=INT --verbose 570s \
-          pytest --capture=no --verbosity 2 --cov-report term --cov-report xml --cov aiomysql --cov tests ./tests --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
+          pytest \
+          --capture=no \
+          --verbosity 2 \
+          --cov-report term \
+          --cov-report xml \
+          --junitxml=junit.xml \
+          -o junit_family=legacy \
+          --cov aiomysql \
+          --cov tests \
+          ./tests \
+          --mysql-unix-socket "unix-${{ join(matrix.db, '') }}=/tmp/run-${{ join(matrix.db, '-') }}/mysql.sock" \
+          --mysql-address "tcp-${{ join(matrix.db, '') }}=127.0.0.1:3306"
       env:
         PYTHONUNBUFFERED: 1
       timeout-minutes: 10
@@ -519,6 +530,21 @@ jobs:
       uses: codecov/codecov-action@v5.5.1
       with:
         files: ./coverage.xml
+        flags: >-
+          CI-GHA,
+          OS-${{ runner.os }},
+          VM-${{ matrix.os }},
+          Py-${{ steps.python-install.outputs.python-version }},
+          DB-${{ join(matrix.db, '-') }},
+          ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
+      with:
+        files: ./junit.xml
         flags: >-
           CI-GHA,
           OS-${{ runner.os }},
