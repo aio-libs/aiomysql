@@ -46,7 +46,6 @@ jobs:
       run:
         shell: python
     outputs:
-      dists-artifact-name: python-package-distributions
       dist-version: >-
         ${{
             steps.request-check.outputs.release-requested == 'true'
@@ -195,6 +194,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    outputs:
+      dists-artifact-id: ${{ steps.dist-artifact-upload.outputs.artifact-id }}
+
     env:
       PY_COLORS: 1
 
@@ -256,10 +258,10 @@ jobs:
         'dist/${{ needs.pre-setup.outputs.sdist-artifact-name }}'
         'dist/${{ needs.pre-setup.outputs.wheel-artifact-name }}'
     - name: Store the distribution packages
+      id: dist-artifact-upload
       uses: actions/upload-artifact@v4
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        name: python-package-distributions
         # NOTE: Exact expected file names are specified here
         # NOTE: as a safety measure — if anything weird ends
         # NOTE: up being in this dir or not all dists will be
@@ -306,8 +308,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v5
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        artifact-ids: >-
+          ${{ needs.build.outputs.dists-artifact-id }}
         path: dist/
 
     - name: Install build tools
@@ -426,8 +428,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v5
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        artifact-ids: >-
+          ${{ needs.build.outputs.dists-artifact-id }}
         path: dist/
 
     - name: Install dependencies
@@ -572,6 +574,7 @@ jobs:
     name: Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
     needs:
     - check
+    - build
     - pre-setup  # transitive, for accessing settings
     if: >-
       fromJSON(needs.pre-setup.outputs.release-requested)
@@ -591,8 +594,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v5
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        artifact-ids: >-
+          ${{ needs.build.outputs.dists-artifact-id }}
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
@@ -604,6 +607,7 @@ jobs:
     name: Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
     needs:
     - check
+    - build
     - pre-setup  # transitive, for accessing settings
     if: >-
       fromJSON(needs.pre-setup.outputs.is-untagged-devel)
@@ -624,8 +628,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v5
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        artifact-ids: >-
+          ${{ needs.build.outputs.dists-artifact-id }}
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
@@ -673,6 +677,7 @@ jobs:
       ${{ needs.pre-setup.outputs.git-tag }}
     needs:
     - post-release-repo-update
+    - build
     - pre-setup  # transitive, for accessing settings
     runs-on: ubuntu-latest
 
@@ -690,8 +695,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v5
       with:
-        name: >-
-          ${{ needs.pre-setup.outputs.dists-artifact-name }}
+        artifact-ids: >-
+          ${{ needs.build.outputs.dists-artifact-id }}
         path: dist/
 
     - name: >-
