@@ -538,7 +538,6 @@ jobs:
           DB-${{ join(matrix.db, '-') }},
           ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Upload test results to Codecov
       if: ${{ !cancelled() }}
@@ -553,7 +552,6 @@ jobs:
           DB-${{ join(matrix.db, '-') }},
           ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   check:  # This job does nothing and is only used for the branch protection
     if: always()
