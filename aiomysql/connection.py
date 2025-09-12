@@ -50,6 +50,7 @@ def connect(host="localhost", user=None, password="",
             read_default_file=None, conv=decoders, use_unicode=None,
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
+            read_timeout=None,
             autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
             program_name='', server_public_key=None):
@@ -63,6 +64,7 @@ def connect(host="localhost", user=None, password="",
                     init_command=init_command,
                     connect_timeout=connect_timeout,
                     read_default_group=read_default_group,
+                    read_timeout=read_timeout,
                     autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
                     auth_plugin=auth_plugin, program_name=program_name)
@@ -138,7 +140,7 @@ class Connection:
                  charset='', sql_mode=None,
                  read_default_file=None, conv=decoders, use_unicode=None,
                  client_flag=0, cursorclass=Cursor, init_command=None,
-                 connect_timeout=None, read_default_group=None,
+                 connect_timeout=None, read_default_group=None, read_timeout=None,
                  autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
                  program_name='', server_public_key=None):
@@ -170,6 +172,8 @@ class Connection:
             when connecting.
         :param read_default_group: Group to read from in the configuration
             file.
+        :param read_timeout: The timeout for reading from the connection in seconds
+        (default: None - no timeout)
         :param autocommit: Autocommit mode. None means use server default.
             (default: False)
         :param local_infile: boolean to enable the use of LOAD DATA LOCAL
@@ -256,6 +260,7 @@ class Connection:
 
         self.cursorclass = cursorclass
         self.connect_timeout = connect_timeout
+        self.read_timeout = read_timeout
 
         self._result = None
         self._affected_rows = 0
@@ -653,12 +658,25 @@ class Connection:
 
     async def _read_bytes(self, num_bytes):
         try:
-            data = await self._reader.readexactly(num_bytes)
+            if self.read_timeout:
+                try:
+                    data = await asyncio.wait_for(
+                        self._reader.readexactly(num_bytes),
+                        self.read_timeout
+                    )
+                except asyncio.TimeoutError as e:
+                    raise asyncio.TimeoutError("Read timeout exceeded") from e
+            else:
+                data = await self._reader.readexactly(num_bytes)
         except asyncio.IncompleteReadError as e:
             msg = "Lost connection to MySQL server during query"
             self.close()
             raise OperationalError(CR.CR_SERVER_LOST, msg) from e
-        except OSError as e:
+        except (OSError, asyncio.TimeoutError) as e:
+            msg = f"Lost connection to MySQL server during query ({e})"
+            self.close()
+            raise OperationalError(CR.CR_SERVER_LOST, msg) from e
+        except Exception as e:
             msg = f"Lost connection to MySQL server during query ({e})"
             self.close()
             raise OperationalError(CR.CR_SERVER_LOST, msg) from e
