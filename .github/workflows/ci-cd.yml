@@ -702,7 +702,7 @@ jobs:
     - name: >-
         Publish a GitHub Release for
         ${{ needs.pre-setup.outputs.git-tag }}
-      uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
+      uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b
       with:
         artifacts: |
           dist/${{ needs.pre-setup.outputs.sdist-artifact-name }}
