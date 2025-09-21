@@ -38,6 +38,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   pre-setup:
     name: ⚙️ Pre-set global build settings
@@ -93,6 +96,8 @@ jobs:
         steps.request-check.outputs.release-requested != 'true'
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         fetch-depth: 0
         ref: ${{ github.event.inputs.release-commitish }}
     - name: >-
@@ -222,6 +227,8 @@ jobs:
     - name: Grab the source from Git
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         fetch-depth: >-
           ${{
               steps.request-check.outputs.release-requested == 'true'
@@ -243,10 +250,13 @@ jobs:
         || fromJSON(needs.pre-setup.outputs.release-requested)
       run: >-
         git tag
-        -m '${{ needs.pre-setup.outputs.git-tag }}'
-        '${{ needs.pre-setup.outputs.git-tag }}'
+        -m "${GIT_TAG}"
+        "${GIT_TAG}"
         --
-        ${{ github.event.inputs.release-commitish }}
+        "${RELEASE_COMMITISH}"
+      env:
+        GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
+        RELEASE_COMMITISH: ${{ github.event.inputs.release-commitish }}
     - name: Build dists
       run: >-
         python
@@ -255,8 +265,11 @@ jobs:
     - name: Verify that the artifacts with expected names got created
       run: >-
         ls -1
-        'dist/${{ needs.pre-setup.outputs.sdist-artifact-name }}'
-        'dist/${{ needs.pre-setup.outputs.wheel-artifact-name }}'
+        "dist/${SDIST_ARTIFACT_NAME}"
+        "dist/${WHEEL_ARTIFACT_NAME}"
+      env:
+        SDIST_ARTIFACT_NAME: ${{ needs.pre-setup.outputs.sdist-artifact-name }}
+        WHEEL_ARTIFACT_NAME: ${{ needs.pre-setup.outputs.wheel-artifact-name }}
     - name: Store the distribution packages
       id: dist-artifact-upload
       uses: actions/upload-artifact@v4
@@ -303,6 +316,8 @@ jobs:
     - name: Grab the source from Git
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Download all the dists
@@ -419,6 +434,8 @@ jobs:
     - name: Grab the source from Git
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Remove aiomysql source to avoid accidentally using it
@@ -444,7 +461,9 @@ jobs:
         python -m
         pip install
         --user
-        'dist/${{ needs.pre-setup.outputs.wheel-artifact-name }}'
+        "dist/${WHEEL_ARTIFACT_NAME}"
+      env:
+        WHEEL_ARTIFACT_NAME: ${{ needs.pre-setup.outputs.wheel-artifact-name }}
 
     - name: >-
         Log platform.platform()
@@ -529,7 +548,7 @@ jobs:
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
-      uses: codecov/codecov-action@v5.5.1
+      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
       with:
         files: ./coverage.xml
         flags: >-
@@ -566,7 +585,7 @@ jobs:
 
     steps:
     - name: Decide whether the needed jobs succeeded or failed
-      uses: re-actors/alls-green@v1.2.2
+      uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
       with:
         jobs: ${{ toJSON(needs) }}
 
@@ -599,7 +618,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.13.0
+      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
       with:
         print-hash: true
 
@@ -633,7 +652,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
-      uses: pypa/gh-action-pypi-publish@v1.13.0
+      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
       with:
         repository-url: https://test.pypi.org/legacy/
         print-hash: true
@@ -651,6 +670,8 @@ jobs:
     - name: Fetch the src snapshot
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
     - name: Setup git user as [bot]
@@ -661,15 +682,20 @@ jobs:
         as v${{ needs.pre-setup.outputs.git-tag }}
       run: >-
         git tag
-        -m '${{ needs.pre-setup.outputs.git-tag }}'
-        '${{ needs.pre-setup.outputs.git-tag }}'
+        -m "${GIT_TAG}"
+        "${GIT_TAG}"
         --
-        ${{ github.event.inputs.release-commitish }}
+        "${RELEASE_COMMITISH}"
+      env:
+        GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
+        RELEASE_COMMITISH: ${{ github.event.inputs.release-commitish }}
     - name: >-
         Push ${{ needs.pre-setup.outputs.git-tag }} tag corresponding
         to the just published release back to GitHub
       run: >-
-        git push --atomic origin '${{ needs.pre-setup.outputs.git-tag }}'
+        git push --atomic origin "${GIT_TAG}"
+      env:
+        GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
 
   publish-github-release:
     name: >-
@@ -689,6 +715,8 @@ jobs:
     - name: Fetch the src snapshot
       uses: actions/checkout@v5
       with:
+        show-progress: false
+        persist-credentials: false
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
 
