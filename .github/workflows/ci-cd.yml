@@ -253,7 +253,7 @@ jobs:
         -m "${GIT_TAG}"
         "${GIT_TAG}"
         --
-        "${RELEASE_COMMITISH}"
+        ${RELEASE_COMMITISH}
       env:
         GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
         RELEASE_COMMITISH: ${{ github.event.inputs.release-commitish }}
@@ -685,7 +685,7 @@ jobs:
         -m "${GIT_TAG}"
         "${GIT_TAG}"
         --
-        "${RELEASE_COMMITISH}"
+        ${RELEASE_COMMITISH}
       env:
         GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
         RELEASE_COMMITISH: ${{ github.event.inputs.release-commitish }}
