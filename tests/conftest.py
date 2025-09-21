@@ -282,17 +282,7 @@ def mysql_server(mysql_address):
                                           server_version_tuple[1])
 
             if not unix_socket:
-                cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
-
-                result = cursor.fetchall()
-                result = {item['Variable_name']:
-                          item['Value'] for item in result}
-
-                assert result['have_ssl'] == "YES", \
-                    "SSL Not Enabled on MySQL"
-
                 cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
-
                 result = cursor.fetchone()
                 # As we connected with TLS, it should start with that :D
                 assert result['Value'].startswith('TLS'), \
