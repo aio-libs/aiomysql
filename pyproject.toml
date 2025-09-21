@@ -48,7 +48,7 @@ requires = [
     "setuptools >= 80",
 
     # Plugins
-    "setuptools_scm[toml] >= 7, < 8",
+    "setuptools_scm[toml] >= 7, < 10",
 ]
 build-backend = "setuptools.build_meta"
 
