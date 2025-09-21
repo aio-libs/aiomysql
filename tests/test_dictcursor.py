@@ -103,5 +103,5 @@ async def test_ssdictcursor(connection):
     c = await conn.cursor(aiomysql.cursors.SSDictCursor)
     await c.execute("SELECT * from dictcursor where name='bob'")
     r = await c.fetchall()
-    assert [BOB] == r,\
+    assert [BOB] == r, \
         "fetch a 1 row result via fetchall failed via DictCursor"
