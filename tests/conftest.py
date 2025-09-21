@@ -272,6 +272,7 @@ def mysql_server(mysql_address):
         with connection.cursor() as cursor:
             cursor.execute("SELECT VERSION() AS version")
             server_version = cursor.fetchone()["version"]
+            db_type = "mariadb" if "MariaDB" in server_version else "mysql"
             server_version_tuple = tuple(
                 (int(dig) if dig is not None else 0)
                 for dig in
@@ -279,13 +280,6 @@ def mysql_server(mysql_address):
             )
             server_version_tuple_short = (server_version_tuple[0],
                                           server_version_tuple[1])
-            if server_version_tuple_short in [(5, 7), (8, 0)]:
-                db_type = "mysql"
-            elif server_version_tuple[0] == 10:
-                db_type = "mariadb"
-            else:
-                pytest.fail("Unable to determine database type from {!r}"
-                            .format(server_version_tuple))
 
             if not unix_socket:
                 cursor.execute("SHOW VARIABLES LIKE '%ssl%';")

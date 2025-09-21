@@ -602,7 +602,7 @@ Transaction objects
      .. seealso::  `SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT`__
           on :term:`MySQL`:
 
-    .. __: http://dev.mysql.com/doc/refman/5.7/en/savepoint.html
+    .. __: https://dev.mysql.com/doc/refman/8.4/en/savepoint.html
 
 
 .. class:: TwoPhaseTransaction
@@ -629,4 +629,4 @@ Transaction objects
 
     .. seealso:: :term:`MySQL` commands for two phase transactions:
 
-        http://dev.mysql.com/doc/refman/5.7/en/xa-statements.html
+        https://dev.mysql.com/doc/refman/8.4/en/xa-statements.html
