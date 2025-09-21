@@ -741,3 +741,4 @@ jobs:
         discussionCategory: Announcements
         name: ${{ needs.pre-setup.outputs.git-tag }}
         tag: ${{ needs.pre-setup.outputs.git-tag }}
+        immutableCreate: true
