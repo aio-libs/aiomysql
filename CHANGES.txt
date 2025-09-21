@@ -14,6 +14,8 @@ next (unreleased)
 
 * Drop support for EoL MariaDB 10.4, 10.5, 10.9, 10.10, replaced by 11.4, 11.8, 12.0
 
+* Use immutable GitHub tags and releases for future releases
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 
