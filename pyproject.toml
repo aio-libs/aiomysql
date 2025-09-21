@@ -48,6 +48,8 @@ requires = [
     "setuptools >= 80",
 
     # Plugins
+    # >= 9.2 is needed for consistent generation of hashes for non-release artifacts
+    # https://github.com/pypa/setuptools-scm/pull/1158
     "setuptools_scm[toml] >= 7, < 10",
 ]
 build-backend = "setuptools.build_meta"

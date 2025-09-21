@@ -139,7 +139,7 @@ jobs:
         pip install
         --user
         --upgrade
-        "setuptools-scm>= 7, < 8"
+        "setuptools-scm>= 9.2, < 10"
       shell: bash
     - name: Set the current dist version from Git
       if: steps.request-check.outputs.release-requested != 'true'
