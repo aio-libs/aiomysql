@@ -248,6 +248,10 @@ def mysql_server_is(server_version, version_tuple):
     return server_version_tuple >= version_tuple
 
 
+def get_mysql_vendor(server_info):
+    return "mariadb" if "MariaDB" in server_info else "mysql"
+
+
 @pytest.mark.run_loop
 async def test_json(connection_creator, table_cleanup):
     connection = await connection_creator(
@@ -273,6 +277,9 @@ async def test_json(connection_creator, table_cleanup):
     r = await cursor.fetchone()
     assert json.loads(r[0]) == json.loads(json_str)
 
-    await cursor.execute("SELECT CAST(%s AS JSON) AS x", (json_str,))
-    r = await cursor.fetchone()
-    assert json.loads(r[0]) == json.loads(json_str)
+    # MariaDB does not support JSON as a type
+    # See also https://github.com/PyMySQL/PyMySQL/pull/1165
+    if get_mysql_vendor(connection.get_server_info()) == "mysql":
+        await cursor.execute("SELECT CAST(%s AS JSON) AS x", (json_str,))
+        r = await cursor.fetchone()
+        assert json.loads(r[0]) == json.loads(json_str)
