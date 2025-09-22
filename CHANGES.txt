@@ -16,6 +16,9 @@ next (unreleased)
 
 * Use immutable GitHub tags and releases for future releases
 
+* | Bump setuptools to >=80, setuptools-scm to  >=7, <10.
+  | setuptools-scm must be at least 9.2.0 for consistent hash lengths of non-release builds.
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 
