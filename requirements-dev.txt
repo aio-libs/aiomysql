@@ -1,4 +1,4 @@
-coverage==7.10.6
+coverage==7.10.7
 # flake8 version is also specified in .github/workflows/ci-cd.yml
 flake8==7.3.0
 ipdb==0.13.13
