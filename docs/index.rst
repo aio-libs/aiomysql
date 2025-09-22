@@ -1,5 +1,7 @@
+.. _aiomysql-index:
+
 .. aiomysql documentation master file, created by
-   sphinx-quickstart on Sun Jan 18 22:02:31 2015.
+   sphinx-quickstart on Sun Jun 11 16:24:33 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -98,14 +100,14 @@ or have some suggestion for library improvement.
 
 The library uses `GitHub Actions
 <https://github.com/aio-libs/aiomysql/actions>`_ for Continuous Integration
-and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/master>`_ for
+and `Codecov <https://app.codecov.io/gh/aio-libs/aiomysql/branch/main>`_ for
 coverage reports.
 
 
 Dependencies
 ------------
 
-- Python 3.7+
+- Python 3.9+
 - :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 
@@ -123,6 +125,7 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :titlesonly:
 
    connection
    cursors

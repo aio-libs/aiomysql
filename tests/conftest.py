@@ -232,7 +232,7 @@ def table_cleanup(loop, connection):
     yield _register_table
     for t in table_list:
         # TODO: probably this is not safe code
-        sql = f"DROP TABLE IF EXISTS {t};"
+        sql = f"DROP TABLE IF EXISTS {t}"
         loop.run_until_complete(cursor.execute(sql))
 
 
@@ -272,6 +272,7 @@ def mysql_server(mysql_address):
         with connection.cursor() as cursor:
             cursor.execute("SELECT VERSION() AS version")
             server_version = cursor.fetchone()["version"]
+            db_type = "mariadb" if "MariaDB" in server_version else "mysql"
             server_version_tuple = tuple(
                 (int(dig) if dig is not None else 0)
                 for dig in
@@ -279,26 +280,9 @@ def mysql_server(mysql_address):
             )
             server_version_tuple_short = (server_version_tuple[0],
                                           server_version_tuple[1])
-            if server_version_tuple_short in [(5, 7), (8, 0)]:
-                db_type = "mysql"
-            elif server_version_tuple[0] == 10:
-                db_type = "mariadb"
-            else:
-                pytest.fail("Unable to determine database type from {!r}"
-                            .format(server_version_tuple))
 
             if not unix_socket:
-                cursor.execute("SHOW VARIABLES LIKE '%ssl%';")
-
-                result = cursor.fetchall()
-                result = {item['Variable_name']:
-                          item['Value'] for item in result}
-
-                assert result['have_ssl'] == "YES", \
-                    "SSL Not Enabled on MySQL"
-
                 cursor.execute("SHOW STATUS LIKE 'Ssl_version%'")
-
                 result = cursor.fetchone()
                 # As we connected with TLS, it should start with that :D
                 assert result['Value'].startswith('TLS'), \

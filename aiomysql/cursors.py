@@ -11,7 +11,7 @@ from pymysql.err import (
 from .log import logger
 from .connection import FIELD_TYPE
 
-# https://github.com/PyMySQL/PyMySQL/blob/master/pymysql/cursors.py#L11-L18
+# https://github.com/PyMySQL/PyMySQL/blob/d7bb777e503d82bf2496113f07dd4ab249615efc/pymysql/cursors.py#L6-L14
 
 #: Regular expression for :meth:`Cursor.executemany`.
 #: executemany only supports simple bulk insert.

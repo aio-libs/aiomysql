@@ -2,7 +2,7 @@ Examples of aiomysql usage
 ==========================
 
 Below is a list of examples from `aiomysql/examples
-<https://github.com/aio-libs/aiomysql/tree/master/examples>`_
+<https://github.com/aio-libs/aiomysql/tree/main/examples>`_
 
 Every example is a correct tiny python program that demonstrates specific
 feature of library.
@@ -35,4 +35,4 @@ Example of using connection pool:
 sqlalchemy usage
 ----------------
 
-.. literalinclude:: ../examples/example_sa.py
+.. literalinclude:: ../examples/example_simple_sa.py

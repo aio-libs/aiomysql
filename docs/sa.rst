@@ -1,4 +1,4 @@
-.. _aiomysql-rpc:
+.. _aiomysql-sa:
 
 :mod:`aiomysql.sa` --- support for SQLAlchemy functional SQL layer
 ==================================================================
@@ -13,11 +13,11 @@ Intro
 .. note::  :term:`sqlalchemy` support ported from aiopg_, so api should be
            very familiar for aiopg_ user.
 
-While :ref:`core API <aiomysql-core>` provides a core support for
+While :ref:`core API <aiomysql-index>` provides a core support for
 access to :term:`MySQL` database, manipulations with raw SQL strings
 too annoying.
 
-Fortunately we can use excellent :ref:`core_toplevel` as **SQL query builder**.
+Fortunately we can use excellent :ref:`aiomysql <aiomysql-index>` as **SQL query builder**.
 
 
 Example::
@@ -66,7 +66,7 @@ So you can execute SQL query built by
 ``tbl.insert().values(val='abc')`` or ``tbl.select()`` expressions.
 
 :term:`sqlalchemy` has rich and very powerful set of SQL construction
-functions, please read :ref:`tutorial <core_toplevel>` for full list
+functions, please read :ref:`tutorial <aiomysql-index>` for full list
 of available operations.
 
 Also we provide SQL transactions support. Please take a look on
@@ -204,7 +204,7 @@ Connection
         This method is a :ref:`coroutine <coroutine>`.
 
         :param query: a SQL query string or any :term:`sqlalchemy`
-                        expression (see :ref:`core_toplevel`)
+                        expression (see :ref:`aiomysql core <aiomysql-index>`)
 
         :param \*multiparams/\**params: represent bound parameter values
          to be used in the execution.  Typically, the format is either a
@@ -602,7 +602,7 @@ Transaction objects
      .. seealso::  `SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT`__
           on :term:`MySQL`:
 
-    .. __: http://dev.mysql.com/doc/refman/5.7/en/savepoint.html
+    .. __: https://dev.mysql.com/doc/refman/8.4/en/savepoint.html
 
 
 .. class:: TwoPhaseTransaction
@@ -629,4 +629,4 @@ Transaction objects
 
     .. seealso:: :term:`MySQL` commands for two phase transactions:
 
-        http://dev.mysql.com/doc/refman/5.7/en/xa-statements.html
+        https://dev.mysql.com/doc/refman/8.4/en/xa-statements.html

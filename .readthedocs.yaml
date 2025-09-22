@@ -6,13 +6,13 @@
 version: 2
 
 build:
-  os: ubuntu-20.04
+  os: ubuntu-24.04
   tools:
-    python: "3.10"
+    python: "3.13"
 
 sphinx:
   configuration: docs/conf.py
-  fail_on_warning: false # FIXME
+  fail_on_warning: true
 
 formats:
 - pdf
@@ -20,6 +20,6 @@ formats:
 
 python:
   install:
-  - requirements: requirements-dev.txt
+  - requirements: requirements-docs.txt
   - method: pip
     path: .

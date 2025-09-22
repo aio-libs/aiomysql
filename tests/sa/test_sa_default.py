@@ -78,7 +78,7 @@ async def test_default_fields(make_engine):
         assert row.number == 100
         assert row.description == 'default test'
         assert row.enabled is True
-        assert type(row.created_at) == datetime.datetime
+        assert isinstance(row.created_at, datetime.datetime)
 
 
 @pytest.mark.run_loop
