@@ -1,6 +1,7 @@
 import asyncio
 import gc
 import os
+import time
 
 import pytest
 
@@ -263,3 +264,17 @@ async def test_commit_during_multi_result(connection_creator):
     await cur.execute("SELECT 3;")
     resp = await cur.fetchone()
     assert resp[0] == 3
+
+
+@pytest.mark.run_loop
+async def test_connect_timeout_error(mysql_params, loop):
+    async def mock_block_code():
+        # block a little longer then default connect_timeout variable (10s)
+        time.sleep(11)
+
+    async def connect():
+        mysql_params.pop("ssl", None)
+        await aiomysql.connect(loop=loop, **mysql_params)
+
+    with pytest.raises(aiomysql.OperationalError):
+        await asyncio.gather(connect(), mock_block_code())
