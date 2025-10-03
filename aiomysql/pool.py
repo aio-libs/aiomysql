@@ -183,9 +183,9 @@ class Pool(asyncio.AbstractServer):
                                      **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
-                self._cond.notify()
             finally:
                 self._acquiring -= 1
+                self._cond.notify()
         if self._free:
             return
 
@@ -196,9 +196,9 @@ class Pool(asyncio.AbstractServer):
                                      **self._conn_kwargs)
                 # raise exception if pool is closing
                 self._free.append(conn)
-                self._cond.notify()
             finally:
                 self._acquiring -= 1
+                self._cond.notify()
 
     async def _wakeup(self):
         async with self._cond:

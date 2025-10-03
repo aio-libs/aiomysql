@@ -550,10 +550,7 @@ class Connection:
             if self.autocommit_mode is not None:
                 await self.autocommit(self.autocommit_mode)
         except Exception as e:
-            if self._writer:
-                self._writer.transport.close()
-            self._reader = None
-            self._writer = None
+            self.close()
 
             # As of 3.11, asyncio.TimeoutError is a deprecated alias of
             # OSError. For consistency, we're also considering this an
@@ -665,7 +662,12 @@ class Connection:
         return data
 
     def _write_bytes(self, data):
-        return self._writer.write(data)
+        try:
+            return self._writer.write(data)
+        except RuntimeError as e:
+            self.close()
+            msg = "Lost connection to MySQL server during query ({})".format(e)
+            raise OperationalError(2013, msg) from e
 
     async def _read_query_result(self, unbuffered=False):
         self._result = None
