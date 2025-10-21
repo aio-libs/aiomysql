@@ -1,22 +1,22 @@
 Changes
 -------
 
-next (unreleased)
+0.3.0 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 
-* Drop support for Python 3.7 and 3.8, replaced by 3.12 and 3.13
+* Drop support for Python 3.7 and 3.8, replaced by 3.12 and 3.13 #1026
 
-* Bump minimum Sphinx version to generate documentation to 6.2.0 for Python 3.13 support
+* Bump minimum Sphinx version to generate documentation to 6.2.0 for Python 3.13 support #1026
 
-* Sphinx now uses the furo theme for local and RTD builds
+* Sphinx now uses the furo theme for local and RTD builds #936
 
-* Drop support for EoL MySQL 5.7, replaced by 8.4 and 9.4
+* Drop support for EoL MySQL 5.7, replaced by 8.4 and 9.4 #1032
 
-* Drop support for EoL MariaDB 10.4, 10.5, 10.9, 10.10, replaced by 11.4, 11.8, 12.0
+* Drop support for EoL MariaDB 10.4, 10.5, 10.9, 10.10, replaced by 11.4, 11.8, 12.0 #1032
 
-* Use immutable GitHub tags and releases for future releases
+* Use immutable GitHub tags and releases for future releases #1034
 
-* | Bump setuptools to >=80, setuptools-scm to  >=7, <10.
+* | Bump setuptools to >=80, setuptools-scm to  >=7, <10 #1018
   | setuptools-scm must be at least 9.2.0 for consistent hash lengths of non-release builds.
 
 * | Properly check whether loading of local files is enabled #1044
