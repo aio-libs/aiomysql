@@ -1,6 +1,11 @@
 Changes
 -------
 
+0.3.2 (2025-10-21)
+^^^^^^^^^^^^^^^^^^
+
+* Fix not persisting GitHub credentials during Git checkout action in CI for publishing release tags #1047
+
 0.3.1 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 
