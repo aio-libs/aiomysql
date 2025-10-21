@@ -676,7 +676,7 @@ jobs:
       uses: actions/checkout@v5
       with:
         show-progress: false
-        persist-credentials: false
+        persist-credentials: true
         fetch-depth: 1
         ref: ${{ github.event.inputs.release-commitish }}
     - name: Setup git user as [bot]
