@@ -2,7 +2,9 @@ import builtins
 import os
 from unittest.mock import patch, MagicMock
 
+import aiomysql
 import pytest
+from pymysql.constants import CLIENT
 from pymysql.err import OperationalError
 
 
@@ -81,3 +83,33 @@ async def test_load_warnings(cursor, table_local_file):
     with warnings.catch_warnings(record=True) as w:
         await cursor.execute(sql)
     assert "Incorrect integer value" in str(w[-1].message)
+
+
+@pytest.mark.run_loop
+async def test_load_local_disabled(mysql_params, table_local_file):
+    # By setting the client flag, the server will be informed that we support
+    # loading local files. This validates that the client side check catches
+    # the server attempting to read files from us without having this
+    # explicitly enabled on the connection. The local_infile parameter sets
+    # the client flag, but not the other way round.
+    params = mysql_params.copy()
+    params["local_infile"] = False
+    if "client_flag" in params:
+        params["client_flag"] |= CLIENT.LOCAL_FILES
+    else:
+        params["client_flag"] = CLIENT.LOCAL_FILES
+
+    async with aiomysql.connect(**params) as conn:
+        async with conn.cursor() as cursor:
+            # Test load local infile with a valid file
+            filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                    'fixtures',
+                                    'load_local_data.txt')
+            with pytest.raises(
+                RuntimeError,
+                match="Received LOAD_LOCAL packet but local_infile option is false",
+            ):
+                await cursor.execute(
+                    ("LOAD DATA LOCAL INFILE '{0}' INTO TABLE " +
+                     "test_load_local FIELDS TERMINATED BY ','").format(filename)
+                )

@@ -46,8 +46,8 @@ Example::
             client_flag=0, cursorclass=Cursor, init_command=None,
             connect_timeout=None, read_default_group=None,
             autocommit=False, echo=False
-            ssl=None, auth_plugin='', program_name='',
-            server_public_key=None, loop=None)
+            local_infile=False, loop=None, ssl=None, auth_plugin='',
+            program_name='', server_public_key=None)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -71,7 +71,8 @@ Example::
         See `pymysql.converters`.
     :param use_unicode: whether or not to default to unicode strings.
     :param  client_flag: custom flags to send to MySQL. Find
-        potential values in `pymysql.constants.CLIENT`.
+        potential values in `pymysql.constants.CLIENT`. Refer to the
+        `local_infile` parameter for enabling loading of local data.
     :param cursorclass: custom cursor class to use.
     :param str init_command: initial SQL statement to run when connection is
         established.
@@ -81,6 +82,10 @@ Example::
         file.
     :param autocommit: Autocommit mode. None means use server default.
         (default: ``False``)
+    :param local_infile: Boolean to enable the use of `LOAD DATA LOCAL`
+        command. This also enables the corresponding `client_flag`. aiomysql
+        does not perform any validation of files requested by the server. Do
+        not use this with untrusted servers. (default: ``False``)
     :param ssl: Optional SSL Context to force SSL
     :param auth_plugin: String to manually specify the authentication
         plugin to use, i.e you will want to use mysql_clear_password

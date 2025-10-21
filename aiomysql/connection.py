@@ -245,7 +245,8 @@ class Connection:
 
         self._encoding = charset_by_name(self._charset).encoding
 
-        if local_infile:
+        self._local_infile = bool(local_infile)
+        if self._local_infile:
             client_flag |= CLIENT.LOCAL_FILES
 
         client_flag |= CLIENT.CAPABILITIES
@@ -1203,6 +1204,10 @@ class MySQLResult:
         self.has_next = ok_packet.has_next
 
     async def _read_load_local_packet(self, first_packet):
+        if not self.connection._local_infile:
+            raise RuntimeError(
+                "**WARN**: Received LOAD_LOCAL packet but local_infile option is false."
+            )
         load_packet = LoadLocalPacketWrapper(first_packet)
         sender = LoadLocalFile(load_packet.filename, self.connection)
         try:
