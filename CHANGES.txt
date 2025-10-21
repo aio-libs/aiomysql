@@ -1,6 +1,11 @@
 Changes
 -------
 
+0.3.1 (2025-10-21)
+^^^^^^^^^^^^^^^^^^
+
+* Fix permissions in GitHub Actions workflow to allow pushing git tag after release #1046
+
 0.3.0 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 

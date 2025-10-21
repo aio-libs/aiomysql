@@ -661,10 +661,15 @@ jobs:
     name: >-
       Publish post-release Git tag
       for ${{ needs.pre-setup.outputs.git-tag }}
+
     needs:
     - publish-pypi
     - pre-setup  # transitive, for accessing settings
+
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required for pushing git tag
 
     steps:
     - name: Fetch the src snapshot
@@ -679,7 +684,7 @@ jobs:
 
     - name: >-
         Tag the release in the local Git repo
-        as v${{ needs.pre-setup.outputs.git-tag }}
+        as ${{ needs.pre-setup.outputs.git-tag }}
       run: >-
         git tag
         -m "${GIT_TAG}"
@@ -689,6 +694,7 @@ jobs:
       env:
         GIT_TAG: ${{ needs.pre-setup.outputs.git-tag }}
         RELEASE_COMMITISH: ${{ github.event.inputs.release-commitish }}
+
     - name: >-
         Push ${{ needs.pre-setup.outputs.git-tag }} tag corresponding
         to the just published release back to GitHub
@@ -701,10 +707,12 @@ jobs:
     name: >-
       Publish a tag and GitHub release for
       ${{ needs.pre-setup.outputs.git-tag }}
+
     needs:
     - post-release-repo-update
     - build
     - pre-setup  # transitive, for accessing settings
+
     runs-on: ubuntu-latest
 
     permissions:
