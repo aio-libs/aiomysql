@@ -19,6 +19,11 @@ next (unreleased)
 * | Bump setuptools to >=80, setuptools-scm to  >=7, <10.
   | setuptools-scm must be at least 9.2.0 for consistent hash lengths of non-release builds.
 
+* | Properly check whether loading of local files is enabled #1044
+  | Loading local data now requires using the `local_infile` parameter, passing just the client flag through `client_flag` is no longer supported.
+  | Fixes `GHSA-r397-ff8c-wv2g <https://github.com/aio-libs/aiomysql/security/advisories/GHSA-r397-ff8c-wv2g>`_
+  | Thanks to @KonstantAnxiety for reporting this.
+
 0.2.0 (2023-06-11)
 ^^^^^^^^^^^^^^^^^^
 
