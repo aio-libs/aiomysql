@@ -321,7 +321,7 @@ jobs:
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Download all the dists
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         artifact-ids: >-
           ${{ needs.build.outputs.dists-artifact-id }}
@@ -443,7 +443,7 @@ jobs:
         rm -rf aiomysql
 
     - name: Download all the dists
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         artifact-ids: >-
           ${{ needs.build.outputs.dists-artifact-id }}
@@ -611,7 +611,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         artifact-ids: >-
           ${{ needs.build.outputs.dists-artifact-id }}
@@ -645,7 +645,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         artifact-ids: >-
           ${{ needs.build.outputs.dists-artifact-id }}
@@ -729,7 +729,7 @@ jobs:
         ref: ${{ github.event.inputs.release-commitish }}
 
     - name: Download all the dists
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       with:
         artifact-ids: >-
           ${{ needs.build.outputs.dists-artifact-id }}
