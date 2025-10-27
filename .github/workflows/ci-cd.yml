@@ -272,7 +272,7 @@ jobs:
         WHEEL_ARTIFACT_NAME: ${{ needs.pre-setup.outputs.wheel-artifact-name }}
     - name: Store the distribution packages
       id: dist-artifact-upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: python-package-distributions
         # NOTE: Exact expected file names are specified here
