@@ -195,7 +195,13 @@ class Engine:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.close()
-        await self.wait_closed()
+        try:
+            await self.wait_closed()
+        except RuntimeError as e:
+            if "Event loop is closed" in str(e):
+                # Gracefully handle event loop shutdown during asyncio.run()
+                return
+            raise
 
 
 _EngineContextManager = _PoolContextManager
