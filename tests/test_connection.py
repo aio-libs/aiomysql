@@ -33,6 +33,14 @@ async def test_connect_timeout(connection_creator):
 
 
 @pytest.mark.run_loop
+async def test_read_timeout(connection_creator):
+    with pytest.raises(aiomysql.OperationalError):
+        con = await connection_creator(read_timeout=0.01)
+        cur = await con.cursor()
+        await cur.execute("DO SLEEP(1)")
+
+
+@pytest.mark.run_loop
 async def test_config_file(fill_my_cnf, connection_creator, mysql_params):
     tests_root = os.path.abspath(os.path.dirname(__file__))
     path = os.path.join(tests_root, 'fixtures/my.cnf')
