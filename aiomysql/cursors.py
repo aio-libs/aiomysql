@@ -598,7 +598,8 @@ class SSCursor(Cursor):
 
     async def close(self):
         conn = self._connection
-        if conn is None:
+        if conn is None or conn.closed:
+            self._connection = None
             return
 
         if self._result is not None and self._result is conn._result:
