@@ -29,7 +29,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-"sa" = ["sqlalchemy>=1.3,<1.4"]
+"sa" = ["sqlalchemy>=1.3,<2.1"]
 "rsa" = ["PyMySQL[rsa]>=1.0"]
 
 [project.urls]
