@@ -40,7 +40,7 @@ from .log import logger
 
 try:
     DEFAULT_USER = getpass.getuser()
-except KeyError:
+except (KeyError, OSError):
     DEFAULT_USER = "unknown"
 
 
