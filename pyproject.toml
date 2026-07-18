@@ -58,7 +58,7 @@ build-backend = "setuptools.build_meta"
 platforms = ["POSIX"]
 
 [tool.setuptools.packages.find]
-exclude = ["tests", "tests.*"]
+exclude = ["docs", "docs.*", "examples", "examples.*", "tests", "tests.*"]
 
 [tool.setuptools_scm]
 write_to = "aiomysql/_scm_version.py"
