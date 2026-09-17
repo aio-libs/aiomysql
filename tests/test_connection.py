@@ -281,4 +281,11 @@ def test_default_user_falls_back_when_getuser_fails(monkeypatch, exc_type):
     try:
         assert aiomysql_connection.DEFAULT_USER == "unknown"
     finally:
+        # Undo the patch first so this reload picks the real getpass.getuser
+        # back up, then reload the parent package too so aiomysql.Connection
+        # and aiomysql.connect are rebound to the same objects as the
+        # reloaded aiomysql.connection module, restoring identity checks
+        # relied on by other tests.
+        monkeypatch.undo()
         importlib.reload(aiomysql_connection)
+        importlib.reload(aiomysql)
