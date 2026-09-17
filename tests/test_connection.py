@@ -1,10 +1,12 @@
 import asyncio
 import gc
+import importlib
 import os
 
 import pytest
 
 import aiomysql
+from aiomysql import connection as aiomysql_connection
 
 
 @pytest.fixture()
@@ -263,3 +265,20 @@ async def test_commit_during_multi_result(connection_creator):
     await cur.execute("SELECT 3;")
     resp = await cur.fetchone()
     assert resp[0] == 3
+
+
+@pytest.mark.parametrize("exc_type", [KeyError, OSError])
+def test_default_user_falls_back_when_getuser_fails(monkeypatch, exc_type):
+    # Regression test: getpass.getuser() raises KeyError on Python < 3.13 and
+    # OSError on Python 3.13+ when there's no entry in the OS user database
+    # for the current uid (e.g. an arbitrary uid in a container). Either way,
+    # importing aiomysql must not crash.
+    def raise_exc():
+        raise exc_type("no such user")
+
+    monkeypatch.setattr("getpass.getuser", raise_exc)
+    importlib.reload(aiomysql_connection)
+    try:
+        assert aiomysql_connection.DEFAULT_USER == "unknown"
+    finally:
+        importlib.reload(aiomysql_connection)
