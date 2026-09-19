@@ -1,6 +1,12 @@
 Changes
 -------
 
+0.3.3 (unreleased)
+^^^^^^^^^^^^^^^^^^
+
+* Define ``escape_bytes`` and ``escape_dict`` locally instead of importing non-public
+  names from PyMySQL, which broke binary parameters on PyMySQL 1.2.3 #1080
+
 0.3.2 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 
