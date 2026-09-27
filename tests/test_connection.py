@@ -1,12 +1,12 @@
 import asyncio
 import gc
-import importlib
 import os
+import subprocess
+import sys
 
 import pytest
 
 import aiomysql
-from aiomysql import connection as aiomysql_connection
 
 
 @pytest.fixture()
@@ -267,25 +267,25 @@ async def test_commit_during_multi_result(connection_creator):
     assert resp[0] == 3
 
 
-@pytest.mark.parametrize("exc_type", [KeyError, OSError])
-def test_default_user_falls_back_when_getuser_fails(monkeypatch, exc_type):
+@pytest.mark.parametrize("exc_type", ["KeyError", "OSError"])
+def test_default_user_falls_back_when_getuser_fails(exc_type):
     # Regression test: getpass.getuser() raises KeyError on Python < 3.13 and
     # OSError on Python 3.13+ when there's no entry in the OS user database
     # for the current uid (e.g. an arbitrary uid in a container). Either way,
-    # importing aiomysql must not crash.
-    def raise_exc():
-        raise exc_type("no such user")
-
-    monkeypatch.setattr("getpass.getuser", raise_exc)
-    importlib.reload(aiomysql_connection)
-    try:
-        assert aiomysql_connection.DEFAULT_USER == "unknown"
-    finally:
-        # Undo the patch first so this reload picks the real getpass.getuser
-        # back up, then reload the parent package too so aiomysql.Connection
-        # and aiomysql.connect are rebound to the same objects as the
-        # reloaded aiomysql.connection module, restoring identity checks
-        # relied on by other tests.
-        monkeypatch.undo()
-        importlib.reload(aiomysql_connection)
-        importlib.reload(aiomysql)
+    # importing aiomysql must not crash. The import runs in a fresh
+    # interpreter so this test doesn't touch the already imported modules.
+    code = (
+        "import getpass\n"
+        "def fail():\n"
+        f"    raise {exc_type}('no such user')\n"
+        "getpass.getuser = fail\n"
+        "import aiomysql.connection\n"
+        "print(aiomysql.connection.DEFAULT_USER)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "unknown"
