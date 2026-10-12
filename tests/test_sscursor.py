@@ -161,7 +161,7 @@ async def test_sscursor_cancel(connection):
             )
         """)
 
-    ids = [(x) for x in range(100000)]
+    ids = [*range(100000)]
     await cur.executemany('INSERT INTO long_seq VALUES (%s)', ids)
 
     # Will return several results. All we need at this point
