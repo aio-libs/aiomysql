@@ -69,6 +69,39 @@ async def test_release_closed(pool_creator):
 
 
 @pytest.mark.run_loop
+@pytest.mark.parametrize('minsize,initial_size,closed_indices', [
+    (0, 1, (0,)),
+    (1, 1, (0,)),
+    (2, 3, (0, 2)),
+    (3, 3, (0, 1, 2)),
+    (0, 3, (1,)),
+])
+async def test_acquire_discards_closed_free_connections(
+        pool_creator, minsize, initial_size, closed_indices):
+    pool = await pool_creator(minsize=minsize, maxsize=4)
+    connections = [await pool.acquire() for _ in range(initial_size)]
+    for conn in connections:
+        await pool.release(conn)
+
+    # Closing a retained reference after release clears its reader and writer.
+    for index in closed_indices:
+        connections[index].close()
+
+    async with pool.acquire() as conn:
+        assert not conn.closed
+        assert all(conn is not connections[i] for i in closed_indices)
+        async with conn.cursor() as cursor:
+            await cursor.execute('SELECT 1')
+            assert await cursor.fetchone() == (1,)
+
+    expected_size = max(minsize, initial_size - len(closed_indices), 1)
+    assert pool.size == pool.freesize == expected_size
+    assert all(not conn.closed for conn in pool._free)
+    assert not pool._used
+    assert pool._acquiring == 0
+
+
+@pytest.mark.run_loop
 async def test_bad_context_manager_usage(pool_creator):
     pool = await pool_creator()
     with pytest.raises(RuntimeError):
