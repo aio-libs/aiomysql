@@ -926,14 +926,10 @@ class Connection:
             # Try from fast auth
             logger.debug("caching sha2: Trying fast path")
 
-            # AuthSwitchRequest auth-plugin-data is NULL-terminated.
-            # caching_sha2_password uses a 20-byte scramble/nonce.
-            # Some proxies, including RDS Proxy, may leave the trailing NUL
-            # in the packet payload. Including it changes the SHA2 scramble
-            # and can cause valid credentials to fail with 1045.
-            # FIX: Match PyMySQL's behavior by using only the 20-byte nonce.
-            # See https://github.com/mysql/mysql-server/blob/7d10c82196c8e45554f27c00681474a9fb86d137/sql/auth/sha2_password.cc#L939-L945
-            # https://github.com/PyMySQL/PyMySQL/issues/890
+            # AuthSwitchRequest includes a trailing NUL byte in the salt.
+            # caching_sha2_password requires a 20-byte nonce.
+            # Including the NUL byte produces an invalid authentication response.
+            # See https://github.com/PyMySQL/PyMySQL/pull/892
             self.salt = pkt.read_all()[:SCRAMBLE_LENGTH]
 
             scrambled = _auth.scramble_caching_sha2(

@@ -1,7 +1,39 @@
 import copy
-from aiomysql import create_pool
+from unittest.mock import AsyncMock, patch
+
+from aiomysql import Connection, create_pool
+from pymysql.connections import MysqlPacket, _auth
 
 import pytest
+
+
+@pytest.mark.run_loop
+@pytest.mark.parametrize('terminator', [b'\0', b''],
+                         ids=['nul-terminated', 'unterminated'])
+async def test_caching_sha2_auth_switch_salt(terminator, loop):
+    nonce = b'0123456789abcdefghij'
+    password = b'pass_caching_sha2'
+    conn = Connection(password=password.decode('latin1'), loop=loop)
+    auth_switch = MysqlPacket(
+        b'\xfe' + b'caching_sha2_password\0' + nonce + terminator, 'utf8'
+    )
+    # The caller consumes the packet identifier and plugin name first.
+    auth_switch.read_uint8()
+    auth_switch.read_string()
+    fast_auth = MysqlPacket(b'\x01\x03', 'utf8')
+    ok_packet = MysqlPacket(b'\x00\x00\x00\x02\x00\x00\x00', 'utf8')
+
+    with patch.object(conn, 'write_packet') as write_packet, \
+            patch.object(conn, '_read_packet', new_callable=AsyncMock,
+                         side_effect=[fast_auth, ok_packet]) as read_packet:
+        result = await conn.caching_sha2_password_auth(auth_switch)
+
+    assert conn.salt == nonce
+    write_packet.assert_called_once_with(
+        _auth.scramble_caching_sha2(password, nonce)
+    )
+    assert result is ok_packet
+    assert read_packet.await_count == 2
 
 
 # You could parameterise these tests with this, but then pytest
