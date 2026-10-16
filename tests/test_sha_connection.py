@@ -18,8 +18,9 @@ async def test_caching_sha2_auth_switch_salt(terminator, loop):
         b'\xfe' + b'caching_sha2_password\0' + nonce + terminator, 'utf8'
     )
     # The caller consumes the packet identifier and plugin name first.
-    auth_switch.read_uint8()
-    auth_switch.read_string()
+    assert auth_switch.read_uint8() == 0xfe
+    assert auth_switch.read_string() == b'caching_sha2_password'
+
     fast_auth = MysqlPacket(b'\x01\x03', 'utf8')
     ok_packet = MysqlPacket(b'\x00\x00\x00\x02\x00\x00\x00', 'utf8')
 
