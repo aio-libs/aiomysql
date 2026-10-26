@@ -1,6 +1,8 @@
 import asyncio
 import gc
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -263,3 +265,27 @@ async def test_commit_during_multi_result(connection_creator):
     await cur.execute("SELECT 3;")
     resp = await cur.fetchone()
     assert resp[0] == 3
+
+
+@pytest.mark.parametrize("exc_type", ["KeyError", "OSError"])
+def test_default_user_falls_back_when_getuser_fails(exc_type):
+    # Regression test: getpass.getuser() raises KeyError on Python < 3.13 and
+    # OSError on Python 3.13+ when there's no entry in the OS user database
+    # for the current uid (e.g. an arbitrary uid in a container). Either way,
+    # importing aiomysql must not crash. The import runs in a fresh
+    # interpreter so this test doesn't touch the already imported modules.
+    code = (
+        "import getpass\n"
+        "def fail():\n"
+        f"    raise {exc_type}('no such user')\n"
+        "getpass.getuser = fail\n"
+        "import aiomysql.connection\n"
+        "print(aiomysql.connection.DEFAULT_USER)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "unknown"
