@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 """
 
-from pymysql.converters import escape_dict, escape_sequence, escape_string
+from pymysql.converters import escape_sequence, escape_string
 from pymysql.err import (Warning, Error, InterfaceError, DataError,
                          DatabaseError, OperationalError, IntegrityError,
                          InternalError,
@@ -35,6 +35,11 @@ from .pool import create_pool, Pool
 from ._version import version
 
 __version__ = version
+
+
+def escape_dict(val, charset, mapping=None):
+    raise TypeError("dict can not be used as parameter")
+
 
 __all__ = [
 
