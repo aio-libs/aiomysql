@@ -119,7 +119,7 @@ jobs:
     - name: Set up pip cache
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ steps.calc-cache-key-files.outputs.cache-key-for-dep-files }}
@@ -212,7 +212,7 @@ jobs:
         python-version: >-
           3.13
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
@@ -308,7 +308,7 @@ jobs:
         python-version: >-
           3.13
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
@@ -418,7 +418,7 @@ jobs:
         python-version: ${{ matrix.py }}
 
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
