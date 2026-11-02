@@ -68,7 +68,7 @@ jobs:
       wheel-artifact-name: ${{ steps.artifact-name.outputs.wheel }}
     steps:
     - name: Switch to using Python 3.13 by default
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: >-
           3.13
@@ -207,7 +207,7 @@ jobs:
 
     steps:
     - name: Switch to using Python v3.13
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: >-
           3.13
@@ -303,7 +303,7 @@ jobs:
 
     steps:
     - name: Switch to using Python 3.13 by default
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: >-
           3.13
@@ -413,7 +413,7 @@ jobs:
     steps:
     - name: Setup Python ${{ matrix.py }}
       id: python-install
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.py }}
 
