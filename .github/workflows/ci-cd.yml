@@ -94,7 +94,7 @@ jobs:
     - name: Check out src from Git
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: false
@@ -225,7 +225,7 @@ jobs:
         build
 
     - name: Grab the source from Git
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: false
@@ -314,7 +314,7 @@ jobs:
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
 
     - name: Grab the source from Git
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: false
@@ -432,7 +432,7 @@ jobs:
         pip
 
     - name: Grab the source from Git
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: false
@@ -673,7 +673,7 @@ jobs:
 
     steps:
     - name: Fetch the src snapshot
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: true
@@ -721,7 +721,7 @@ jobs:
 
     steps:
     - name: Fetch the src snapshot
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         show-progress: false
         persist-credentials: false
