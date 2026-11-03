@@ -7,6 +7,32 @@ import pytest
 import aiomysql
 
 
+@pytest.mark.run_loop
+@pytest.mark.parametrize('use_context_manager', [False, True])
+@pytest.mark.parametrize('key_options', [{}, {'server_public_key': b'public-key'}])
+async def test_connect_server_public_key(monkeypatch, loop, key_options,
+                                         use_context_manager):
+    expected = key_options.get('server_public_key')
+    connected = []
+
+    async def check_connect(conn):
+        # Check before the handshake, where authentication needs the key.
+        assert conn.server_public_key == expected
+        connected.append(conn)
+
+    monkeypatch.setattr(aiomysql.Connection, '_connect', check_connect)
+    if use_context_manager:
+        async with aiomysql.connect(**key_options) as conn:
+            assert conn.server_public_key == expected
+    else:
+        conn = await aiomysql.connect(**key_options)
+        try:
+            assert conn.server_public_key == expected
+        finally:
+            conn.close()
+    assert connected == [conn]
+
+
 @pytest.fixture()
 def fill_my_cnf(mysql_params):
     tests_root = os.path.abspath(os.path.dirname(__file__))
