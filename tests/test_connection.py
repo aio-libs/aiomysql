@@ -114,6 +114,17 @@ async def test_escape_string(connection_creator):
 
 
 @pytest.mark.run_loop
+async def test_escape_bytes(connection_creator):
+    con = await connection_creator()
+    cur = await con.cursor()
+
+    payload = b"foo'bar\x00\\"
+    await cur.execute("SELECT %s", (payload,))
+    (result,) = await cur.fetchone()
+    assert result == payload
+
+
+@pytest.mark.run_loop
 async def test_sql_mode_param(connection_creator):
     con = await connection_creator(sql_mode='NO_BACKSLASH_ESCAPES')
     assert con.escape("foo'bar") == "'foo''bar'"
