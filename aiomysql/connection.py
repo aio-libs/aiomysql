@@ -40,7 +40,9 @@ from .log import logger
 
 try:
     DEFAULT_USER = getpass.getuser()
-except KeyError:
+except (KeyError, OSError):
+    # KeyError is raised on Python < 3.13, OSError on Python 3.13+, when
+    # there's no entry in the OS user database for the current uid.
     DEFAULT_USER = "unknown"
 
 
