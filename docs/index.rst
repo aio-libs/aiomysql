@@ -107,7 +107,7 @@ coverage reports.
 Dependencies
 ------------
 
-- Python 3.9+
+- Python 3.11+
 - :term:`PyMySQL`
 - aiomysql.sa requires :term:`sqlalchemy`.
 

@@ -1,6 +1,11 @@
 Changes
 -------
 
+next (unreleased)
+^^^^^^^^^^^^^^^^^
+
+* Drop support for Python 3.9 and 3.10, replaced by 3.14 and 3.15 #1100
+
 0.3.2 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 
