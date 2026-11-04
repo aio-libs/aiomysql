@@ -350,7 +350,7 @@ jobs:
       🧪 🐍${{
           matrix.py
       }} @ ${{
-          matrix.os
+          matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os
       }} on ${{
           join(matrix.db, '-')
       }}
@@ -381,7 +381,8 @@ jobs:
         - [mariadb, '12.0']
 
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    # Ubuntu 26.04 (ubuntu-latest) has no prebuilt Python 3.9 in setup-python.
+    runs-on: ${{ matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os }}
     timeout-minutes: 15
 
     continue-on-error: >-
@@ -554,10 +555,10 @@ jobs:
         flags: >-
           CI-GHA,
           OS-${{ runner.os }},
-          VM-${{ matrix.os }},
+          VM-${{ matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os }},
           Py-${{ steps.python-install.outputs.python-version }},
           DB-${{ join(matrix.db, '-') }},
-          ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
+          ${{ matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
 
     - name: Upload test results to Codecov
@@ -568,10 +569,10 @@ jobs:
         flags: >-
           CI-GHA,
           OS-${{ runner.os }},
-          VM-${{ matrix.os }},
+          VM-${{ matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os }},
           Py-${{ steps.python-install.outputs.python-version }},
           DB-${{ join(matrix.db, '-') }},
-          ${{ matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
+          ${{ matrix.py == '3.9' && 'ubuntu-24.04' || matrix.os }}_${{ matrix.py }}_${{ join(matrix.db, '-') }}
         fail_ci_if_error: true
 
   check:  # This job does nothing and is only used for the branch protection
