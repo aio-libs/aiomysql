@@ -119,7 +119,7 @@ jobs:
     - name: Set up pip cache
       if: >-
         steps.request-check.outputs.release-requested != 'true'
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ steps.calc-cache-key-files.outputs.cache-key-for-dep-files }}
@@ -212,7 +212,7 @@ jobs:
         python-version: >-
           3.13
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
@@ -308,7 +308,7 @@ jobs:
         python-version: >-
           3.13
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
@@ -418,7 +418,7 @@ jobs:
         python-version: ${{ matrix.py }}
 
     - name: Set up pip cache
-      uses: re-actors/cache-python-deps@810325a232f2a28ea124dfba85c7c72fd1774b38 # v1.0.0
+      uses: re-actors/cache-python-deps@cb5e4347cdcefa232fd1cc80cd4a0865d9d100da # v1.0.1
       with:
         cache-key-for-dependency-files: >-
           ${{ needs.pre-setup.outputs.cache-key-for-dep-files }}
@@ -548,7 +548,7 @@ jobs:
 
     - name: Upload coverage
       if: ${{ github.event_name != 'schedule' }}
-      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       with:
         files: ./coverage.xml
         flags: >-
@@ -585,7 +585,7 @@ jobs:
 
     steps:
     - name: Decide whether the needed jobs succeeded or failed
-      uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+      uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
       with:
         jobs: ${{ toJSON(needs) }}
 
@@ -618,7 +618,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to PyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+      uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
       with:
         print-hash: true
 
@@ -652,7 +652,7 @@ jobs:
         path: dist/
     - name: >-
         Publish 🐍📦 ${{ needs.pre-setup.outputs.git-tag }} to TestPyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+      uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
       with:
         repository-url: https://test.pypi.org/legacy/
         print-hash: true
