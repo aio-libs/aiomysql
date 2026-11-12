@@ -3,6 +3,7 @@ import gc
 import os
 
 import pytest
+from pymysql.constants import COMMAND
 
 import aiomysql
 
@@ -263,3 +264,130 @@ async def test_commit_during_multi_result(connection_creator):
     await cur.execute("SELECT 3;")
     resp = await cur.fetchone()
     assert resp[0] == 3
+
+
+@pytest.mark.run_loop
+async def test_escape_bytes_binary_prefix_default(connection_creator):
+    conn = await connection_creator()
+    assert conn.escape(b"x'y") == r"_binary'x\'y'"
+
+
+@pytest.mark.run_loop
+async def test_escape_bytes_without_binary_prefix(connection_creator):
+    conn = await connection_creator(binary_prefix=False)
+    assert conn.escape(b"x'y") == r"'x\'y'"
+    assert conn.escape("x'y") == r"'x\'y'"
+
+
+@pytest.mark.run_loop
+async def test_insert_bytes_json_without_binary_prefix(connection_creator):
+    # MySQL 8 rejects ``_binary`` strings for JSON columns (error 3144).
+    conn = await connection_creator(binary_prefix=False)
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS test_binary_prefix_json")
+        await cur.execute(
+            "CREATE TABLE test_binary_prefix_json (j JSON)")
+        try:
+            await cur.execute(
+                "INSERT INTO test_binary_prefix_json (j) VALUES (%s)",
+                (b'{"a": 1}',))
+            await cur.execute("SELECT j FROM test_binary_prefix_json")
+            (row,) = await cur.fetchall()
+            assert row[0] in ('{"a": 1}', {"a": 1})
+        finally:
+            await cur.execute("DROP TABLE test_binary_prefix_json")
+
+
+_RAW_VALUES = [
+    b'\xff\x00\xe9',  # invalid UTF-8 and a NUL byte
+    b'caf\xc3\xa9',  # valid non-ASCII UTF-8
+    b"it's \\ \"quoted\"",
+]
+
+
+async def _make_raw_table(cur):
+    await cur.execute("DROP TABLE IF EXISTS test_binary_prefix_raw")
+    await cur.execute(
+        "CREATE TABLE test_binary_prefix_raw (id INT, b VARBINARY(64))")
+
+
+@pytest.mark.run_loop
+async def test_binary_prefix_false_raw_bytes_execute(connection_creator):
+    conn = await connection_creator(binary_prefix=False)
+    async with conn.cursor() as cur:
+        await _make_raw_table(cur)
+        try:
+            for i, value in enumerate(_RAW_VALUES):
+                await cur.execute(
+                    "INSERT INTO test_binary_prefix_raw VALUES (%s, %s)",
+                    (i, value))
+            await cur.execute(
+                "SELECT b FROM test_binary_prefix_raw ORDER BY id")
+            assert [r[0] for r in await cur.fetchall()] == _RAW_VALUES
+        finally:
+            await cur.execute("DROP TABLE test_binary_prefix_raw")
+
+
+@pytest.mark.run_loop
+async def test_binary_prefix_false_raw_bytes_executemany(connection_creator):
+    conn = await connection_creator(binary_prefix=False)
+    async with conn.cursor() as cur:
+        await _make_raw_table(cur)
+        try:
+            await cur.executemany(
+                "INSERT INTO test_binary_prefix_raw VALUES (%s, %s)",
+                list(enumerate(_RAW_VALUES)))
+            await cur.execute(
+                "SELECT b FROM test_binary_prefix_raw ORDER BY id")
+            assert [r[0] for r in await cur.fetchall()] == _RAW_VALUES
+        finally:
+            await cur.execute("DROP TABLE test_binary_prefix_raw")
+
+
+@pytest.mark.run_loop
+async def test_execute_command_str_with_surrogateescape(connection_creator):
+    # str built from undecodable bytes (as produced by escape() with
+    # binary_prefix=False) must not raise UnicodeEncodeError when sent.
+    conn = await connection_creator(binary_prefix=False)
+    sql = "SELECT 1 /* " + b'\xff\xe9'.decode('ascii', 'surrogateescape') \
+        + " */"
+    await conn._execute_command(COMMAND.COM_QUERY, sql)
+    await conn._read_query_result()
+    assert conn._result.rows == ((1,),)
+
+
+@pytest.mark.run_loop
+async def test_pool_binary_prefix_false_raw_bytes(pool_creator):
+    pool = await pool_creator(binary_prefix=False)
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await _make_raw_table(cur)
+            try:
+                await cur.execute(
+                    "INSERT INTO test_binary_prefix_raw VALUES (1, %s)",
+                    (_RAW_VALUES[0],))
+                await cur.executemany(
+                    "INSERT INTO test_binary_prefix_raw VALUES (%s, %s)",
+                    [(2, _RAW_VALUES[1]), (3, _RAW_VALUES[2])])
+                await cur.execute(
+                    "SELECT b FROM test_binary_prefix_raw ORDER BY id")
+                assert [r[0] for r in await cur.fetchall()] == _RAW_VALUES
+            finally:
+                await cur.execute("DROP TABLE test_binary_prefix_raw")
+
+
+@pytest.mark.run_loop
+async def test_binary_prefix_false_no_backslash_escapes(connection_creator):
+    conn = await connection_creator(binary_prefix=False)
+    async with conn.cursor() as cur:
+        await cur.execute("SET SESSION sql_mode = 'NO_BACKSLASH_ESCAPES'")
+        assert conn.escape(b"a'b\\c") == "'a''b\\c'"
+        await _make_raw_table(cur)
+        try:
+            value = b"x' OR '1'='1 \\"
+            await cur.execute(
+                "INSERT INTO test_binary_prefix_raw VALUES (1, %s)", (value,))
+            await cur.execute("SELECT b FROM test_binary_prefix_raw")
+            assert (await cur.fetchone())[0] == value
+        finally:
+            await cur.execute("DROP TABLE test_binary_prefix_raw")
