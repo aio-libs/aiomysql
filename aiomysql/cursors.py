@@ -25,6 +25,8 @@ RE_INSERT_VALUES = re.compile(
     r"(?:ON DUPLICATE.*)?);?\s*\Z",
     re.IGNORECASE | re.DOTALL)
 
+RE_ROW_ALIAS = re.compile(r"\s*AS\s", re.IGNORECASE)
+
 
 class Cursor:
     """Cursor is used to interact with the database."""
@@ -276,6 +278,11 @@ class Cursor:
             logger.info("%r", args)
 
         m = RE_INSERT_VALUES.match(query)
+        if m and m.group(3) and '%' in m.group(3) \
+                and RE_ROW_ALIAS.match(m.group(3)):
+            # The postfix is sent without formatting, so a row alias
+            # followed by placeholders (or %%) keeps using the per-row path.
+            m = None
         if m:
             q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()

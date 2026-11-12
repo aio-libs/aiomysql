@@ -383,6 +383,37 @@ async def test_executemany_percentage(connection_creator):
 
 
 @pytest.mark.run_loop
+async def test_executemany_row_alias(mysql_server, connection_creator):
+    if mysql_server["db_type"] != "mysql" or \
+            mysql_server["server_version_tuple"] < (8, 0, 19):
+        pytest.skip("row alias needs MySQL 8.0.19+")
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS alias_test")
+        await cur.execute("""\
+            CREATE TABLE alias_test (
+                a INTEGER PRIMARY KEY,
+                b INTEGER)""")
+
+        # no placeholder after the alias: batched in one statement
+        q = ("INSERT INTO alias_test (a, b) VALUES (%s, %s) AS new "
+             "ON DUPLICATE KEY UPDATE b = new.b")
+        await cur.executemany(q, [(1, 10), (2, 20)])
+        assert cur._last_executed.startswith(
+            b"INSERT INTO alias_test (a, b) VALUES (1, 10),(2, 20) AS new")
+
+        # placeholder after the alias: one statement per row
+        q = ("INSERT INTO alias_test (a, b) VALUES (%s, %s) AS new "
+             "ON DUPLICATE KEY UPDATE b = new.b + %s")
+        await cur.executemany(q, [(1, 11, 100), (2, 21, 200)])
+        assert cur._last_executed.endswith("b = new.b + 200")
+
+        await cur.execute("SELECT a, b FROM alias_test ORDER BY a")
+        assert await cur.fetchall() == ((1, 111), (2, 221))
+        await cur.execute("DROP TABLE alias_test")
+
+
+@pytest.mark.run_loop
 async def test_max_execution_time(mysql_server, connection_creator):
     conn = await connection_creator()
     await _prepare(conn)
