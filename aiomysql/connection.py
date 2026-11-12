@@ -52,7 +52,8 @@ def connect(host="localhost", user=None, password="",
             connect_timeout=None, read_default_group=None,
             autocommit=False, echo=False,
             local_infile=False, loop=None, ssl=None, auth_plugin='',
-            program_name='', server_public_key=None):
+            program_name='', server_public_key=None,
+            binary_prefix=True):
     """See connections.Connection.__init__() for information about
     defaults."""
     coro = _connect(host=host, user=user, password=password, db=db,
@@ -65,7 +66,8 @@ def connect(host="localhost", user=None, password="",
                     read_default_group=read_default_group,
                     autocommit=autocommit, echo=echo,
                     local_infile=local_infile, loop=loop, ssl=ssl,
-                    auth_plugin=auth_plugin, program_name=program_name)
+                    auth_plugin=auth_plugin, program_name=program_name,
+                    binary_prefix=binary_prefix)
     return _ConnectionContextManager(coro)
 
 
@@ -141,7 +143,8 @@ class Connection:
                  connect_timeout=None, read_default_group=None,
                  autocommit=False, echo=False,
                  local_infile=False, loop=None, ssl=None, auth_plugin='',
-                 program_name='', server_public_key=None):
+                 program_name='', server_public_key=None,
+                 binary_prefix=True):
         """
         Establish a connection to the MySQL database. Accepts several
         arguments:
@@ -183,6 +186,11 @@ class Connection:
             handshaking with MySQL. (omitted by default)
         :param server_public_key: SHA256 authentication plugin public
             key value.
+        :param binary_prefix: Add the ``_binary`` prefix to ``bytes``
+            parameters when escaping them, so the server treats them as
+            binary strings. Set to ``False`` to send them as plain string
+            literals, as PyMySQL does by default; this is needed to store
+            ``bytes`` JSON in a MySQL 8 ``JSON`` column. (default: ``True``)
         :param loop: asyncio loop
         """
         self._loop = loop or asyncio.get_event_loop()
@@ -265,6 +273,7 @@ class Connection:
         #: specified autocommit mode. None means use server default.
         self.autocommit_mode = autocommit
 
+        self._binary_prefix = binary_prefix
         self.encoders = encoders  # Need for MySQLdb compatibility.
         self.decoders = conv
         self.sql_mode = sql_mode
@@ -415,7 +424,10 @@ class Connection:
         if isinstance(obj, str):
             return "'" + self.escape_string(obj) + "'"
         if isinstance(obj, bytes):
-            return escape_bytes_prefixed(obj)
+            if self._binary_prefix:
+                return escape_bytes_prefixed(obj)
+            return "'" + self.escape_string(
+                obj.decode('ascii', 'surrogateescape')) + "'"
         return escape_item(obj, self._charset)
 
     def literal(self, obj):
@@ -716,7 +728,7 @@ class Connection:
             self._result = None
 
         if isinstance(sql, str):
-            sql = sql.encode(self._encoding)
+            sql = sql.encode(self._encoding, 'surrogateescape')
 
         chunk_size = min(MAX_PACKET_LEN, len(sql) + 1)  # +1 is for command
 

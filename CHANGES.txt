@@ -1,6 +1,11 @@
 Changes
 -------
 
+Unreleased
+^^^^^^^^^^
+
+* Add ``binary_prefix`` connection option (default ``True``, unchanged) to allow sending ``bytes`` parameters without the ``_binary`` prefix, e.g. for MySQL 8 JSON columns #970
+
 0.3.2 (2025-10-21)
 ^^^^^^^^^^^^^^^^^^
 

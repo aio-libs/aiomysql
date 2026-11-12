@@ -47,7 +47,8 @@ Example::
             connect_timeout=None, read_default_group=None,
             autocommit=False, echo=False
             local_infile=False, loop=None, ssl=None, auth_plugin='',
-            program_name='', server_public_key=None)
+            program_name='', server_public_key=None,
+            binary_prefix=True)
 
     A :ref:`coroutine <coroutine>` that connects to MySQL.
 
@@ -97,6 +98,16 @@ Example::
         .. versionchanged:: 1.0
             ``sys.argv[0]`` is no longer passed by default
     :param server_public_key: SHA256 authenticaiton plugin public key value.
+    :param binary_prefix: Add the ``_binary`` prefix when escaping ``bytes``
+        parameters. Set to ``False`` to send them as plain string literals,
+        as PyMySQL does by default, e.g. to store ``bytes`` JSON in a MySQL 8
+        ``JSON`` column. (default: ``True``)
+
+        .. warning::
+
+            With ``False``, ``bytes`` are sent as plain string literals in the
+            connection charset, so this is meant for text/JSON, not arbitrary
+            binary data; keep ``True`` for ``BLOB`` columns.
     :param loop: asyncio event loop instance or ``None`` for default one.
     :returns: :class:`Connection` instance.
 
