@@ -6,6 +6,32 @@ from aiomysql import ProgrammingError, Cursor, InterfaceError, OperationalError
 from aiomysql.cursors import RE_INSERT_VALUES
 
 
+def test_re_insert_values_with_on_duplicate_key_alias():
+    m = RE_INSERT_VALUES.match(
+        "INSERT INTO t1 (a,b,c) VALUES (%s,%s,%s) AS new "
+        "ON DUPLICATE KEY UPDATE c = new.a + new.b"
+    )
+    assert m is not None
+    assert m.group(1) == "INSERT INTO t1 (a,b,c) VALUES "
+    assert m.group(2) == "(%s,%s,%s)"
+    assert m.group(3) == " AS new ON DUPLICATE KEY UPDATE c = new.a + new.b"
+
+    m = RE_INSERT_VALUES.match(
+        "INSERT INTO t1 (a,b,c) VALUES (%s,%s,%s) AS new(n1,n2,n3) "
+        "ON DUPLICATE KEY UPDATE c = n1 + n2"
+    )
+    assert m is not None
+    assert m.group(3) == (
+        " AS new(n1,n2,n3) ON DUPLICATE KEY UPDATE c = n1 + n2")
+
+    m = RE_INSERT_VALUES.match(
+        "INSERT INTO t1 (a,b,c) VALUES (%s,%s,%s) "
+        "ON DUPLICATE KEY UPDATE c=VALUES(a)+VALUES(b)"
+    )
+    assert m is not None
+    assert m.group(3) == " ON DUPLICATE KEY UPDATE c=VALUES(a)+VALUES(b)"
+
+
 async def _prepare(conn):
     cur = await conn.cursor()
     await cur.execute("DROP TABLE IF EXISTS tbl;")
@@ -354,6 +380,37 @@ async def test_executemany_percentage(connection_creator):
         await cur.executemany(q, [(3, 4), (5, 6)])
         assert cur._last_executed.endswith(b"(3, 4),(5, 6)"), \
             "executemany with %% not in one query"
+
+
+@pytest.mark.run_loop
+async def test_executemany_row_alias(mysql_server, connection_creator):
+    if mysql_server["db_type"] != "mysql" or \
+            mysql_server["server_version_tuple"] < (8, 0, 19):
+        pytest.skip("row alias needs MySQL 8.0.19+")
+    conn = await connection_creator()
+    async with conn.cursor() as cur:
+        await cur.execute("DROP TABLE IF EXISTS alias_test")
+        await cur.execute("""\
+            CREATE TABLE alias_test (
+                a INTEGER PRIMARY KEY,
+                b INTEGER)""")
+
+        # no placeholder after the alias: batched in one statement
+        q = ("INSERT INTO alias_test (a, b) VALUES (%s, %s) AS new "
+             "ON DUPLICATE KEY UPDATE b = new.b")
+        await cur.executemany(q, [(1, 10), (2, 20)])
+        assert cur._last_executed.startswith(
+            b"INSERT INTO alias_test (a, b) VALUES (1, 10),(2, 20) AS new")
+
+        # placeholder after the alias: one statement per row
+        q = ("INSERT INTO alias_test (a, b) VALUES (%s, %s) AS new "
+             "ON DUPLICATE KEY UPDATE b = new.b + %s")
+        await cur.executemany(q, [(1, 11, 100), (2, 21, 200)])
+        assert cur._last_executed.endswith("b = new.b + 200")
+
+        await cur.execute("SELECT a, b FROM alias_test ORDER BY a")
+        assert await cur.fetchall() == ((1, 111), (2, 221))
+        await cur.execute("DROP TABLE alias_test")
 
 
 @pytest.mark.run_loop
