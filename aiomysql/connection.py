@@ -615,20 +615,21 @@ class Connection:
                 '<HBB', packet_header)
             bytes_to_read = btrl + (btrh << 16)
 
+            error = None
+
             # Outbound and inbound packets are numbered sequentialy, so
             # we increment in both write_packet and read_packet. The count
             # is reset at new COMMAND PHASE.
             if packet_number != self._next_seq_id:
-                self.close()
                 if packet_number == 0:
                     # MySQL 8.0 sends error packet with seqno==0 when shutdown
-                    raise OperationalError(
+                    error = OperationalError(
                         CR.CR_SERVER_LOST,
                         "Lost connection to MySQL server during query")
-
-                raise InternalError(
-                    "Packet sequence number wrong - got %d expected %d" %
-                    (packet_number, self._next_seq_id))
+                else:
+                    error = InternalError(
+                        "Packet sequence number wrong - got %d expected %d" %
+                        (packet_number, self._next_seq_id))
             self._next_seq_id = (self._next_seq_id + 1) % 256
 
             try:
@@ -638,6 +639,16 @@ class Connection:
                 raise
 
             buff += recv_data
+
+            if error is not None:
+                # if packet is error packet
+                if (isinstance(error, InternalError) and recv_data
+                        and (recv_data[0] == 0xFF)):
+                    break
+                else:
+                    self.close()
+                    raise error
+
             # https://dev.mysql.com/doc/internals/en/sending-more-than-16mbyte.html
             if bytes_to_read == 0xffffff:
                 continue
