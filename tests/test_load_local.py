@@ -61,7 +61,9 @@ async def test_load_file(cursor, table_local_file):
                             'load_local_data.txt')
     await cursor.execute(
         ("LOAD DATA LOCAL INFILE '{0}' INTO TABLE " +
-         "test_load_local FIELDS TERMINATED BY ','").format(filename)
+         "test_load_local FIELDS TERMINATED BY ','").format(
+            filename.replace('\\', '/')
+        )
     )
     await cursor.execute("SELECT COUNT(*) FROM test_load_local")
     resp = await cursor.fetchone()
@@ -78,7 +80,9 @@ async def test_load_warnings(cursor, table_local_file):
                             'fixtures', 'load_local_warn_data.txt')
 
     sql = ("LOAD DATA LOCAL INFILE '{0}' INTO TABLE " +
-           "test_load_local FIELDS TERMINATED BY ','").format(filename)
+           "test_load_local FIELDS TERMINATED BY ','").format(
+               filename.replace('\\', '/')
+           )
 
     with warnings.catch_warnings(record=True) as w:
         await cursor.execute(sql)
@@ -111,5 +115,7 @@ async def test_load_local_disabled(mysql_params, table_local_file):
             ):
                 await cursor.execute(
                     ("LOAD DATA LOCAL INFILE '{0}' INTO TABLE " +
-                     "test_load_local FIELDS TERMINATED BY ','").format(filename)
+                     "test_load_local FIELDS TERMINATED BY ','").format(
+                         filename.replace('\\', '/')
+                     )
                 )

@@ -236,8 +236,10 @@ async def test_connection_double_ensure_closed(connection_creator):
 
 @pytest.mark.run_loop
 @pytest.mark.usefixtures("disable_gc")
-async def test___del__(connection_creator):
-    conn = await connection_creator()
+async def test___del__(mysql_params, loop):
+    # The connection_creator fixture retains references until teardown,
+    # preventing the destructor being exercised reliably on Windows.
+    conn = await aiomysql.connect(loop=loop, **mysql_params)
     with pytest.warns(ResourceWarning):
         del conn
         gc.collect()

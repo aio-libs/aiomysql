@@ -1,0 +1,98 @@
+name: Windows MySQL tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-mysql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-mysql:
+    name: Python ${{ matrix.python-version }} / Windows / MySQL 8.4
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      # Match Linux CI: the test .cnf fixtures require an explicit value.
+      MYSQL_ROOT_PASSWORD: ''
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install project and test dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -e .
+
+      # Windows runners cannot use Linux service containers. This action
+      # initialises a native MySQL 8.4 Windows service instead.
+      - name: Start native MySQL 8.4 service
+        uses: ankane/setup-mysql@d771aa74d6ea539d50a55296b7d18ac9feb9fd23
+        with:
+          mysql-version: '8.4'
+          user: root
+
+      - name: Configure TLS and local-file imports
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $certs = (Resolve-Path 'tests/ssl_resources/ssl').Path.Replace('\', '/')
+
+          # The existing mysql_server fixture requires TLS authenticated by
+          # tests/ssl_resources/ssl/ca.pem, not MySQL's generated default CA.
+          @"
+          [mysqld]
+          ssl-ca=$certs/ca.pem
+          ssl-cert=$certs/server-cert.pem
+          ssl-key=$certs/server-key.pem
+          local-infile=ON
+          "@ | Set-Content -Path 'C:\my.ini' -Encoding ascii
+
+          Restart-Service -Name MySQL
+          $ready = $false
+          for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            & mysql --host=127.0.0.1 --user=root --ssl-mode=REQUIRED --execute='SELECT 1' 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              $ready = $true
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ready) {
+            throw 'MySQL did not become ready with TLS enabled'
+          }
+
+          # Check server settings before executing the integration suite.
+          & mysql --host=127.0.0.1 --user=root --ssl-mode=REQUIRED `
+            --execute='SHOW VARIABLES LIKE "ssl_ca"; SHOW VARIABLES LIKE "local_infile";'
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Could not inspect MySQL TLS and local_infile settings'
+          }
+
+      - name: Run Windows database integration tests
+        shell: pwsh
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python -m pytest -v `
+            ./tests `
+            --mysql-address 'windows=127.0.0.1:3306'

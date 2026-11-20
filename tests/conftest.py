@@ -7,7 +7,11 @@ import ssl
 import aiomysql
 import pymysql
 import pytest
-import uvloop
+
+if os.name == "nt":
+    uvloop = None
+else:
+    import uvloop
 
 
 @pytest.fixture
@@ -76,10 +80,13 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture
 def loop(request, loop_type):
-    loop = asyncio.new_event_loop()
     asyncio.set_event_loop(None)
 
-    if uvloop and loop_type == 'uvloop':
+    if os.name == "nt":
+        # Proactor's IOCP handling fails with the TLS transport used here.
+        # Exercise the existing TCP/TLS tests with a Windows selector loop.
+        loop = asyncio.SelectorEventLoop()
+    elif uvloop and loop_type == 'uvloop':
         loop = uvloop.new_event_loop()
     else:
         loop = asyncio.new_event_loop()
