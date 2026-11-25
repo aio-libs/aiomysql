@@ -416,6 +416,11 @@ class Connection:
             return "'" + self.escape_string(obj) + "'"
         if isinstance(obj, bytes):
             return escape_bytes_prefixed(obj)
+        # don't use isinstance here. it breaks subclasses like
+        # time.struct_time. Mirrors PyMySQL's Connection.escape().
+        if type(obj) in (tuple, list, set, frozenset):
+            escape = self.escape
+            return "(" + ",".join([escape(item) for item in obj]) + ")"
         return escape_item(obj, self._charset)
 
     def literal(self, obj):

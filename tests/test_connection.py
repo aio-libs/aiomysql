@@ -113,6 +113,47 @@ async def test_escape_string(connection_creator):
     assert con.escape("foo'bar") == "'foo''bar'"
 
 
+def test_escape_sequence():
+    # Regression test for https://github.com/aio-libs/aiomysql/issues/1104:
+    # sequence parameters must be expanded item-wise through the
+    # sql_mode-aware escape(), like PyMySQL's Connection.escape() does,
+    # instead of raising TypeError with PyMySQL >= 1.2.4.
+    conn = aiomysql.Connection(user="test")
+    conn.server_status = 0
+
+    assert conn.escape((1, 2)) == "(1,2)"
+    assert conn.escape([1, "a"]) == "(1,'a')"
+    assert conn.escape(("a",)) == "('a')"
+    assert conn.escape((1, ("a", "b"))) == "(1,('a','b'))"
+    # the classic format-paramstyle IN clause case
+    assert conn.escape((("x", "y"),)) == "(('x','y'))"
+
+    # non-sequence values are unaffected
+    assert conn.escape("foo'bar") == "'foo\\'bar'"
+    assert conn.escape(42) == "42"
+    assert conn.escape(None) == "NULL"
+
+    # tuple subclasses such as time.struct_time must be escaped as
+    # datetimes, not expanded as sequences
+    import time
+
+    st = time.struct_time((2024, 1, 2, 3, 4, 5, 1, 2, -1))
+    assert conn.escape(st) == "'2024-01-02 03:04:05'"
+
+
+def test_escape_sequence_no_backslash_escapes():
+    # Items inside sequences go through the sql_mode-aware escape_string(),
+    # so with NO_BACKSLASH_ESCAPES quotes are doubled rather than
+    # backslash-escaped.
+    from pymysql.constants import SERVER_STATUS
+
+    conn = aiomysql.Connection(user="test")
+    conn.server_status = SERVER_STATUS.SERVER_STATUS_NO_BACKSLASH_ESCAPES
+
+    assert conn.escape("foo'bar") == "'foo''bar'"
+    assert conn.escape(("a'b", 2)) == "('a''b',2)"
+
+
 @pytest.mark.run_loop
 async def test_sql_mode_param(connection_creator):
     con = await connection_creator(sql_mode='NO_BACKSLASH_ESCAPES')
