@@ -113,12 +113,23 @@ async def test_escape_string(connection_creator):
     assert con.escape("foo'bar") == "'foo''bar'"
 
 
-def test_escape_sequence():
+@pytest.fixture()
+def unconnected_connection():
+    # A Connection that never connects: escape() is pure string handling,
+    # so no server is needed. The constructor requires a loop, and the
+    # suite deliberately unsets the current loop, so pass one explicitly.
+    loop = asyncio.new_event_loop()
+    conn = aiomysql.Connection(user="test", loop=loop)
+    yield conn
+    loop.close()
+
+
+def test_escape_sequence(unconnected_connection):
     # Regression test for https://github.com/aio-libs/aiomysql/issues/1104:
     # sequence parameters must be expanded item-wise through the
     # sql_mode-aware escape(), like PyMySQL's Connection.escape() does,
     # instead of raising TypeError with PyMySQL >= 1.2.4.
-    conn = aiomysql.Connection(user="test")
+    conn = unconnected_connection
     conn.server_status = 0
 
     assert conn.escape((1, 2)) == "(1,2)"
@@ -141,13 +152,13 @@ def test_escape_sequence():
     assert conn.escape(st) == "'2024-01-02 03:04:05'"
 
 
-def test_escape_sequence_no_backslash_escapes():
+def test_escape_sequence_no_backslash_escapes(unconnected_connection):
     # Items inside sequences go through the sql_mode-aware escape_string(),
     # so with NO_BACKSLASH_ESCAPES quotes are doubled rather than
     # backslash-escaped.
     from pymysql.constants import SERVER_STATUS
 
-    conn = aiomysql.Connection(user="test")
+    conn = unconnected_connection
     conn.server_status = SERVER_STATUS.SERVER_STATUS_NO_BACKSLASH_ESCAPES
 
     assert conn.escape("foo'bar") == "'foo''bar'"
